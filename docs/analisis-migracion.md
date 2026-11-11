@@ -9,7 +9,7 @@ El proyecto `OYS.pjx` tiene **dos sistemas** con menús separados:
 | Menú | Qué es | ¿Entra en el facturador web? |
 |---|---|---|
 | `menu1.mnx` | **Facturación**: tablas, clientes, artículos, facturación electrónica, cta. cte., cheques, listados, AFIP | **Sí, es el alcance** |
-| `menuprod.mnx` | **Producción textil**: telas, cortes, talleres, materias primas, fórmulas, órdenes de compra, liquidación a talleres | A confirmar (propuesta: no, o etapa aparte) |
+| `menuprod.mnx` | **Producción textil**: telas, cortes, talleres, materias primas, fórmulas, órdenes de compra, liquidación a talleres | **No** (decisión de Hernán, 11/11/2026) |
 
 ### Menú de facturación (`menu1`), 44 opciones
 
@@ -61,6 +61,35 @@ Se reutiliza el módulo PHP `afip_fe` v2 (10/11/2026), copiado en `lib/afip_fe/`
 - Se entrega en **modo prueba** (`factura_grabar = false`); la facturación real la activa Hernán.
 - Antes de emitir: `probar_conexion.php` tiene que dar OK (FEDummy, TA, puntos de venta, último número, condiciones de IVA).
 
+## 1 bis. Decisiones de Hernán (11/11/2026)
+
+- **Alcance:** solo facturación (`menu1`). Producción textil no entra.
+- **Producto por suscripción** para varios clientes.
+- **Comprobantes:** A, B, C, **E** (exportación), **M** y **FCE MiPyME** (FC/NC/ND). Sin controlador fiscal.
+- **ARCA:** cada cliente con su **punto de venta** y su **certificado** nuevos.
+- **Primer cliente: OYS**, con migración de **todo el histórico**.
+
+### Multi-empresa o una copia por cliente: propuesta
+
+**Un solo código, una instalación por cliente** (no multi-empresa en una sola base):
+
+| | Una instalación por cliente (propuesta) | Multi-empresa en una base |
+|---|---|---|
+| Datos fiscales | Cada cliente en su base: imposible que uno vea al otro | Todo junto; un error de filtro muestra datos ajenos |
+| Certificado y PV de ARCA | Su carpeta privada propia | Varios certificados en una sola configuración |
+| Backup / restaurar / dar de baja | Por cliente, simple | Hay que separar filas |
+| Migración de cada cliente (DBF) | Casi 1 a 1 con el esquema O&S (`subdiario`, `iva`…) | Hay que agregar `empresa_id` a todo y adaptar `afip_fe` |
+| Actualizar versión | Un `git pull` por instalación + "Aplicar cambios" (se automatiza con un script) | Una sola vez |
+| Costo de hosting | Una base y una carpeta por cliente (Ferozo lo permite) | Una sola |
+
+Se deja preparado para pasar a multi-empresa más adelante si se llega a muchos clientes. Si un cliente tiene **varios CUIT**, se le da una instalación por CUIT o se suma "emisores" dentro de la instalación cuando haga falta.
+
+Cada instalación: `facturador.<dominio>` → carpeta propia → base propia → `afip_<cliente>/` fuera de `public_html`. Un archivo de **licencia** por instalación (vencimiento de la suscripción) bloquea la emisión si no se renovó, con aviso previo.
+
+### Factura E (exportación)
+
+`afip_fe` cubre A, B, C, M y FCE (WSFEv1), pero **no la E**: ARCA la autoriza con otro servicio, **WSFEX** (país de destino, Incoterms, idioma, moneda y cotización, permisos de embarque). Hay que sumarlo al módulo (sirve después para todos los sistemas O&S). El certificado necesita también la relación con "Facturación Electrónica de Exportación".
+
 ## 2. Propuesta técnica
 
 - **PHP 8 + MySQL 8, sin framework**, igual que oesteparts: mismo hosting, mismo deploy (integración Git de Ferozo), se reaprovechan el login con bloqueo, los roles, la multi-empresa, los catálogos AFIP, la exportación a Excel y las pruebas.
@@ -77,10 +106,11 @@ Se reutiliza el módulo PHP `afip_fe` v2 (10/11/2026), copiado en `lib/afip_fe/`
 |---|---|---|
 | 1 | Base y estructura | Login, usuarios y permisos, empresa, puntos de venta, tablas (12), clientes, artículos; script de migración de maestros |
 | 2 | Facturación | FC/NC/ND A, B, C (y E si exportan), ítems, IVA por alícuota, formas de pago, comprobante asociado en NC, numeración, impresión, mail |
-| 3 | Factura electrónica ARCA | Integrar `lib/afip_fe` (ya hecho y probado): configuración, ABM de equivalencias de IVA, Revisar → Emitir, QR, certificado y punto de venta de la web |
+| 3 | Factura electrónica ARCA | Integrar `lib/afip_fe` (A, B, C, M, FCE): configuración, ABM de equivalencias de IVA, Revisar → Emitir, QR. **Sumar WSFEX para la E** |
 | 4 | Cta. cte. y cheques | Recibos con retenciones y valores, imputación manual y automática, ajustes, cartera de cheques |
 | 5 | Listados | Subdiario de ventas, cobranzas, cta. cte. por fecha / comprobante, deuda pendiente, resumen de deuda, cheques diferidos, clientes, Libro IVA digital; todo a Excel |
-| 6 | Pase a producción | Migración de datos históricos, controles de saldos contra VFP, capacitación |
+| 6 | Pase a producción OYS | Migración de todo el histórico, controles de saldos contra VFP, capacitación |
+| 7 | Producto | Script de alta de una instalación nueva (base, carpeta, config, usuario inicial), licencia de suscripción, actualización de todas las instalaciones, migrador DBF reutilizable |
 
 ## 4. Estimación (Claude, 11/11/2026)
 
@@ -88,27 +118,24 @@ Solo el menú de facturación (`menu1`). Producción textil, aparte.
 
 | | Humano (dev solo) | Con IA |
 |---|---|---|
-| Desarrollo | 150–225 h | 18–28 h de sesión |
-| Pruebas | 38–55 h | 5–8 h (automáticas) |
-| Entorno por sesión | — | ~15 min × 8–12 sesiones |
-| Tiempo de Hernán (revisar, probar, certificado y PV en ARCA, desplegar, cliente) | — | 26–40 h |
-| **Horas hombre reales** | **190–280 h** | **26–40 h de Hernán** |
-| Calendario | 2–3 meses | 4–5 semanas, según las pruebas de Hernán y del cliente |
+| Desarrollo | 185–275 h | 23–35 h de sesión |
+| Pruebas | 45–65 h | 6–10 h (automáticas) |
+| Entorno por sesión | — | ~15 min × 10–14 sesiones |
+| Tiempo de Hernán (revisar, probar, certificado y PV en ARCA, desplegar, cliente) | — | 30–45 h |
+| **Horas hombre reales** | **230–340 h** | **30–45 h de Hernán** |
+| Calendario | 3–4 meses | 5–6 semanas, según las pruebas de Hernán y del cliente |
 
-Por etapa (con IA, horas de sesión): 1) 4–6 h · 2) 6–9 h · 3) **1,5–3 h** (antes 5–8 h, gracias a `afip_fe`) · 4) 6–9 h · 5) 4–6 h · 6) 3–5 h.
+Por etapa (con IA, horas de sesión): 1) 4–6 h · 2) 6–9 h (con E, M y FCE) · 3) 1,5–3 h + **WSFEX 3–5 h** · 4) 6–9 h · 5) 4–6 h · 6) 3–5 h (todo el histórico) · 7) 2–4 h.
 
-Estimación actualizada el 11/11/2026 al sumar el módulo `afip_fe`. Un humano también ahorra: el módulo ya resuelve WSAA/WSFE, QR, bloqueo de números y recuperación ante cortes.
+Estimación actualizada el 11/11/2026 con las decisiones de Hernán (E, M, FCE, histórico completo, producto por suscripción).
 
 - Mis horas son menos confiables que las humanas. Lo que puede alargarlas: reglas escondidas en `facturacion_ped` (8.800 líneas), datos viejos inconsistentes en los DBF y el trámite del certificado en ARCA (el sandbox no llega a ARCA: lo prueba Hernán).
 - **Cuello de botella:** pruebas de homologación con ARCA y el control de saldos migrados contra el VFP, no el desarrollo.
 
 ## 5. Preguntas abiertas
 
-1. ¿Entra **producción textil** (`menuprod`)? ¿Es del mismo cliente?
-2. ¿Es para **un cliente** o un **producto** para varios (multi-empresa / multi-CUIT)?
-3. ¿Qué comprobantes emiten hoy: A, B, C, **E (exportación)**, NC, ND, remitos, tickets con **controlador fiscal**? (`sucursales` tiene campos de controlador fiscal y comprobante manual.)
-4. ¿Se usan **lista de precios** por cliente, descuentos, precios en dólares (`cotizacion_dolar`, `valor_dolar`)?
-5. ¿Qué **retenciones** se cargan en los recibos (`cobra.COD_RT1..5`)?
-6. ARCA: ¿qué CUIT y alias usa hoy el programa externo? ¿Se puede crear un punto de venta nuevo para la web?
-7. ¿Cuántos **usuarios y sucursales** van a usar el web a la vez?
-8. ¿Se migra **todo el histórico** o solo saldos de cta. cte. + maestros?
+1. ¿Cuántas facturas **E** emite OYS por mes? (si son pocas, WSFEX puede ir después del pase)
+2. ¿Se usan **listas de precios** por cliente, descuentos, precios en dólares (`cotizacion_dolar`, `valor_dolar`)?
+3. ¿Qué **retenciones** se cargan en los recibos (`cobra.COD_RT1..5`)? ¿Percepciones de IIBB en las facturas (`tributos`)?
+4. ¿Cuántos **usuarios y sucursales** de OYS van a usarlo a la vez?
+5. Para migrar el histórico: una **copia de los DBF con datos** de OYS (fuera del repo, por ejemplo en Drive).
