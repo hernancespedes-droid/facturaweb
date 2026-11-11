@@ -138,3 +138,31 @@ Estimación actualizada el 11/11/2026 con las decisiones de Hernán (E, M, FCE, 
 3. ¿Qué **retenciones** se cargan en los recibos (`cobra.COD_RT1..5`)? ¿Percepciones de IIBB en las facturas (`tributos`)?
 4. ¿Cuántos **usuarios y sucursales** de OYS van a usarlo a la vez?
 5. Para migrar el histórico: una **copia de los DBF con datos** de OYS (fuera del repo, por ejemplo en Drive).
+
+## 6. Datos de OYS (copia del 11/11/2026, `datos_facturador_web…rar` en Drive)
+
+283 archivos, 18 MB. **No se suben al repo.**
+
+- **Comprobantes (`subdiario`):** 3.371, del 02/03/2010 al 07/02/2025 (casi todo 2010–2019; 2021 y 2025, uno cada uno). Un solo punto de venta: **0004**.
+  - FC A 3.207 · NC A 77 · FC B 69 · NC B 16 · ND A 1 · ND B 1. **No hay C, M, E ni FCE** en el histórico.
+  - Todos tienen CAE salvo 2.
+- **Otros:** `ctact` 810 · `caja` 731 · `DET` 906 ítems · clientes 519 · usuarios 8 · formas de pago 28.
+- **`fe_parametros` (71) es exactamente el esquema que lee `OysSubdiario`** (nombres de tabla y campo, URLs WSAA/WSFE/WSFEX, datos legales de la cabecera, impresión). Se migra tal cual.
+- **`equivalencias_afip`:** tiene Comprobante (21), Iva (4), Moneda (50) y Tributo (5), pero **ninguna fila `Equivaliencia`** (condición de IVA del receptor, RG 5616). Hay que cargarlas antes de emitir.
+- **Condición de IVA del cliente en este sistema** (combo de `clientes.scx`, distinto del `catg_iva` de Reciclados):
+
+| Código VFP | Condición | Clientes | Id ARCA propuesto |
+|---|---|---|---|
+| 1 | Inscripto | 186 | 1 |
+| 2 | No Inscripto | 0 | — (ya no existe) |
+| 3 | Consumidor Final | 317 | 5 |
+| 4 | Exento (B) | 11 | 4 |
+| 5 | Exento (A) | 1 | 4 |
+| 6 | Liberado | 0 | 10 |
+| 7 | Monotributo | 4 | 6 |
+| 8 | Exento Especial (A) | 0 | 4 |
+| 9 | Exento Especial (B) | 0 | 4 |
+
+  - Hoy un RI tiene que hacer **A** a monotributistas (el histórico les hacía B).
+  - "Exento (A)" / "Exento Especial (A)": a un exento hoy corresponde **B**. A confirmar con Hernán.
+- **`empresas.dbf`** dice "QUEDUL S.A." y `sucursales` "Organizacion & Sistemas": es una base de demostración/propia de O&S, no de un cliente externo.
