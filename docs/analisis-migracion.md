@@ -20,7 +20,7 @@ El proyecto `OYS.pjx` tiene **dos sistemas** con menús separados:
 - **Listados (5):** subdiario de ventas, cobranzas, remitos, clientes, archivo de ventas para AFIP (Libro IVA digital).
 - **Utilitarios:** auditoría de usuarios, control de errores, backup, reindexar, ZAP, modificar reporte FE, notas de crédito (`notas_credito.prg`).
 
-Varias de los utilitarios **no hacen falta en web** (reindexar, ZAP, backup de DBF): los reemplaza MySQL y el backup del hosting.
+Varios de los utilitarios **no hacen falta en web** (reindexar, ZAP, backup de DBF): los reemplaza MySQL y el backup del hosting.
 
 ### Tablas que importan (con datos en la copia)
 
