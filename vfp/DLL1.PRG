@@ -1,0 +1,2 @@
+PARAMETERS letas
+RETURN LEN(letas)

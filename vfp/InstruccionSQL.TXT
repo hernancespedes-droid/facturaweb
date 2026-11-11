@@ -1,0 +1,1 @@
+ SELECT * FROM subdiario inner JOIN clientes ON cliente=CODIGO  where !EMPTY(fe_cCae)  AND fecha BETWEEN CTOD('21/11/2019') AND CTOD('21/11/2019')  into CURSOR detalle

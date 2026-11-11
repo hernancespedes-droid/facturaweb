@@ -1,0 +1,2 @@
+LPARAMETERS mensaje
+MESSAGEBOX(mensaje)

@@ -1,0 +1,1 @@
+iIF SEEK(v_estadistica.codigo_de_barra,'ARTICULOS','CODIGO'),articulos.codigo,iIF(ThisForm.Valido_Codigo(v_estadistica.codigo_de_barra),articulos.codigo,''))

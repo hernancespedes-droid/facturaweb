@@ -1,0 +1,6 @@
+REPLACE fe_ntipoafip WITH 0 ALL
+REPLACE fe_ccae WITH " " ALL
+REPLACE fe_iid WITH 0 ALL
+
+REPLACE fe_dfecha WITH CTOD(" ") ALL
+REPLACE fe_NROCBTE WITH 0 ALL
