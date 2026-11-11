@@ -3,69 +3,73 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Core\Db;
-
 final class SistemaTest extends DbTestCase
 {
-    private const PRUEBA = '9999_prueba_sistema.sql';
-
-    protected function tearDown(): void
-    {
-        @unlink(dirname(__DIR__) . '/database/migrations/' . self::PRUEBA);
-        Db::pdo()->exec('DROP TABLE IF EXISTS prueba_sistema');
-        Db::pdo()->prepare('DELETE FROM schema_migrations WHERE filename = ?')->execute([self::PRUEBA]);
-        parent::tearDown();
-    }
-
     public function testEntranMasterYAdministradorPeroSoloElMasterAplicaCambiosDeBase(): void
     {
-        foreach (['operador', 'vendedor_interno', 'vendedor_externo'] as $rol) {
-            $id = $this->crearUsuario('t_' . $rol, ['BP' => $rol]);
-            $this->loginComo($id, 'BP');
-            $this->assertSame(403, $this->get('/sistema')->status, $rol);
-            $this->assertSame(403, $this->post('/sistema/migrar')->status, $rol);
-            $this->assertSame(403, $this->post('/sistema/menu', ['disposicion' => 'lateral'])->status, $rol);
-            $this->assertStringNotContainsString('href="' . url_base('/sistema') . '"', $this->get('/')->body, $rol);
-        }
-        // 0.9.6: el Administrador entra y ve todo, pero no aplica los cambios de base.
-        $id = $this->crearUsuario('t_admin', ['BP' => 'admin']);
-        $this->loginComo($id, 'BP');
+        $this->loginComo($this->crearUsuario('t_op', 'operador'));
+        $this->assertSame(403, $this->get('/sistema')->status);
+        $this->assertSame(403, $this->post('/sistema/migrar')->status);
+
+        $this->loginComo($this->crearUsuario('t_adm', 'admin'));
         $res = $this->get('/sistema');
         $this->assertSame(200, $res->status);
-        $this->assertStringContainsString('0008_sesiones.sql', $res->body);
-        $this->assertStringNotContainsString('action="' . url('/sistema/migrar') . '"', $res->body, 'sin el botón');
+        $this->assertStringNotContainsString('Últimos errores', $res->body, 'los errores los ve solo el Master');
         $this->assertSame(403, $this->post('/sistema/migrar')->status);
-        $this->assertStringContainsString('href="' . url_base('/sistema') . '"', $this->get('/')->body, 'en el menú');
-        // En "Todas" también entra.
-        $this->limpiarUsuarios();
-        $id = $this->crearUsuario('t_admin2', ['BP' => 'admin', 'OP' => 'admin']);
-        $this->loginComo($id, null);
-        $this->assertTrue(\App\Modules\Auth\Auth::elegirEmpresa(\App\Modules\Auth\Auth::TODAS));
-        \App\Modules\Auth\Auth::reset();
-        $this->assertSame(200, $this->get('/sistema')->status);
-        $this->assertSame(403, $this->post('/sistema/migrar')->status);
-        // El Master sí.
-        $id = $this->crearUsuario('t_master', ['BP' => 'master']);
-        $this->loginComo($id, 'BP');
+
+        $this->loginComo($this->crearUsuario('t_mas', 'master'));
         $res = $this->get('/sistema');
-        $this->assertSame(200, $res->status);
-        $this->assertStringContainsString('action="' . url('/sistema/migrar') . '"', $res->body);
+        $this->assertStringContainsString('Últimos errores', $res->body);
+        $this->assertSame(302, $this->post('/sistema/migrar')->status);
     }
 
-    public function testAplicaLosCambiosDeBasePendientes(): void
+    public function testInstalarSoloConTokenYMientrasNoHayaMaster(): void
     {
-        file_put_contents(dirname(__DIR__) . '/database/migrations/' . self::PRUEBA,
-            "CREATE TABLE IF NOT EXISTS prueba_sistema (id INT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n");
-        $id = $this->crearUsuario('t_master', ['BP' => 'master']);
-        $this->loginComo($id, 'BP');
+        $this->assertSame(404, $this->get('/instalar')->status, 'sin token la ruta no existe');
+        putenv('INSTALAR_TOKEN=clave-de-prueba-larga');
+        try {
+            $this->app = \App\App::boot();
+            $this->assertSame(200, $this->get('/instalar')->status);
+            $mal = $this->post('/instalar', ['token' => 'otra', 'usuario' => 't_inst', 'nombre' => 'Inst', 'clave' => 'Clave12345', 'confirmacion' => 'Clave12345']);
+            $this->assertSame(422, $mal->status);
+            $this->assertRedirect('/login', $this->post('/instalar', ['token' => 'clave-de-prueba-larga', 'usuario' => 't_inst', 'nombre' => 'Inst',
+                'clave' => 'Clave12345', 'confirmacion' => 'Clave12345']));
+            $this->assertTrue((new \App\Modules\Auth\LoginService())->intentar('t_inst', 'Clave12345')['ok']);
+            $this->assertSame(404, $this->get('/instalar')->status, 'con un Master ya no se puede volver a instalar');
+        } finally {
+            putenv('INSTALAR_TOKEN');
+            $this->app = \App\App::boot();
+        }
+    }
 
-        $this->assertStringContainsString(self::PRUEBA, $this->get('/sistema')->body);
-        $salud = json_decode($this->get('/salud')->body, true);
-        $this->assertSame(1, $salud['cambios_de_base_pendientes']);
+    public function testMigrarSubiendoUnZipSoloElMaster(): void
+    {
+        $dir = sys_get_temp_dir() . '/fw_zip_' . bin2hex(random_bytes(4));
+        mkdir($dir);
+        DbfFalso::escribir($dir . '/vendedores.dbf', [['CODIGO', 'C', 2], ['DESCRIPCIO', 'C', 30]], [['CODIGO' => 'Z8', 'DESCRIPCIO' => 'DESDE ZIP']]);
+        $zip = new \ZipArchive();
+        $zip->open($dir . '/datos.zip', \ZipArchive::CREATE);
+        $zip->addFile($dir . '/vendedores.dbf', 'carpeta/VENDEDORES.DBF');
+        $zip->addFromString('../../malo.php', '<?php echo 1;');
+        $zip->close();
+        $archivo = ['zip' => ['name' => 'datos.zip', 'tmp_name' => $dir . '/datos.zip', 'error' => UPLOAD_ERR_OK, 'size' => filesize($dir . '/datos.zip')]];
+        $pedido = fn (array $post) => $this->app->handle(\App\Http\Request::make('POST', '/sistema/migrar-vfp', $post + ['_csrf' => \App\Core\Csrf::token()], [], $archivo));
+        try {
+            $this->loginComo($this->crearUsuario('t_adm', 'admin'));
+            $this->assertSame(403, $pedido(['simular' => '0', 'reemplazar' => '1'])->status);
 
-        $this->assertRedirect('/sistema', $this->post('/sistema/migrar'));
-        $this->assertSame(1, (int) Db::pdo()->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'prueba_sistema'")->fetchColumn());
-        $salud = json_decode($this->get('/salud')->body, true);
-        $this->assertSame(0, $salud['cambios_de_base_pendientes']);
+            $this->loginComo($this->crearUsuario('t_mas', 'master'));
+            $pedido(['simular' => '1', 'reemplazar' => '1']);
+            $this->assertSame(0, (int) \App\Core\Db::pdo()->query("SELECT COUNT(*) FROM vendedores WHERE codigo = 'Z8'")->fetchColumn(), 'simulación');
+            $pedido(['simular' => '0', 'reemplazar' => '1']);
+            $this->assertSame('DESDE ZIP', \App\Core\Db::pdo()->query("SELECT descripcion FROM vendedores WHERE codigo = 'Z8'")->fetchColumn());
+            $this->assertSame([], glob(\App\App::root() . '/storage/migracion/*/*') ?: [], 'los DBF subidos se borran');
+            $this->assertSame(false, is_file(\App\App::root() . '/storage/malo.php'));
+        } finally {
+            \App\Core\Db::pdo()->exec("DELETE FROM vendedores WHERE codigo = 'Z8'");
+            \App\Core\Db::pdo()->exec('DELETE FROM migracion_vfp');
+            array_map('unlink', glob($dir . '/*') ?: []);
+            rmdir($dir);
+        }
     }
 }

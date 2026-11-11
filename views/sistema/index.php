@@ -59,7 +59,17 @@
 <section class="card" id="migracion-vfp">
     <h2>Migración desde el sistema VFP</h2>
     <p class="small muted">Los datos del sistema de escritorio (DBF) se pasan con <code>php bin/migrar-dbf.php &lt;carpeta de los DBF&gt;</code>
-        (o se genera un archivo SQL para importarlo con phpMyAdmin). Ver <code>docs/migracion-dbf.md</code>.</p>
+        o, sin SSH, subiendo acá un .zip con los DBF (solo el Master). Ver <code>docs/migracion-dbf.md</code>.</p>
+    <?php if ($puedeMigrar): ?>
+        <form method="post" action="<?= e(url('/sistema/migrar-vfp')) ?>" enctype="multipart/form-data" class="toolbar"
+              data-confirmar="¿Hiciste el backup de la base? La migración carga los datos del VFP en las tablas de esta instalación.">
+            <?= csrf_field() ?>
+            <label class="field"><span>.zip con los DBF y datos.dbc</span><input type="file" name="zip" accept=".zip" required></label>
+            <label class="check"><input type="checkbox" name="simular" value="1" checked> Simular (no graba: muestra qué pasaría)</label>
+            <label class="check"><input type="checkbox" name="reemplazar" value="1"> Reemplazar lo que ya esté cargado</label>
+            <button class="btn" type="submit">Migrar</button>
+        </form>
+    <?php endif; ?>
     <?php if ($migracionesVfp === []): ?>
         <p>Todavía no se migró nada en esta instalación.</p>
     <?php else: ?>
@@ -72,7 +82,11 @@
                     <td data-label="Resultado" class="small">
                         <?php foreach ($m['resumen'] as $tabla => $r): ?>
                             <div><b><?= e($tabla) ?></b>: <?= (int) ($r['grabadas'] ?? 0) ?> de <?= (int) ($r['leidas'] ?? 0) ?>
-                                <?php if (!empty($r['avisos'])): ?><span class="badge badge-warn"><?= count($r['avisos']) ?> aviso(s)</span><?php endif; ?></div>
+                                <?php if (!empty($r['avisos'])): ?>
+                                    <details><summary><span class="badge badge-warn"><?= count($r['avisos']) ?> aviso(s)</span></summary>
+                                        <ul class="small"><?php foreach ($r['avisos'] as $a): ?><li><?= e($a) ?></li><?php endforeach; ?></ul>
+                                    </details>
+                                <?php endif; ?></div>
                         <?php endforeach; ?>
                     </td></tr>
             <?php endforeach; ?>

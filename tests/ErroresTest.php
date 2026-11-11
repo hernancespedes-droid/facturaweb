@@ -26,11 +26,11 @@ final class ErroresTest extends DbTestCase
     {
         $marca = 'ZZ prueba de error ' . bin2hex(random_bytes(4));
         App::registrar(new \RuntimeException($marca));
-        $this->loginComo($this->crearUsuario('t_master', ['BP' => 'master']));
+        $this->loginComo($this->crearUsuario('t_master', 'master'));
         $html = $this->get('/sistema')->body;
         $this->assertStringContainsString('Últimos errores', $html);
         $this->assertStringContainsString($marca, $html);
-        $this->loginComo($this->crearUsuario('t_adm', ['BP' => 'admin']));
+        $this->loginComo($this->crearUsuario('t_adm', 'admin'));
         $adm = $this->get('/sistema');
         $this->assertFalse(str_contains($adm->body, $marca), 'el Administrador no ve los errores');
     }

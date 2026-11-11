@@ -28,7 +28,7 @@ Varios de los utilitarios **no hacen falta en web** (reindexar, ZAP, backup de D
 |---|---|---|---|
 | `subdiario` | 3.396 | Cabecera de cada comprobante (FC/NC/ND A/B/C/E), totales, IVA, CAE, vto. CAE, comprobante asociado, mail enviado | `comprobantes` |
 | `iva` | 3.383 | IVA por alícuota de cada comprobante | `comprobante_iva` |
-| `DET` / `ITEMS` | 906 / 0 | Ítems de los comprobantes | `comprobante_items` |
+| `DET` / `ITEMS` | 906 / 0 | ~~Ítems de los comprobantes~~ `DET` resultó ser una lista de precios de otra instalación (no se migra); `ITEMS` está vacía. Los ítems de OYS parecen estar en `estadistica` (3.821 renglones con artículo, cantidad y precio por comprobante): confirmarlo en la etapa 2 | `comprobante_items` |
 | `ctact` | 3.489 | Movimientos de cuenta corriente | `ctacte_movimientos` |
 | `caja` | 3.340 | Valores de cada cobro/factura (forma de pago, cheque: banco, número, vencimiento) | `valores` |
 | `cobra`, `imputaciones` | 30 / 54 | Recibos, retenciones, imputación a facturas | `recibos`, `imputaciones` |
@@ -95,7 +95,7 @@ Cada instalación: `facturador.<dominio>` → carpeta propia → base propia →
 - **PHP 8 + MySQL 8, sin framework**, igual que oesteparts: mismo hosting, mismo deploy (integración Git de Ferozo), se reaprovechan el login con bloqueo, los roles, la multi-empresa, los catálogos AFIP, la exportación a Excel y las pruebas.
 - **Base propia** (`a0021735_factura`) con usuario propio.
 - **Carpeta** `public_html/facturador_web`; excepción en `public_html/.htaccess`; subdominio `facturador.oys.com.ar` (DNS de oys.com.ar → IP del hosting + dominio adicional en Ferozo) con SSL.
-- **Migración de datos**: script que lee los DBF (Python `dbfread` en la PC de Hernán) y genera el SQL de carga. Se corre una vez para pruebas y otra el día del pase.
+- **Migración de datos**: migrador en PHP dentro del sistema (`bin/migrar-dbf.php` o subiendo un .zip en Sistema), con simulación y opción de generar el SQL. Se corre una vez para pruebas y otra el día del pase. Ver `docs/migracion-dbf.md`.
 - **Impresión**: HTML imprimible / PDF con el diseño de `IMPRESION_FACTURA_A/B/E.FRX`.
 - **Mail de facturas**: hoy usa CDO de Windows; en web, SMTP del hosting.
 - El prototipo Node (`src/`, `public/`) queda como referencia y se retira cuando arranque la versión PHP.
@@ -104,7 +104,7 @@ Cada instalación: `facturador.<dominio>` → carpeta propia → base propia →
 
 | # | Etapa | Contenido |
 |---|---|---|
-| 1 | Base y estructura | Login, usuarios y permisos, empresa, puntos de venta, tablas (12), clientes, artículos; script de migración de maestros |
+| 1 | Base y estructura | Login, usuarios y permisos, empresa, puntos de venta, tablas (12), clientes, artículos; script de migración de maestros. **Hecha: 0.2.0** (`docs/entregas/0.2.0-etapa1.md`) |
 | 2 | Facturación | FC/NC/ND A, B, C (y E si exportan), ítems, IVA por alícuota, formas de pago, comprobante asociado en NC, numeración, impresión, mail |
 | 3 | Factura electrónica ARCA | Integrar `lib/afip_fe` (A, B, C, M, FCE): configuración, ABM de equivalencias de IVA, Revisar → Emitir, QR. La **E (WSFEX) queda para otra etapa** (los clientes actuales son todos nacionales) |
 | 4 | Cta. cte. y cheques | Recibos con retenciones y valores, imputación manual y automática, ajustes, cartera de cheques |

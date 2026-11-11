@@ -14,6 +14,9 @@ return [
         // Solo para el diagnóstico inicial: poner una clave larga al azar, abrir
         // /diagnostico?token=CLAVE, copiar el resultado y volver a dejarla vacía.
         'diag_token' => '',
+        // Solo para la primera instalación sin SSH: una clave larga al azar, abrir /instalar, crear el Master
+        // y volver a dejarla vacía.
+        'instalar_token' => '',
     ],
     'db' => [
         'host' => 'localhost',

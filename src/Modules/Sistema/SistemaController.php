@@ -127,6 +127,85 @@ final class SistemaController
         return Response::redirect(url('/sistema'));
     }
 
+    /**
+     * Migración desde el VFP subiendo un .zip con los DBF (para hostings sin SSH). Solo el Master. Del zip se
+     * extraen solo las tablas (.dbf .fpt .dbc .dct), con nombre limpio, a storage/migracion/<al azar>/, y se
+     * borran al terminar.
+     */
+    public static function migrarVfp(Request $req, array $params): Response
+    {
+        if (!Auth::esMaster()) {
+            return new Response(403);
+        }
+        $f = $req->files['zip'] ?? null;
+        if (!is_array($f) || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_file((string) $f['tmp_name'])) {
+            Session::flash('error', 'Elegí el .zip con los DBF (si pesa mucho, el hosting puede rechazarlo: máximo ' . ini_get('upload_max_filesize') . ').');
+            return Response::redirect(url('/sistema#migracion-vfp'));
+        }
+        $dir = App::root() . '/storage/migracion/' . bin2hex(random_bytes(8));
+        try {
+            $n = self::extraerDbf((string) $f['tmp_name'], $dir);
+            if ($n === 0) {
+                Session::flash('error', 'El zip no tiene tablas DBF.');
+                return Response::redirect(url('/sistema#migracion-vfp'));
+            }
+            $simular = ($req->post['simular'] ?? '') === '1';
+            @set_time_limit(600);
+            $resumen = (new \App\Modules\Migracion\MigradorVfp(Db::pdo(), $dir))
+                ->migrar(null, ($req->post['reemplazar'] ?? '') === '1', $simular);
+            $grabadas = array_sum(array_map(static fn ($r) => $r['grabadas'], $resumen));
+            $avisos = array_sum(array_map(static fn ($r) => count($r['avisos']), $resumen));
+            Session::flash('ok', ($simular ? 'Simulación (no se grabó nada): ' : 'Migración grabada: ')
+                . number_format($grabadas, 0, ',', '.') . ' registros, ' . $avisos . ' aviso(s).'
+                . ($simular ? ' ' . self::resumenTexto($resumen) : ' El detalle quedó abajo.'));
+        } catch (\RuntimeException $e) {
+            Session::flash('error', 'No se migró nada: ' . $e->getMessage());
+        } finally {
+            foreach (glob($dir . '/*') ?: [] as $x) {
+                @unlink($x);
+            }
+            @rmdir($dir);
+        }
+        return Response::redirect(url('/sistema#migracion-vfp'));
+    }
+
+    /** Extrae del zip solo los archivos de tablas, sin carpetas. Devuelve cuántos .dbf extrajo. */
+    private static function extraerDbf(string $zip, string $dir): int
+    {
+        $z = new \ZipArchive();
+        if ($z->open($zip) !== true) {
+            throw new \RuntimeException('El archivo no es un .zip válido.');
+        }
+        if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
+            throw new \RuntimeException('No se pudo crear la carpeta temporal en storage/.');
+        }
+        $n = 0;
+        for ($i = 0; $i < $z->numFiles; $i++) {
+            $nombre = basename(str_replace('\\', '/', (string) $z->getNameIndex($i)));
+            if (preg_match('/^[A-Za-z0-9_ .-]{1,80}\.(dbf|fpt|dbc|dct)$/i', $nombre) !== 1) {
+                continue;
+            }
+            $datos = $z->getFromIndex($i);
+            if ($datos === false) {
+                continue;
+            }
+            file_put_contents($dir . '/' . $nombre, $datos);
+            $n += preg_match('/\.dbf$/i', $nombre);
+        }
+        $z->close();
+        return $n;
+    }
+
+    /** @param array<string,array{leidas:int,grabadas:int,avisos:string[]}> $resumen */
+    private static function resumenTexto(array $resumen): string
+    {
+        $partes = [];
+        foreach ($resumen as $t => $r) {
+            $partes[] = $t . ' ' . $r['grabadas'] . (count($r['avisos']) > 0 ? ' (' . count($r['avisos']) . ' avisos: ' . implode(' / ', array_slice($r['avisos'], 0, 3)) . ')' : '');
+        }
+        return implode('; ', $partes) . '.';
+    }
+
     private static function migrator(): Migrator
     {
         return new Migrator(Db::pdo(), App::root() . '/database/migrations');

@@ -1,66 +1,50 @@
 # FacturaWeb
 
-Sistema web de facturación para Argentina: clientes, productos/servicios y facturas **A, B y C** con cálculo de IVA.
+Facturador web de Organización & Sistemas, migración del sistema de facturación VFP9 de O&S (menú `menu1`).
+PHP 8.2+ y MySQL 8, sin framework, sobre el núcleo de `oesteparts` (login con bloqueo, usuarios, roles,
+migraciones, página Sistema, pruebas). **Una instalación por cliente**: su carpeta, su base y su certificado de ARCA.
 
-Sin dependencias externas: Node.js (≥ 22.13) con su SQLite integrado (`node:sqlite`) y una interfaz web en HTML/CSS/JS.
+Análisis y etapas: [`docs/analisis-migracion.md`](docs/analisis-migracion.md). Factura electrónica (etapa 3): `lib/afip_fe/`.
 
-## Uso
+## Qué tiene (etapa 1, versión 0.2.0)
+
+- **Ingreso** con bloqueo por intentos, "recordarme", contraseña temporal y cierre por inactividad.
+- **Usuarios y roles** (Sistema): cada usuario tiene un rol; cada rol, las opciones del menú que puede usar
+  (una por opción del VFP) y si edita o solo consulta. Roles de fábrica: Master (O&S), Administrador, Operador.
+- **Tablas** (las 12 del VFP): sucursales, rubros, subrubros, provincias, parámetros (datos de la empresa),
+  bancos, cotizaciones del dólar, vendedores, alícuotas de IVA, condiciones de pago, transportes y formas de pago.
+- **Clientes y artículos** con el esquema O&S (mismos nombres de tabla y campo que `datos.dbc`).
+- **Migrador DBF → MySQL** (`php bin/migrar-dbf.php` o subiendo un .zip en Sistema): ver [`docs/migracion-dbf.md`](docs/migracion-dbf.md).
+
+## Desarrollo
 
 ```bash
-npm start
+bash bin/setup-dev.sh
 ```
-
-Abrí http://localhost:3000. La base se guarda en `data/facturaweb.db` (configurable con `DB_FILE`; puerto con `PORT`).
 
 ```bash
-npm test
+bash bin/test.sh
 ```
 
-## Funcionalidades
-
-- **Mi empresa**: razón social, CUIT, domicilio, condición frente al IVA, inicio de actividades y punto de venta.
-- **Clientes**: alta, edición, búsqueda y baja lógica. Valida el dígito verificador del CUIT.
-- **Productos**: precio neto y alícuota de IVA (0, 2,5, 5, 10,5, 21 y 27 %).
-- **Facturas**:
-  - Tipo automático: emisor Responsable Inscripto → **A** a otro RI, **B** al resto; Monotributo/Exento → **C**.
-  - Numeración correlativa por tipo y punto de venta (`00001-00000001`).
-  - Varios ítems con distintas alícuotas, IVA discriminado por alícuota en la A, precio con IVA incluido en la B
-    (con la leyenda de IVA contenido de la Ley 27.743), sin IVA en la C.
-  - Se guarda una copia de los datos del cliente al emitir, así editar el cliente no altera comprobantes viejos.
-  - Estados: pendiente, pagada, anulada (y "vencida" si pasó el vencimiento).
-  - Vista de comprobante lista para imprimir o guardar como PDF.
-- **Inicio**: facturado del mes, pendiente de cobro, vencido, facturación por mes y mejores clientes.
-
-## Estructura
-
-```
-src/server.js       servidor HTTP + archivos estáticos
-src/api.js          rutas REST (/api/...)
-src/facturacion.js  reglas de negocio (tipo de comprobante, IVA, CUIT)
-src/db.js           esquema SQLite
-public/             interfaz web (SPA)
-test/               tests con node:test
+```bash
+bin/dev-server.sh
 ```
 
-## API
+`bin/test.sh --unit` corre solo las pruebas de PHP; sin `--unit` también el recorrido de navegador (`e2e/recorrido.js`, Playwright).
+El sistema queda en http://127.0.0.1:8080; el primer usuario se crea con `php bin/crear-master.php`.
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET/PUT | `/api/empresa` | Datos del emisor |
-| GET/POST | `/api/clientes` | Listar (`?q=`) / crear |
-| PUT/DELETE | `/api/clientes/:id` | Editar / dar de baja |
-| GET/POST | `/api/productos` | Listar (`?q=`) / crear |
-| PUT/DELETE | `/api/productos/:id` | Editar / dar de baja |
-| GET | `/api/facturas` | Listar (`?desde=&hasta=&estado=&cliente_id=&q=`) |
-| POST | `/api/facturas` | Emitir `{cliente_id, fecha, vencimiento, observaciones, items:[{descripcion, cantidad, precio_unitario, alicuota_iva, producto_id?}]}` |
-| GET | `/api/facturas/:id` | Comprobante con ítems |
-| PATCH | `/api/facturas/:id/estado` | `{estado: "pendiente" \| "pagada" \| "anulada"}` |
-| GET | `/api/resumen` | Datos del tablero |
+## Carpetas
 
-## Pendiente / próximos pasos
+| Carpeta | Contenido |
+|---|---|
+| `public/` | Lo único que sirve la web (docroot): `index.php`, estilos y scripts |
+| `src/` | Código. Cada módulo en `src/Modules/<Nombre>/` (Auth, Usuarios, Roles, Tablas, Clientes, Articulos, Configuracion, Sistema, Migracion) |
+| `views/` | Pantallas |
+| `config/` | Configuración; `config/local.php` (solo en el servidor) tiene las claves de la base |
+| `database/migrations/` | Cambios de base numerados (`php bin/migrate.php` o Sistema → Aplicar cambios) |
+| `lib/afip_fe/` | Módulo de factura electrónica (no público) |
+| `vfp/` | Fuentes del sistema VFP (referencia; no van en los paquetes) |
+| `bin/`, `tests/`, `e2e/` | Herramientas y pruebas |
+| `docs/` | Análisis, despliegue, migración y notas de entrega |
 
-- **Factura electrónica ARCA (ex AFIP)**: obtener CAE vía WSAA + WSFEv1 (requiere certificado digital) e imprimir el QR.
-  Hoy los comprobantes son internos, sin validez fiscal.
-- Notas de crédito/débito (en lugar de anular).
-- Usuarios y login.
-- Cobros parciales y cuenta corriente por cliente.
+Despliegue: [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md). Chequeo rápido: `/salud` tiene que mostrar `"ok":true`.

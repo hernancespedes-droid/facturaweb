@@ -12,7 +12,7 @@ final class AuthTest extends DbTestCase
 {
     public function testLoginCorrectoReiniciaIntentosYRegistraIngreso(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $id = $this->crearUsuario('t_ana', 'admin');
         Db::pdo()->exec("UPDATE usuarios SET intentos_fallidos = 3 WHERE id = {$id}");
 
         $r = (new LoginService())->intentar('T_Ana ', 'Prueba1234');
@@ -26,7 +26,7 @@ final class AuthTest extends DbTestCase
 
     public function testClaveIncorrectaYUsuarioInexistenteDanElMismoMensaje(): void
     {
-        $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $this->crearUsuario('t_ana', 'admin');
         $mal = (new LoginService())->intentar('t_ana', 'otra-clave');
         $noExiste = (new LoginService())->intentar('t_nadie', 'otra-clave');
 
@@ -36,7 +36,7 @@ final class AuthTest extends DbTestCase
 
     public function testSeBloqueaTrasCincoIntentosYNoEntraNiConLaClaveCorrecta(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $id = $this->crearUsuario('t_ana', 'admin');
         $svc = new LoginService();
         for ($i = 0; $i < LoginService::MAX_INTENTOS; $i++) {
             $svc->intentar('t_ana', 'mala');
@@ -52,7 +52,7 @@ final class AuthTest extends DbTestCase
 
     public function testCuatroIntentosNoBloquean(): void
     {
-        $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $this->crearUsuario('t_ana', 'admin');
         $svc = new LoginService();
         for ($i = 0; $i < LoginService::MAX_INTENTOS - 1; $i++) {
             $svc->intentar('t_ana', 'mala');
@@ -62,7 +62,7 @@ final class AuthTest extends DbTestCase
 
     public function testElBloqueoVenceYElContadorArrancaDeCero(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $id = $this->crearUsuario('t_ana', 'admin');
         Db::pdo()->exec("UPDATE usuarios SET intentos_fallidos = 5, bloqueado_hasta = NOW() - INTERVAL 1 MINUTE WHERE id = {$id}");
         $svc = new LoginService();
 
@@ -77,7 +77,7 @@ final class AuthTest extends DbTestCase
     public function testIntentosFallidosSimultaneosSeCuentanTodos(): void
     {
         // Concurrencia: varios procesos fallan a la vez; el incremento atómico no pierde ninguno.
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $id = $this->crearUsuario('t_ana', 'admin');
         $script = __DIR__ . '/fixtures/intento_fallido.php';
         $procs = [];
         for ($i = 0; $i < 4; $i++) {
@@ -92,7 +92,7 @@ final class AuthTest extends DbTestCase
 
     public function testUsuarioInactivoNoEntra(): void
     {
-        $this->crearUsuario('t_ana', ['BP' => 'admin'], 'Prueba1234', false);
+        $this->crearUsuario('t_ana', 'admin', 'Prueba1234', false);
         $r = (new LoginService())->intentar('t_ana', 'Prueba1234');
         $this->assertFalse($r['ok']);
         $this->assertStringContainsString('desactivado', $r['error']);
@@ -100,14 +100,14 @@ final class AuthTest extends DbTestCase
 
     public function testSinSesionTodoRedirigeAlLogin(): void
     {
-        foreach (['/', '/usuarios', '/diccionario', '/empresa', '/mi-clave'] as $path) {
+        foreach (['/', '/usuarios', '/clientes', '/articulos', '/tablas/rubros', '/sistema', '/mi-clave'] as $path) {
             $this->assertRedirect('/login', $this->get($path), $path);
         }
     }
 
     public function testPostSinTokenCsrfSeRechaza(): void
     {
-        $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $this->crearUsuario('t_ana', 'admin');
         $res = $this->post('/login', ['usuario' => 't_ana', 'clave' => 'Prueba1234'], false);
         $this->assertSame(403, $res->status);
         $this->assertSame(null, Session::get('uid'));
@@ -116,61 +116,29 @@ final class AuthTest extends DbTestCase
         $this->assertSame(403, $res->status);
     }
 
-    public function testConUnaEmpresaEntraDirectoYConDosElige(): void
+    public function testLoginVuelveALaPantallaQueSeQueriaAbrir(): void
     {
-        $this->crearUsuario('t_una', ['BP' => 'operador']);
-        $this->crearUsuario('t_dos', ['BP' => 'operador', 'OP' => 'vendedor_interno']);
-
-        $this->assertRedirect('/', $this->post('/login', ['usuario' => 't_una', 'clave' => 'Prueba1234']));
-        $this->assertSame('BP', Auth::empresa()['codigo']);
-
-        $this->post('/salir');
-        $this->assertRedirect('/empresa', $this->post('/login', ['usuario' => 't_dos', 'clave' => 'Prueba1234']));
-        $this->assertSame(null, Auth::empresa());
-        $this->assertRedirect('/empresa', $this->get('/'), 'Sin empresa elegida no entra al inicio');
-        $pantalla = $this->get('/empresa');
-        $this->assertStringContainsString('BP SERVICES SRL', $pantalla->body);
-        $this->assertStringContainsString('OESTE PARTS SA', $pantalla->body);
+        $this->crearUsuario('t_ana', 'operador');
+        $this->assertRedirect('/login', $this->get('/clientes', ['q' => 'x']));
+        $this->assertRedirect('/clientes?q=x', $this->post('/login', ['usuario' => 't_ana', 'clave' => 'Prueba1234']));
     }
 
-    public function testSinEmpresasAsignadasNoQuedaLogueado(): void
+    public function testCambiarElRolRigeEnElProximoPedidoSinVolverAIngresar(): void
     {
-        $this->crearUsuario('t_nada', []);
-        $res = $this->post('/login', ['usuario' => 't_nada', 'clave' => 'Prueba1234']);
-        $this->assertSame(422, $res->status);
-        $this->assertSame(null, Session::get('uid'));
-    }
-
-    public function testNoPuedeElegirUnaEmpresaQueNoTiene(): void
-    {
-        $id = $this->crearUsuario('t_una', ['BP' => 'admin']);
-        $this->loginComo($id, 'BP');
-        $res = $this->post('/empresa', ['empresa_id' => (string) $this->empresaId('OP')]);
-        $this->assertSame(403, $res->status);
-        $this->assertSame('BP', Auth::empresa()['codigo']);
-    }
-
-    public function testElRolYLosPermisosDependenDeLaEmpresaActivaSinVolverAIngresar(): void
-    {
-        $id = $this->crearUsuario('t_dos', ['BP' => 'admin', 'OP' => 'vendedor_externo']);
-        $this->loginComo($id, 'BP');
-        $this->assertTrue(Auth::puede('usuarios.administrar'));
+        $id = $this->crearUsuario('t_ana', 'admin');
+        $this->loginComo($id);
         $this->assertSame(200, $this->get('/usuarios')->status);
-
-        $this->assertRedirect('/', $this->post('/empresa', ['empresa_id' => (string) $this->empresaId('OP')]));
-        $this->assertSame('vendedor_externo', Auth::rol()['codigo']);
-        $this->assertFalse(Auth::puede('usuarios.administrar'));
+        Db::pdo()->prepare('UPDATE usuarios SET rol_id = ? WHERE id = ?')->execute([$this->rolId('operador'), $id]);
+        Auth::reset();
         $this->assertSame(403, $this->get('/usuarios')->status);
+        $this->assertSame('operador', Auth::rol()['codigo']);
     }
 
-    public function testDesactivarOQuitarAccesoRigeEnElProximoPedido(): void
+    public function testDesactivarRigeEnElProximoPedido(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin', 'OP' => 'admin']);
-        $this->loginComo($id, 'BP');
+        $id = $this->crearUsuario('t_ana', 'admin');
+        $this->loginComo($id);
         $this->assertSame(200, $this->get('/')->status);
-
-        Db::pdo()->exec("DELETE FROM usuario_empresas WHERE usuario_id = {$id} AND empresa_id = " . $this->empresaId('BP'));
-        $this->assertRedirect('/empresa', $this->get('/'), 'Sin acceso a la empresa activa vuelve al selector');
 
         Db::pdo()->exec("UPDATE usuarios SET activo = 0 WHERE id = {$id}");
         $this->assertRedirect('/login', $this->get('/'));
@@ -179,16 +147,16 @@ final class AuthTest extends DbTestCase
 
     public function testLaSesionVencePorInactividad(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
-        $this->loginComo($id, 'BP');
+        $id = $this->crearUsuario('t_ana', 'admin');
+        $this->loginComo($id);
         Session::set('ultimo_uso', time() - 5 * 3600);
         $this->assertRedirect('/login', $this->get('/'));
     }
 
     public function testSalirCierraLaSesion(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
-        $this->loginComo($id, 'BP');
+        $id = $this->crearUsuario('t_ana', 'admin');
+        $this->loginComo($id);
         $this->assertRedirect('/login', $this->post('/salir'));
         $this->assertSame(null, Session::get('uid'));
         $this->assertRedirect('/login', $this->get('/'));
@@ -196,7 +164,7 @@ final class AuthTest extends DbTestCase
 
     public function testConClaveTemporalSoloPuedeCambiarla(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $id = $this->crearUsuario('t_ana', 'admin');
         Db::pdo()->exec("UPDATE usuarios SET debe_cambiar_clave = 1 WHERE id = {$id}");
         $this->assertRedirect('/mi-clave', $this->post('/login', ['usuario' => 't_ana', 'clave' => 'Prueba1234']));
         $this->assertRedirect('/mi-clave', $this->get('/usuarios'));
@@ -211,7 +179,7 @@ final class AuthTest extends DbTestCase
 
     public function testValidacionesDeClaveNueva(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $id = $this->crearUsuario('t_ana', 'admin');
         $svc = new LoginService();
         $this->assertStringContainsString('actual', (string) $svc->cambiarClave($id, 'mala', 'NuevaClave99', 'NuevaClave99'));
         $this->assertStringContainsString('coinciden', (string) $svc->cambiarClave($id, 'Prueba1234', 'NuevaClave99', 'NuevaClave98'));
@@ -222,7 +190,7 @@ final class AuthTest extends DbTestCase
 
     public function testLasClavesSeGuardanConHash(): void
     {
-        $id = $this->crearUsuario('t_ana', ['BP' => 'admin']);
+        $id = $this->crearUsuario('t_ana', 'admin');
         $hash = (string) Db::pdo()->query("SELECT password_hash FROM usuarios WHERE id = {$id}")->fetchColumn();
         $this->assertFalse(str_contains($hash, 'Prueba1234'));
         $this->assertTrue(password_get_info($hash)['algo'] !== null);

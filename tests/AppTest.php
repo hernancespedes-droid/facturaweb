@@ -25,7 +25,7 @@ final class AppTest extends TestCase
         $this->assertSame(200, $res->status);
         $this->assertStringContainsString('text/html', $res->headers['Content-Type']);
         $this->assertSame('no-store', $res->headers['Cache-Control']);
-        $this->assertStringContainsString('<title>Ingresar - Oeste Parts</title>', $res->body);
+        $this->assertStringContainsString('<title>Ingresar - FacturaWeb</title>', $res->body);
         $this->assertStringContainsString('name="_csrf"', $res->body, 'El formulario de ingreso lleva token CSRF');
         $this->assertStringContainsString('meta name="viewport"', $res->body, 'El layout debe ser responsive');
     }

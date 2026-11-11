@@ -20,6 +20,8 @@ $base = [
         'url' => env('APP_URL', ''),
         // Clave temporal para habilitar /diagnostico?token=... (vacía = ruta apagada).
         'diag_token' => env('DIAG_TOKEN', ''),
+        // Clave para /instalar (primera instalación sin SSH). Vacía = ruta apagada.
+        'instalar_token' => env('INSTALAR_TOKEN', ''),
     ],
     'auth' => [
         // Minutos sin uso tras los cuales la sesión se cierra sola.

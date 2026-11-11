@@ -1,0 +1,55 @@
+# FacturaWeb — guía de desarrollo (para Claude)
+
+Contexto, decisiones y estado del proyecto: skill `facturaweb-proyecto` (copia en `.claude/skills/facturaweb-proyecto/SKILL.md`)
+y `docs/analisis-migracion.md`. Esto es solo lo técnico del repositorio.
+
+## Al empezar una sesión
+
+1. `bash bin/setup-dev.sh`: instala MySQL 8 si falta, crea `facturaweb_dev` y `facturaweb_test` (usuario `facturaweb` / `facturaweb_dev`) y migra. Idempotente.
+   Si MySQL no está corriendo (el contenedor se reinició), el mismo script lo levanta.
+2. `bash bin/test.sh` tiene que pasar **antes** de tocar nada (`--unit` solo PHP). El recorrido de navegador usa el Playwright preinstalado.
+3. `bin/dev-server.sh` → http://127.0.0.1:8080. Usuario: `php bin/crear-master.php`.
+4. Datos reales de OYS para probar la migración: en Drive (`datos_facturador_web….rar`), **nunca al repo** (`.gitignore` bloquea `*.dbf`).
+   Se descomprimen con `unrar` en el scratchpad y se cargan con `php bin/migrar-dbf.php <carpeta> --reemplazar`.
+
+## Base técnica
+
+Núcleo copiado de `hernancespedes-droid/oesteparts` (App, Core, Http, Auth, Usuarios, Roles, Sistema, layout, corredor de pruebas)
+y adaptado a **una instalación por cliente**: sin tabla `empresas`, cada usuario tiene un rol (`usuarios.rol_id`).
+Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/run.php`), nada de librerías de terceros.
+
+- **PHP 8.2 como piso**: nada exclusivo de 8.3/8.4. **MySQL 8**, InnoDB, `utf8mb4_unicode_ci` en cada tabla
+  (códigos O&S con `utf8mb4_bin`: en el VFP conviven 'SE' y 'SÑ').
+- **Esquema O&S**: tablas y columnas con los nombres largos de `datos.dbc` del VFP (`clientes.razon_social`, `sucursales.ultima_factura_a`…),
+  para que la migración y `lib/afip_fe` (adaptador `OysSubdiario`) trabajen casi 1 a 1. Lo que agrega la web se documenta en la migración.
+- `parametros` = datos de la empresa (tabla O&S, fila id=1). La configuración del sistema web es la tabla `configuracion`.
+
+## Estructura y convenciones
+
+- Módulos en `src/Modules/<Nombre>/` con `routes.php`; vistas en `views/<modulo>/`. Handlers `function (Request $req, array $params): Response`.
+- Las 12 tablas del VFP se declaran en `src/Modules/Tablas/Definiciones.php` (campos, clave O&S, grilla, quién las usa) y tienen
+  una sola pantalla genérica. Clientes y Artículos declaran sus campos igual (`campos()`); `App\Core\Form` los dibuja y
+  `App\Core\Validador` los valida.
+- Menú: `App\Core\Menu` (grupos Maestros, Tablas, Sistema). Permiso por opción del VFP (`tablas.rubros`, `clientes.ver`/`clientes.editar`…).
+- Permiso nuevo: insertarlo en `permisos` y darlo en la misma migración a los roles `WHERE es_admin = 1 OR es_master = 1`; si es pantalla, sumarlo a `RolesService::MENU` y a `Menu`.
+- Cambios de base: solo migraciones nuevas `database/migrations/NNNN_*.sql`, idempotentes; nunca editar una ya entregada.
+- Textos en español rioplatense. URLs con `url()`, texto con `e()`.
+
+## Seguridad
+
+Sentencias preparadas siempre (los nombres de tabla/columna solo salen de definiciones del código), `password_hash`, CSRF en todo POST,
+permisos verificados en el servidor en cada ruta (y probados: qué NO puede cada rol), errores a `storage/logs/`.
+Nada de datos reales de clientes en el repo ni en pruebas (las pruebas del migrador generan sus DBF con `tests/DbfFalso.php`).
+
+## Un módulo está terminado cuando
+
+1. Migraciones, código y vistas responsive.
+2. Pruebas de PHP (lógica, permisos por rol, concurrencia si numera) y el flujo en `e2e/recorrido.js`. `bash bin/test.sh` pasa completo.
+3. Se recorrió de verdad con el navegador (escritorio y celular).
+4. `VERSION` subida (0.2.0 = etapa 1, 0.3.0 = etapa 2…; 1.0.0 = pase a producción de OYS), commit y `bin/package.sh` arma `dist/facturaweb-<version>.zip`.
+5. Nota de entrega `docs/entregas/<version>-<etapa>.md` (qué incluye, qué probar con qué usuario, cómo desplegar y revertir, qué falta del cliente).
+6. Skill `facturaweb-proyecto` actualizado si cambió el estado o una decisión.
+
+## Al cerrar la sesión
+
+Commit y push a la rama de trabajo (el contenedor no persiste).

@@ -4,203 +4,125 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Core\Db;
-use App\Core\Session;
 use App\Modules\Auth\LoginService;
 use App\Modules\Usuarios\UsuariosService;
 
 final class UsuariosTest extends DbTestCase
 {
-    private function rolEn(int $usuarioId, string $empresa): ?string
+    private function rol(int $usuarioId): string
     {
-        $st = Db::pdo()->prepare(
-            'SELECT r.codigo FROM usuario_empresas ue JOIN roles r ON r.id = ue.rol_id WHERE ue.usuario_id = ? AND ue.empresa_id = ?'
-        );
-        $st->execute([$usuarioId, $this->empresaId($empresa)]);
-        $v = $st->fetchColumn();
-        return $v === false ? null : (string) $v;
+        $st = Db::pdo()->prepare('SELECT r.codigo FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = ?');
+        $st->execute([$usuarioId]);
+        return (string) $st->fetchColumn();
     }
 
     public function testAltaGeneraClaveTemporalQueObligaACambiarla(): void
     {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin', 'OP' => 'admin']);
-        $this->loginComo($admin, 'BP');
-
-        $res = $this->post('/usuarios', [
-            'usuario' => 'T_Nuevo', 'nombre' => 'Nuevo Usuario', 'email' => 'nuevo@ejemplo.com',
-            'roles' => [$this->empresaId('BP') => $this->rolId('operador'), $this->empresaId('OP') => '0'],
-        ]);
+        $this->loginComo($this->crearUsuario('t_admin', 'admin'));
+        $res = $this->post('/usuarios', ['usuario' => 'T_Nuevo', 'nombre' => 'Nuevo', 'email' => 'Nuevo@Ejemplo.com', 'rol_id' => (string) $this->rolId('operador')]);
         $this->assertSame(302, $res->status);
         $id = (int) Db::pdo()->query("SELECT id FROM usuarios WHERE usuario = 't_nuevo'")->fetchColumn();
-        $this->assertTrue($id > 0, 'El usuario se guarda en minúsculas');
-        $this->assertSame('operador', $this->rolEn($id, 'BP'));
-        $this->assertSame(null, $this->rolEn($id, 'OP'));
-
-        $flash = Session::takeFlash();
-        $clave = null;
-        foreach ($flash as $f) {
-            if ($f['tipo'] === 'clave' && preg_match('/: (\S{12}) /', $f['texto'], $m)) {
-                $clave = $m[1];
-            }
-        }
-        $this->assertTrue($clave !== null, 'Se muestra la contraseña temporal una vez');
-        $this->assertTrue((new LoginService())->intentar('t_nuevo', (string) $clave)['ok']);
-        $this->assertSame(1, (int) Db::pdo()->query("SELECT debe_cambiar_clave FROM usuarios WHERE id = {$id}")->fetchColumn());
+        $this->assertSame('operador', $this->rol($id));
+        $this->assertSame('nuevo@ejemplo.com', Db::pdo()->query("SELECT email FROM usuarios WHERE id = {$id}")->fetchColumn());
+        $flash = \App\Core\Session::get('_flash');
+        $this->assertSame('clave', $flash[1]['tipo'] ?? null);
+        preg_match('/: (\S{12}) —/', $flash[1]['texto'], $m);
+        $r = (new LoginService())->intentar('t_nuevo', $m[1] ?? '');
+        $this->assertTrue($r['ok'], 'la clave temporal sirve para entrar');
+        $this->loginComo($id);
+        $this->assertRedirect('/mi-clave', $this->get('/clientes'), 'con clave temporal solo puede cambiarla');
     }
 
     public function testValidacionesDelAlta(): void
     {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin']);
-        $svc = new UsuariosService($admin, false);
-        $bp = $this->empresaId('BP');
-
-        $r = $svc->crear(['usuario' => 'x', 'nombre' => '', 'email' => 'no-es-mail', 'roles' => []]);
+        $this->crearUsuario('t_admin', 'admin');
+        $svc = new UsuariosService(0, false);
+        $r = $svc->crear(['usuario' => 'x', 'nombre' => '', 'email' => 'no-es-mail', 'rol_id' => '']);
         $this->assertFalse($r['ok']);
-        $this->assertTrue(isset($r['errores']['usuario'], $r['errores']['nombre'], $r['errores']['email']));
-
-        $r = $svc->crear(['usuario' => 't_sinrol', 'nombre' => 'Sin rol', 'roles' => [$bp => '0']]);
-        $this->assertTrue(isset($r['errores']['roles']), 'Tiene que tener al menos un rol');
-
-        $r = $svc->crear(['usuario' => 't_admin', 'nombre' => 'Repetido', 'roles' => [$bp => $this->rolId('operador')]]);
+        foreach (['usuario', 'nombre', 'email', 'rol_id'] as $campo) {
+            $this->assertTrue(isset($r['errores'][$campo]), $campo);
+        }
+        $r = $svc->crear(['usuario' => 't_admin', 'nombre' => 'Repetido', 'rol_id' => (string) $this->rolId('operador')]);
         $this->assertSame('Ese nombre de usuario ya existe.', $r['errores']['usuario'] ?? null);
     }
 
-    public function testAdministradorNoVeNiTocaUsuariosMaster(): void
+    public function testOperadorNoEntraAUsuariosNiRoles(): void
     {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin', 'OP' => 'admin']);
-        $master = $this->crearUsuario('t_master', ['BP' => 'master', 'OP' => 'master']);
-        $this->loginComo($admin, 'BP');
-
-        $lista = $this->get('/usuarios')->body;
-        $this->assertFalse(str_contains($lista, 't_master'), 'El Master no aparece en la lista');
-        $this->assertSame(404, $this->get('/usuarios/' . $master)->status);
-        $this->assertSame(404, $this->post('/usuarios/' . $master, ['nombre' => 'Hackeado'])->status);
-        $this->assertSame(404, $this->post('/usuarios/' . $master . '/activo', ['activo' => '0'])->status);
-        $this->assertSame(404, $this->post('/usuarios/' . $master . '/clave')->status);
-        $this->assertSame(404, $this->post('/usuarios/' . $master . '/desbloquear')->status);
-
-        $u = Db::pdo()->query("SELECT nombre, activo FROM usuarios WHERE id = {$master}")->fetch();
-        $this->assertSame('Nombre t_master', $u['nombre']);
-        $this->assertSame(1, (int) $u['activo']);
-        $this->assertTrue((new LoginService())->intentar('t_master', 'Prueba1234')['ok'], 'La clave del Master no cambió');
+        $this->loginComo($this->crearUsuario('t_op', 'operador'));
+        foreach (['/usuarios', '/usuarios/nuevo', '/roles'] as $p) {
+            $this->assertSame(403, $this->get($p)->status, $p);
+        }
+        $this->assertSame(403, $this->post('/usuarios', ['usuario' => 't_colado', 'nombre' => 'X', 'rol_id' => (string) $this->rolId('admin')])->status);
+        $this->assertSame(0, (int) Db::pdo()->query("SELECT COUNT(*) FROM usuarios WHERE usuario = 't_colado'")->fetchColumn());
     }
 
-    public function testAdministradorNoPuedeAsignarElRolMaster(): void
+    public function testAdministradorNoVeNiTocaNiAsignaMaster(): void
     {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin']);
-        $otro = $this->crearUsuario('t_otro', ['BP' => 'operador']);
-        $this->loginComo($admin, 'BP');
-        $bp = $this->empresaId('BP');
-        $master = $this->rolId('master');
+        $admin = $this->crearUsuario('t_admin', 'admin');
+        $master = $this->crearUsuario('t_master', 'master');
+        $otro = $this->crearUsuario('t_otro', 'operador');
+        $this->loginComo($admin);
+        $lista = $this->get('/usuarios')->body;
+        $this->assertStringNotContainsString('t_master', $lista);
+        $this->assertStringContainsString('t_otro', $lista);
+        $this->assertSame(404, $this->get('/usuarios/' . $master)->status);
+        $this->assertSame(404, $this->post('/usuarios/' . $master . '/activo', ['activo' => '0'])->status);
+        $this->assertSame(404, $this->post('/usuarios/' . $master . '/clave')->status);
 
-        $this->assertFalse(str_contains($this->get('/usuarios/nuevo')->body, 'Master (O&amp;S)'), 'El rol Master no se ofrece');
-
-        $res = $this->post('/usuarios', ['usuario' => 't_colado', 'nombre' => 'Colado', 'roles' => [$bp => (string) $master]]);
+        $res = $this->post('/usuarios/' . $otro, ['nombre' => 'Otro', 'rol_id' => (string) $this->rolId('master')]);
         $this->assertSame(422, $res->status);
-        $this->assertSame(0, (int) Db::pdo()->query("SELECT COUNT(*) FROM usuarios WHERE usuario = 't_colado'")->fetchColumn());
-
-        $res = $this->post('/usuarios/' . $otro, ['nombre' => 'Otro', 'roles' => [$bp => (string) $master]]);
+        $this->assertSame('operador', $this->rol($otro));
+        $res = $this->post('/usuarios', ['usuario' => 't_colado', 'nombre' => 'Colado', 'rol_id' => (string) $this->rolId('master')]);
         $this->assertSame(422, $res->status);
-        $this->assertSame('operador', $this->rolEn($otro, 'BP'));
     }
 
     public function testMasterVeYAsignaMaster(): void
     {
-        $master = $this->crearUsuario('t_master', ['BP' => 'master']);
-        $otroMaster = $this->crearUsuario('t_master2', ['OP' => 'master']);
-        $otro = $this->crearUsuario('t_otro', ['BP' => 'operador']);
-        $this->loginComo($master, 'BP');
-
-        $this->assertStringContainsString('t_master2', $this->get('/usuarios')->body);
-        $this->assertSame(200, $this->get('/usuarios/' . $otroMaster)->status);
-        $res = $this->post('/usuarios/' . $otro, ['nombre' => 'Otro', 'roles' => [$this->empresaId('BP') => (string) $this->rolId('master')]]);
-        $this->assertSame(302, $res->status);
-        $this->assertSame('master', $this->rolEn($otro, 'BP'));
+        $master = $this->crearUsuario('t_master', 'master');
+        $otro = $this->crearUsuario('t_otro', 'operador');
+        $this->loginComo($master);
+        $this->assertSame(302, $this->post('/usuarios/' . $otro, ['nombre' => 'Otro', 'rol_id' => (string) $this->rolId('master')])->status);
+        $this->assertSame('master', $this->rol($otro));
     }
 
-    public function testAdministradorDeUnaEmpresaSoloManejaEsaEmpresa(): void
+    public function testNadieSeDesactivaNiSeCambiaSuPropioRol(): void
     {
-        $adminBp = $this->crearUsuario('t_adminbp', ['BP' => 'admin']);
-        $soloOp = $this->crearUsuario('t_soloop', ['OP' => 'operador']);
-        $ambas = $this->crearUsuario('t_ambas', ['BP' => 'operador', 'OP' => 'vendedor_interno']);
-        $this->loginComo($adminBp, 'BP');
-
-        $lista = $this->get('/usuarios')->body;
-        $this->assertFalse(str_contains($lista, 't_soloop'), 'No ve usuarios que solo están en OP');
-        $this->assertStringContainsString('t_ambas', $lista);
-        $this->assertSame(404, $this->get('/usuarios/' . $soloOp)->status);
-
-        // No puede asignar roles en OP...
-        $res = $this->post('/usuarios/' . $ambas, ['nombre' => 'Ambas', 'roles' => [$this->empresaId('OP') => (string) $this->rolId('admin')]]);
-        $this->assertSame(422, $res->status);
-        $this->assertSame('vendedor_interno', $this->rolEn($ambas, 'OP'));
-
-        // ...y al cambiar el rol en BP, el de OP queda como estaba.
-        $res = $this->post('/usuarios/' . $ambas, ['nombre' => 'Ambas', 'roles' => [$this->empresaId('BP') => (string) $this->rolId('vendedor_externo')]]);
-        $this->assertSame(302, $res->status);
-        $this->assertSame('vendedor_externo', $this->rolEn($ambas, 'BP'));
-        $this->assertSame('vendedor_interno', $this->rolEn($ambas, 'OP'));
-    }
-
-    public function testNadieSeDesactivaNiSeCambiaSusPropiosRoles(): void
-    {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin']);
-        $this->loginComo($admin, 'BP');
-
+        $admin = $this->crearUsuario('t_admin', 'admin');
+        $this->loginComo($admin);
         $this->post('/usuarios/' . $admin . '/activo', ['activo' => '0']);
         $this->assertSame(1, (int) Db::pdo()->query("SELECT activo FROM usuarios WHERE id = {$admin}")->fetchColumn());
-
-        $this->post('/usuarios/' . $admin, ['nombre' => 'Yo mismo', 'roles' => [$this->empresaId('BP') => '0']]);
-        $this->assertSame('admin', $this->rolEn($admin, 'BP'));
+        $this->post('/usuarios/' . $admin, ['nombre' => 'Yo mismo', 'rol_id' => (string) $this->rolId('operador')]);
+        $this->assertSame('admin', $this->rol($admin));
         $this->assertSame('Yo mismo', Db::pdo()->query("SELECT nombre FROM usuarios WHERE id = {$admin}")->fetchColumn());
     }
 
-    public function testDesactivarImpideIngresarYActivarLoDevuelve(): void
+    public function testDesactivarImpideIngresarYResetearDesbloquea(): void
     {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin']);
-        $otro = $this->crearUsuario('t_otro', ['BP' => 'operador']);
-        $this->loginComo($admin, 'BP');
+        $admin = $this->crearUsuario('t_admin', 'admin');
+        $otro = $this->crearUsuario('t_otro', 'operador');
+        Db::pdo()->exec("UPDATE usuarios SET intentos_fallidos = 5, bloqueado_hasta = NOW() + INTERVAL 1 HOUR WHERE id = {$otro}");
+        $this->loginComo($admin);
+        $this->post('/usuarios/' . $otro . '/clave');
+        $u = Db::pdo()->query("SELECT debe_cambiar_clave, intentos_fallidos, bloqueado_hasta FROM usuarios WHERE id = {$otro}")->fetch();
+        $this->assertSame(1, (int) $u['debe_cambiar_clave']);
+        $this->assertSame(0, (int) $u['intentos_fallidos']);
+        $this->assertNull($u['bloqueado_hasta']);
 
         $this->post('/usuarios/' . $otro . '/activo', ['activo' => '0']);
-        $this->assertFalse((new LoginService())->intentar('t_otro', 'Prueba1234')['ok']);
-        $this->post('/usuarios/' . $otro . '/activo', ['activo' => '1']);
-        $this->assertTrue((new LoginService())->intentar('t_otro', 'Prueba1234')['ok']);
-    }
-
-    public function testResetDeClaveDesbloqueaYPideCambiarla(): void
-    {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin']);
-        $otro = $this->crearUsuario('t_otro', ['BP' => 'operador']);
-        Db::pdo()->exec("UPDATE usuarios SET intentos_fallidos = 5, bloqueado_hasta = NOW() + INTERVAL 10 MINUTE WHERE id = {$otro}");
-        $svc = new UsuariosService($admin, false);
-
-        $clave = $svc->resetearClave($otro);
-        $this->assertTrue(is_string($clave) && strlen($clave) === 12);
-        $this->assertFalse((new LoginService())->intentar('t_otro', 'Prueba1234')['ok'], 'La clave vieja ya no sirve');
-        $this->assertTrue((new LoginService())->intentar('t_otro', (string) $clave)['ok']);
-        $this->assertSame(1, (int) Db::pdo()->query("SELECT debe_cambiar_clave FROM usuarios WHERE id = {$otro}")->fetchColumn());
-        $this->assertSame(null, $svc->resetearClave($admin), 'La propia se cambia desde Mi contraseña');
-    }
-
-    public function testDesbloquear(): void
-    {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin']);
-        $otro = $this->crearUsuario('t_otro', ['BP' => 'operador']);
-        Db::pdo()->exec("UPDATE usuarios SET intentos_fallidos = 5, bloqueado_hasta = NOW() + INTERVAL 10 MINUTE WHERE id = {$otro}");
-        $this->loginComo($admin, 'BP');
-        $this->assertSame(302, $this->post('/usuarios/' . $otro . '/desbloquear')->status);
-        $this->assertTrue((new LoginService())->intentar('t_otro', 'Prueba1234')['ok']);
+        $this->assertSame(0, (int) Db::pdo()->query("SELECT activo FROM usuarios WHERE id = {$otro}")->fetchColumn());
+        $this->loginComo($otro);
+        $this->assertRedirect('/login', $this->get('/'), 'un usuario desactivado queda afuera en el próximo pedido');
     }
 
     public function testBuscarEscapaComodinesYDatosEnPantalla(): void
     {
-        $admin = $this->crearUsuario('t_admin', ['BP' => 'admin']);
-        $x = $this->crearUsuario('t_xss', ['BP' => 'operador']);
-        Db::pdo()->prepare('UPDATE usuarios SET nombre = ? WHERE id = ?')->execute(['<script>alert(1)</script>', $x]);
-        $this->loginComo($admin, 'BP');
-
-        $html = $this->get('/usuarios')->body;
-        $this->assertFalse(str_contains($html, '<script>alert(1)</script>'));
-        $this->assertStringContainsString('&lt;script&gt;', $html);
-        $this->assertSame([], (new UsuariosService($admin, false))->listar('%'), 'El % se busca literal');
+        $admin = $this->crearUsuario('t_admin', 'admin');
+        $x = $this->crearUsuario('t_xss', 'operador');
+        Db::pdo()->exec("UPDATE usuarios SET nombre = '<script>alert(1)</script>' WHERE id = {$x}");
+        $this->loginComo($admin);
+        $body = $this->get('/usuarios')->body;
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $body);
+        $this->assertStringContainsString('&lt;script&gt;', $body);
+        $this->assertSame([], (new UsuariosService($admin, false))->listar('%'), 'el % se busca literal');
     }
 }
