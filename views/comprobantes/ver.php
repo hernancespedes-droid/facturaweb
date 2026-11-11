@@ -10,13 +10,14 @@ $cli = $h['cliente_actual'];
 $razon = $h['cliente_razon_social'] ?? ($cli['razon_social'] ?? '');
 $disc = $h['letra'] === 'A';
 $conCae = $h['fe_ccae'] !== '' && $h['fe_ccae'] !== '.';
+[$estadoTxt, $estadoClase] = estado_comprobante($h);
 $subtotal = \App\Modules\Comprobantes\ComprobanteImpreso::subtotal($h);
 $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
 ?>
 <p><a href="<?= e(url('/comprobantes')) ?>">← Comprobantes</a></p>
 <div class="page-head">
     <div>
-        <p class="eyebrow"><?= e(fecha($h['fecha'])) ?> · <?= $conCae ? 'Con CAE' : 'Interno, sin CAE' ?><?= $h['estado'] !== '' ? ' · ANULADO' : '' ?></p>
+        <p class="eyebrow"><?= e(fecha($h['fecha'])) ?> · <?= e($estadoTxt) ?><?= $h['estado'] !== '' ? ' · ANULADO' : '' ?></p>
         <h1><?= e($titulo) ?> <?= e(numero_visible($h)) ?></h1>
     </div>
     <div class="acciones">
@@ -29,7 +30,8 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
     </div>
 </div>
 
-<?php if (!$conCae): ?><div class="alerta alerta-info small">Comprobante interno: todavía no tiene CAE de ARCA (la integración es la etapa 3). No tiene validez fiscal.</div><?php endif; ?>
+<?php if (!$conCae): ?><div class="alerta alerta-info small">Comprobante interno: no tiene CAE de ARCA, no tiene validez fiscal.</div>
+<?php elseif ((int) $h['es_prueba'] === 1): ?><div class="alerta alerta-warn small">Comprobante de <b>prueba</b> (<?= e($h['fe_entorno'] === 'S' ? 'ARCA simulado' : 'homologación de ARCA') ?>): el CAE no tiene validez fiscal.</div><?php endif; ?>
 
 <section class="card">
     <dl class="datos datos-col">
@@ -44,6 +46,8 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
         <?php endif; ?>
         <?php if ($h['observaciones']): ?><div><dt>Observaciones</dt><dd><?= e($h['observaciones']) ?></dd></div><?php endif; ?>
         <?php if ($h['orden_compra']): ?><div><dt>Orden de compra</dt><dd><?= e($h['orden_compra']) ?></dd></div><?php endif; ?>
+        <?php if ((int) $h['fe_concepto'] > 1): ?><div><dt>Servicio</dt><dd><?= e(fecha($h['fe_serv_desde']) . ' al ' . fecha($h['fe_serv_hasta']) . ($h['fe_vencimiento'] ? ' · pago hasta el ' . fecha($h['fe_vencimiento']) : '')) ?></dd></div><?php endif; ?>
+        <?php if (!empty($h['fe_mobservaciones'])): ?><div><dt>Observaciones de ARCA</dt><dd class="pre-linea"><?= e($h['fe_mobservaciones']) ?></dd></div><?php endif; ?>
         <?php if ($conCae): ?><div><dt>CAE</dt><dd><?= e($h['fe_ccae']) ?><?= $h['fe_dvtocae'] ? ' · vence ' . e(fecha($h['fe_dvtocae'])) : '' ?></dd></div><?php endif; ?>
     </dl>
 </section>

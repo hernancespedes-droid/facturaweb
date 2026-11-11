@@ -23,6 +23,7 @@ $disc = $c['letra'] === 'A';
         <div><dt>Punto de venta</dt><dd><?= e(sprintf('%04d', $c['prefijo'])) ?></dd></div>
         <div><dt>Forma de pago</dt><dd><?= $c['forma_pago'] === 2 ? 'Cuenta corriente' : 'Contado' . ($c['pago'] ? ' · ' . e($c['pago']['descripcion']) : '') ?></dd></div>
         <?php if ($c['asociado']): ?><div><dt>Corrige</dt><dd><?= e(Tipos::titulo($c['asociado']['tipo'], $c['asociado']['letra']) . ' ' . numero_cbte($c['prefijo'], $c['asociado']['comprobante']) . ' del ' . fecha($c['asociado']['fecha'])) ?></dd></div><?php endif; ?>
+        <?php if ($c['concepto'] > 1): ?><div><dt>Servicio</dt><dd><?= e(fecha($c['serv_desde']) . ' al ' . fecha($c['serv_hasta']) . ' · pago hasta el ' . fecha($c['vto_pago'])) ?></dd></div><?php endif; ?>
         <?php if ($c['descuento'] > 0): ?><div><dt>Descuento</dt><dd><?= e(numero($c['descuento'])) ?> %</dd></div><?php endif; ?>
         <?php if ($c['observaciones'] !== ''): ?><div><dt>Observaciones</dt><dd><?= e($c['observaciones']) ?></dd></div><?php endif; ?>
         <?php if ($c['email']): ?><div><dt>Mails</dt><dd><?= e($c['email']) ?></dd></div><?php endif; ?>
@@ -57,7 +58,11 @@ $disc = $c['letra'] === 'A';
     <?php if ($c['letra'] === 'B'): ?><p class="small muted">Los precios incluyen IVA. IVA contenido: <?= e(plata_dec($k['iva_total'])) ?> (Ley 27.743).</p><?php endif; ?>
 </section>
 
-<div class="alerta alerta-info small">Todavía no se pide el CAE a ARCA (etapa 3): el comprobante queda como <b>interno, sin validez fiscal</b>, con numeración propia.</div>
+<?php if ($c['electronica']): ?>
+    <div class="alerta alerta-info small">Al emitir se pide el <b>CAE a ARCA</b> (<?= e($etiquetaArca) ?>) y el comprobante toma el número que dé ARCA. Si ARCA no lo autoriza, no se graba nada.</div>
+<?php else: ?>
+    <div class="alerta alerta-info small">Este comprobante queda como <b>interno, sin CAE ni validez fiscal</b>, con numeración propia (<?= e($etiquetaArca) ?>).</div>
+<?php endif; ?>
 
 <div class="actions">
     <form method="post" action="<?= e(url('/comprobantes')) ?>" class="inline">

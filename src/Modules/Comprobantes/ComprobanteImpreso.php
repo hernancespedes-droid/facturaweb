@@ -75,6 +75,22 @@ final class ComprobanteImpreso
             $leyendas[] = 'Régimen de Transparencia Fiscal al Consumidor (Ley 27.743). IVA contenido: ' . plata_dec($h['iva_1']);
         }
 
+        // QR de ARCA (RG 4892) para los que tienen CAE
+        $qr = null;
+        if ($conCae) {
+            require_once \App\App::root() . '/lib/afip_fe/afip.php';
+            $doc = preg_replace('/\D/', '', (string) $h['cuit_cliente']) ?? '';
+            $qr = \OysAfip\QrAfip::url((string) ($emisor['cuit'] ?? ''), [
+                'fecha' => $h['fe_dfecha'] ?: $h['fecha'], 'ptoVta' => (int) $h['prefijo'],
+                'tipo' => (int) $h['fe_ntipoafip'] ?: ((int) $h['tipoafipoys'] ?: Tipos::tipoAfip($h['tipo'], $letra)), 'numero' => $nroCbte,
+                'importe' => (float) $h['neto'], 'docTipo' => strlen($doc) === 11 ? 80 : 99, 'docNro' => strlen($doc) === 11 ? $doc : '0', 'cae' => (string) $h['fe_ccae'],
+            ]);
+        }
+        $aviso = '';
+        if ($conCae && (int) ($h['es_prueba'] ?? 0) === 1) {
+            $aviso = 'COMPROBANTE DE PRUEBA (' . (($h['fe_entorno'] ?? '') === 'S' ? 'ARCA SIMULADO' : 'HOMOLOGACIÓN DE ARCA') . '): el CAE no tiene validez fiscal';
+        }
+
         $pago = (int) $h['forma_pago'] === 2 ? 'Cuenta corriente'
             : 'Contado' . ($h['pagos'] !== [] ? ' - ' . ($h['pagos'][0]['fpago_descripcion'] ?? $h['pagos'][0]['p_fpago']) : '');
 
@@ -95,7 +111,7 @@ final class ComprobanteImpreso
             'condicion_pago' => $pago, 'orden_compra' => (string) $h['orden_compra'],
             'asociado' => $h['fe_nrocbte_asoc'] > 0 ? Tipos::titulo($h['fe_tipocbte_asoc'], $letra) . ' ' . numero_cbte($h['prefijo'], $h['fe_nrocbte_asoc']) . ($h['fe_fecha_asoc'] ? ' del ' . fecha($h['fe_fecha_asoc']) : '') : '',
             'items' => $items, 'totales' => $totales, 'observaciones' => (string) $h['observaciones'], 'leyendas' => $leyendas, 'copia' => $copia,
-            'cae' => $conCae ? ['cae' => (string) $h['fe_ccae'], 'vto' => fecha($h['fe_dvtocae'])] : null,
+            'cae' => $conCae ? ['cae' => (string) $h['fe_ccae'], 'vto' => fecha($h['fe_dvtocae'])] : null, 'qr' => $qr, 'aviso_prueba' => $aviso,
             'nombre_archivo' => preg_replace('/[^A-Za-z0-9._-]+/', '_', Tipos::titulo($h['tipo'], $h['letra']) . '_' . numero_cbte($h['prefijo'], $nroCbte)) . '.pdf',
         ];
     }

@@ -28,17 +28,20 @@ $limpiar = static function () use ($pdo, $copia): void {
             $pdo->prepare('UPDATE sucursales SET ultima_factura_a = ?, ultima_factura_b = ?, ultima_factura_c = ?, ultima_nc_a = ?, ultima_nc_b = ?, ultima_nc_c = ?, ultima_nd_a = ?, ultima_nd_b = ?, ultima_nd_c = ? WHERE codigo = ?')
                 ->execute([...array_values($num), $codigo]);
         }
+        foreach ($p['fac'] ?? [] as $codigo => $fac) {
+            $pdo->prepare('UPDATE sucursales SET fac_electronica = ? WHERE codigo = ?')->execute([$fac, $codigo]);
+        }
         unlink($copia);
     }
     // Comprobantes que emitió el recorrido (los clientes "E2E") y todo lo que cuelga de ellos
-    foreach (['subdiario' => 'cliente_razon_social LIKE \'%E2E%\''] as $t => $w) {
-        $claves = $pdo->query("SELECT tipo, letra, sucursal, comprobante FROM subdiario WHERE {$w}")->fetchAll();
-        foreach ($claves as $k) {
-            foreach (['iva' => 'comprobante', 'estadistica' => 'comprobante', 'caja' => 'comprobante', 'ctact' => 'numero', 'subdiario' => 'comprobante'] as $tabla => $col) {
-                $pdo->prepare("DELETE FROM {$tabla} WHERE tipo = ? AND letra = ? AND sucursal = ? AND {$col} = ?")->execute([$k['tipo'], $k['letra'], $k['sucursal'], $k['comprobante']]);
-            }
+    $claves = $pdo->query("SELECT fe_clave FROM subdiario WHERE cliente_razon_social LIKE '%E2E%'")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($claves as $clave) {
+        foreach (['iva', 'estadistica', 'caja', 'ctact'] as $tabla) {
+            $pdo->prepare("DELETE FROM {$tabla} WHERE subdiario_id = ?")->execute([$clave]);
         }
+        $pdo->prepare('DELETE FROM subdiario WHERE fe_clave = ?')->execute([$clave]);
     }
+    $pdo->exec("DELETE FROM afip_operaciones WHERE entorno = 'S'");
     $pdo->exec("DELETE FROM clientes WHERE razon_social LIKE '%E2E%'");
     $pdo->exec("DELETE FROM articulos WHERE codigo LIKE 'E2E%'");
     $pdo->exec("DELETE FROM vendedores WHERE descripcion LIKE '%E2E%'");
@@ -50,6 +53,7 @@ if (($argv[1] ?? '') === '--limpiar') {
 }
 $guardar = $pdo->query('SELECT empresa, cuit, iva FROM parametros WHERE id = 1')->fetch();
 $guardar['sucursales'] = [];
+$guardar['fac'] = $pdo->query('SELECT codigo, fac_electronica FROM sucursales')->fetchAll(PDO::FETCH_KEY_PAIR);
 foreach ($pdo->query('SELECT codigo, ultima_factura_a, ultima_factura_b, ultima_factura_c, ultima_nc_a, ultima_nc_b, ultima_nc_c, ultima_nd_a, ultima_nd_b, ultima_nd_c FROM sucursales')->fetchAll() as $suc) {
     $codigo = $suc['codigo'];
     unset($suc['codigo']);

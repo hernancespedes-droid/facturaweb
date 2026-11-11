@@ -10,7 +10,7 @@ final class ComprobantePdf
 {
     private const M = 10.0;          // margen
     private const ANCHO = 190.0;     // ancho útil
-    private const PIE = 255.0;       // desde acá empieza el bloque de totales y pie
+    private const PIE = 255.0;       // el bloque de totales termina acá y debajo va el pie
 
     /** @param array<string,mixed> $d */
     public static function generar(array $d): string
@@ -122,7 +122,7 @@ final class ComprobantePdf
             $pdf->texto($m, 280, 'Continúa en la página siguiente…', 8.5, false, 'R', self::ANCHO);
             return;
         }
-        $y = self::PIE - 30;
+        $y = self::PIE - 37;
         $pdf->rect($m + 110, $y, 80, count($d['totales']) * 5.5 + 3, 0.3);
         $y += 5.5;
         foreach ($d['totales'] as [$rotulo, $valor, $fuerte]) {
@@ -132,20 +132,30 @@ final class ComprobantePdf
         }
         foreach ($d['leyendas'] as $i => $l) {
             foreach ($pdf->partir($l, 105, 7.5) as $k => $ln) {
-                $pdf->texto($m, self::PIE - 26 + $i * 8 + $k * 3.6, $ln, 7.5);
+                $pdf->texto($m, self::PIE - 33 + $i * 8 + $k * 3.6, $ln, 7.5);
             }
         }
         // pie: CAE (etapa 3) o aviso de comprobante interno
         $yp = self::PIE + 4;
         if ($d['cae'] !== null) {
-            $pdf->rect($m, $yp, self::ANCHO, 18, 0.3);
-            $pdf->texto($m + 3, $yp + 7, 'CAE: ' . $d['cae']['cae'] . ($d['cae']['vto'] !== '' ? '    Vto. CAE: ' . $d['cae']['vto'] : ''), 10, true);
-            $pdf->texto($m + 3, $yp + 13, 'Comprobante Autorizado ARCA', 8.5);
+            $pdf->rect($m, $yp, self::ANCHO, 28, 0.3);
+            $x = $m + 3;
+            if ($d['qr'] !== null) {
+                $pdf->qr(\App\Core\Qr::matriz($d['qr']), $m + 1, $yp + 1, 26);
+                $x = $m + 32;
+            }
+            $pdf->texto($x, $yp + 8, 'CAE: ' . $d['cae']['cae'] . ($d['cae']['vto'] !== '' ? '    Vto. CAE: ' . $d['cae']['vto'] : ''), 10, true);
+            $pdf->texto($x, $yp + 14, 'Comprobante Autorizado ARCA', 8.5);
+            if ($d['aviso_prueba'] !== '') {
+                foreach ($pdf->partir($d['aviso_prueba'], self::ANCHO - ($x - $m) - 3, 8.5, true) as $k => $l) {
+                    $pdf->texto($x, $yp + 20 + $k * 4, $l, 8.5, true);
+                }
+            }
         } else {
-            $pdf->rect($m, $yp, self::ANCHO, 18, 0.5);
-            $pdf->texto($m, $yp + 7.5, 'COMPROBANTE INTERNO', 12, true, 'C', self::ANCHO);
-            $pdf->texto($m, $yp + 13.5, 'Sin CAE de ARCA: no tiene validez fiscal', 9, false, 'C', self::ANCHO);
+            $pdf->rect($m, $yp, self::ANCHO, 28, 0.5);
+            $pdf->texto($m, $yp + 12, 'COMPROBANTE INTERNO', 12, true, 'C', self::ANCHO);
+            $pdf->texto($m, $yp + 18.5, 'Sin CAE de ARCA: no tiene validez fiscal', 9, false, 'C', self::ANCHO);
         }
-        $pdf->texto($m, $yp + 24, implode(' ', mb_str_split($d['copia'])), 8, true, 'R', self::ANCHO);
+        $pdf->texto($m, $yp + 32, implode(' ', mb_str_split($d['copia'])), 8, true, 'R', self::ANCHO);
     }
 }

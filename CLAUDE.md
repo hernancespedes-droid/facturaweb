@@ -24,7 +24,7 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
   para que la migración y `lib/afip_fe` (adaptador `OysSubdiario`) trabajen casi 1 a 1. Lo que agrega la web se documenta en la migración.
 - `parametros` = datos de la empresa (tabla O&S, fila id=1). La configuración del sistema web es la tabla `configuracion`.
 
-## Facturación (etapa 2)
+## Facturación (etapas 2 y 3)
 
 - `Modules/Comprobantes`: `Calculadora` (lógica pura, las reglas de importes), `Tipos` (letra, códigos ARCA, numeradores), `ComprobantesService`
   (`armar()` valida y calcula; `emitir()` numera con `FOR UPDATE` en `sucursales` y graba todo en una transacción; clave de operación contra el doble envío),
@@ -33,8 +33,10 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
   `caja`, `ctact`) apuntan con `subdiario_id`. Mostrar siempre `numero_visible()` (el de ARCA si tiene CAE). Ver `docs/migracion-dbf.md`.
 - Convención de renglones: `precio` y `total_item` son lo que se ve (A neto; B y C con IVA); `precio_siniva` y `total_siniva` netos y con el descuento. El
   IVA oficial está en `iva`, no se recalcula desde los renglones.
-- Para la etapa 3 (CAE): `Autorizador` entre "Revisar" y grabar; `lib/afip_fe` arma el `Comprobante` a partir de lo calculado (no de nuevo desde los
-  renglones); el comprobante nace con el número de ARCA; `numero_visible()` y `Tipos::numeroVisible()` ya lo contemplan.
+- **ARCA (etapa 3)**: `Modules/Arca/Arca` es el único que toca `lib/afip_fe`; modo en `config/local.php` (`afip.modo` interno|simulado|homologacion|produccion).
+  `ComprobantesService::emitirConArca` registra en `afip_operaciones` antes de pedir el CAE y `recuperar()` graba lo aprobado y no guardado. `ArcaSimulador`
+  contesta WSAA/WSFEv1 sin internet (CAE `99…`, rechaza totales ,13). Lo no fiscal queda `es_prueba = 1`. Las decisiones de Claude llevan `DECISIÓN D-xx` y
+  están en `docs/decisiones-pendientes.md`: al decidir algo de negocio sin consultar, marcarla así y sumarla ahí.
 - Los campos de importe usan `data-decimales` (la máscara de `app.js` pone puntos de miles: `Valida::decimal` y `comprobante.js` los leen igual).
 
 ## Estructura y convenciones
@@ -57,7 +59,7 @@ Nada de datos reales de clientes en el repo ni en pruebas (las pruebas del migra
 ## Un módulo está terminado cuando
 
 1. Migraciones, código y vistas responsive.
-2. Pruebas de PHP (lógica, permisos por rol, concurrencia si numera) y el flujo en `e2e/recorrido.js`. `bash bin/test.sh` pasa completo.
+2. Pruebas de PHP (lógica, permisos por rol, concurrencia si numera) y el flujo en `e2e/recorrido.js` (y `e2e/arca.js`, con ARCA simulado). `bash bin/test.sh` pasa completo.
 3. Se recorrió de verdad con el navegador (escritorio y celular).
 4. `VERSION` subida (0.2.0 = etapa 1, 0.3.0 = etapa 2, 0.4.0 = etapa 3…; 1.0.0 = pase a producción de OYS), commit y `bin/package.sh` arma `dist/facturaweb-<version>.zip`.
 5. Nota de entrega `docs/entregas/<version>-<etapa>.md` (qué incluye, qué probar con qué usuario, cómo desplegar y revertir, qué falta del cliente).

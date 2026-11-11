@@ -13,7 +13,13 @@ namespace App\Modules\Comprobantes;
  *  - se agrupa por alícuota: en la A, base = suma de netos e IVA = base x alícuota (redondeado); en la B, el IVA de cada
  *    grupo sale del total con IVA incluido (neto = total / (1 + alícuota), IVA = total - neto), así el total del
  *    comprobante es exactamente la suma de lo que se ve en los renglones;
- *  - un renglón con alícuota 0 es exento (neto_exento; no lleva fila de IVA), como en el VFP;
+ *  - DECISIÓN D-07 (Claude, a confirmar por Hernán): un renglón con alícuota 0 es exento (neto_exento; no lleva fila de IVA), como en
+ *    el VFP. ARCA distingue "exento" de "gravado al 0 %" (IVA Id 3): si hace falta lo segundo hay que agregarlo acá;
+ *  - DECISIÓN D-03 (Claude, a confirmar por Hernán): solo hay descuento general (%); el VFP también tenía descuento por renglón
+ *    (porcentaje_descuento en cada item), que los renglones de OYS no usan. Para sumarlo, aplicar el % de cada renglón antes
+ *    del general en el bucle de abajo;
+ *  - DECISIÓN D-08 (Claude, a confirmar por Hernán): en la B y C el IVA se calcula por grupo de alícuota (total / (1 + alícuota)), no
+ *    renglón por renglón, así el total del comprobante es exactamente la suma de lo que se ve;
  *  - total = neto gravado + neto exento + IVA.
  */
 final class Calculadora

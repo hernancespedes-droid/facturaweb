@@ -34,7 +34,7 @@ description: Contexto, decisiones y estado del proyecto FacturaWeb (facturador w
 |---|---|---|
 | 1 | Base: login, usuarios y roles, 12 tablas, clientes, artículos, migrador DBF de maestros | **Hecha: versión 0.2.0** (nota `docs/entregas/0.2.0-etapa1.md`), falta la prueba de Hernán |
 | 2 | Facturación FC/NC/ND A, B, C (E si exportan), ítems, IVA por alícuota, numeración, impresión, mail | **Hecha: versión 0.3.0** (nota `docs/entregas/0.3.0-etapa2.md`), **sin CAE**; falta la prueba de Hernán |
-| 3 | Factura electrónica con `lib/afip_fe` (A, B, C, M, FCE); WSFEX (E) en otra etapa | Pendiente |
+| 3 | Factura electrónica con `lib/afip_fe` (A, B, C, M, FCE); WSFEX (E) en otra etapa | **Hecha: versión 0.4.0** (nota `docs/entregas/0.4.0-etapa3.md`) con ARCA **simulado** probado; falta que Hernán haga certificado/PV (`docs/ARCA-PUESTA-EN-MARCHA.md`) y confirme las decisiones (`docs/decisiones-pendientes.md`) |
 | 4 | Cta. cte. y cheques (recibos, imputación, ajustes, cartera) | Pendiente |
 | 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | Pendiente |
 | 6 | Pase a producción OYS: histórico completo, control de saldos contra VFP, capacitación | Pendiente |
@@ -69,7 +69,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 - Migrador con comprobantes: 3.371 de OYS coinciden al centavo; huérfanos del VFP (42 renglones, 28 caja, 28 ctact, 17 iva) y 56 IVA vinculados por neto.
 - Diferencias con el VFP decididas por Claude, **a confirmar con Hernán**: NC no puede superar la factura; descuento solo general; crédito 0 = sin límite;
   un solo medio de pago por comprobante (el mixto y los cheques de terceros van con la etapa 4); sin anulación (se corrige con NC).
-- Etapa 3: el comprobante nace con el número de ARCA; arma el `Comprobante` de `lib/afip_fe` desde lo calculado; punto de venta y certificado propios de la web.
+- Etapa 3 (hecha en 0.4.0): modos `interno|simulado|homologacion|produccion` en `config/local.php` (`afip`); `Modules/Arca` (Arca, ArcaSimulador, ArcaController); `afip_operaciones` registra cada pedido antes de hablar con ARCA y permite recuperar lo aprobado y no grabado; `es_prueba` marca lo no fiscal; Sistema → ARCA. Decisiones de Claude marcadas `D-xx` en el código y listadas en `docs/decisiones-pendientes.md`. Pendiente: pantalla de equivalencias de condición de IVA. Diseño original: el comprobante nace con el número de ARCA; arma el `Comprobante` de `lib/afip_fe` desde lo calculado; punto de venta y certificado propios de la web.
 
 ## Datos de OYS (copia 11/11/2026, en Drive, nunca al repo)
 

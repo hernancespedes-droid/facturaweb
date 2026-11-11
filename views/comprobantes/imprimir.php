@@ -43,6 +43,9 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
         .totales .t { font-size: 15px; font-weight: 700; border-top: 1px solid #000; margin-top: 1mm; padding-top: 1.5mm; }
         .leyenda { font-size: 10px; }
         .estado { margin-top: 6mm; border: 2px solid #000; padding: 4mm; text-align: center; }
+        .estado.con-qr { display: flex; align-items: center; gap: 5mm; text-align: left; }
+        .estado .qr svg { width: 30mm; height: 30mm; display: block; }
+        .estado .prueba { margin-top: 2mm; font-weight: 700; color: #b00020; }
         .estado b { display: block; font-size: 17px; letter-spacing: .5px; }
         .copia { text-align: right; font-weight: 700; letter-spacing: 3px; font-size: 11px; margin-top: 3mm; }
         @media print { body { background: #fff; } .acciones { display: none; } .hoja { margin: 0; width: auto; min-height: 0; } }
@@ -97,7 +100,11 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
         </div>
     </div>
     <?php if ($d['cae'] !== null): ?>
-        <div class="estado"><b>CAE: <?= e($d['cae']['cae']) ?><?= $d['cae']['vto'] !== '' ? ' &nbsp; Vto. CAE: ' . e($d['cae']['vto']) : '' ?></b>Comprobante Autorizado ARCA</div>
+        <div class="estado con-qr">
+            <?php if ($d['qr'] !== null): ?><div class="qr"><?= \App\Core\Qr::svg($d['qr'], 3, 'QR de ARCA') ?></div><?php endif; ?>
+            <div><b>CAE: <?= e($d['cae']['cae']) ?><?= $d['cae']['vto'] !== '' ? ' &nbsp; Vto. CAE: ' . e($d['cae']['vto']) : '' ?></b>Comprobante Autorizado ARCA
+                <?php if ($d['aviso_prueba'] !== ''): ?><div class="prueba"><?= e($d['aviso_prueba']) ?></div><?php endif; ?></div>
+        </div>
     <?php else: ?>
         <div class="estado"><b>COMPROBANTE INTERNO</b>Sin CAE de ARCA: no tiene validez fiscal</div>
     <?php endif; ?>

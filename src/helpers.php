@@ -249,3 +249,27 @@ if (!function_exists('numero_visible')) {
         return numero_cbte($c['prefijo'], $cae !== '' && $cae !== '.' && $arca > 0 ? $arca : $c['comprobante']);
     }
 }
+
+if (!function_exists('estado_comprobante')) {
+    /**
+     * Cómo se rotula un comprobante: [texto, clase de badge]. CAE real, CAE de prueba (simulado u homologación), interno (sin CAE) o anulado.
+     *
+     * @param array<string,mixed> $c fila del subdiario (fe_ccae, es_prueba, fe_entorno, estado)
+     * @return array{0:string,1:string}
+     */
+    function estado_comprobante(array $c): array
+    {
+        if (($c['estado'] ?? '') !== '') {
+            return ['Anulado', 'badge-off'];
+        }
+        $cae = (string) ($c['fe_ccae'] ?? '');
+        if ($cae === '' || $cae === '.') {
+            return ['Interno', 'badge-warn'];
+        }
+        return match ((string) ($c['fe_entorno'] ?? '')) {
+            'S' => ['CAE simulado', 'badge-warn'],
+            'H' => ['CAE homologación', 'badge-warn'],
+            default => ['CAE', 'badge-ok'],
+        };
+    }
+}

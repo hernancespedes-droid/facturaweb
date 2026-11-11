@@ -151,7 +151,7 @@
     actualizarLetra(o ? o.getAttribute('data-letra') || '' : '');
   });
 
-  // ---- forma de pago
+  // ---- forma de pago (DECISIÓN D-09, Claude, a confirmar por Hernán: arranca en cuenta corriente, como el VFP, aunque el cliente tenga contado)
   function formaPago() {
     var cont = form.querySelector('[name="forma_pago"]:checked');
     var contado = cont && cont.value === '1' && tipo !== 'NC';
@@ -220,6 +220,10 @@
         recalcular();
       });
   });
+
+  // concepto: con servicios se pide el período y el vencimiento del pago
+  var concepto = form.querySelector('[data-concepto]');
+  if (concepto) concepto.addEventListener('change', function () { form.querySelector('[data-servicios]').hidden = concepto.value === '1'; });
 
   // un solo envío
   form.addEventListener('submit', function () {

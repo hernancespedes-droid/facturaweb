@@ -28,6 +28,11 @@ return [
         'from'      => 'facturas@dominio.com',
         'from_name' => 'Nombre de la empresa',
     ],
+    // Factura electrónica de ARCA (ver docs/ARCA-PUESTA-EN-MARCHA.md). Sin esta sección el sistema emite comprobantes internos.
+    'afip' => [
+        'modo'   => 'interno',   // interno | simulado | homologacion | produccion
+        'config' => '',          // ruta al config_afip.php del cliente, FUERA de public_html
+    ],
     'db' => [
         'host' => 'localhost',
         'name' => 'NOMBRE_DE_LA_BASE',

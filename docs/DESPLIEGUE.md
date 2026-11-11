@@ -48,7 +48,8 @@ Nunca se pisan `config/local.php` ni `storage/`.
 ## Factura electrónica (etapa 3)
 
 `config_afip.php`, certificado, clave y `cacert.pem` van **fuera de `public_html`** (por ejemplo `<raíz>/afip_<cliente>/`),
-uno por instalación. Ver `lib/afip_fe/GUIA_NUEVO_PROYECTO.md`.
+uno por instalación. Paso a paso (incluido el modo simulado para probar sin certificado): `docs/ARCA-PUESTA-EN-MARCHA.md`.
+En `config/local.php`: `'afip' => ['modo' => 'interno|simulado|homologacion|produccion', 'config' => '/ruta/afip_<cliente>/config_afip.php']`.
 
 ## Diagnóstico
 

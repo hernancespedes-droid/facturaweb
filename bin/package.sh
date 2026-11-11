@@ -17,7 +17,7 @@ tar \
     --exclude='./bin/setup-dev.sh' --exclude='./bin/test.sh' \
     --exclude='./bin/dev-server.sh' --exclude='./bin/package.sh' --exclude='./bin/env.sh' --exclude='./vfp' --exclude='./.claude' --exclude='./lib/afip_fe/tests' --exclude='./bin/demo-usuarios.php' \
     --exclude='./config/local.php' \
-    --exclude='./storage/logs/*' --exclude='./storage/uploads/*' --exclude='./storage/sessions/*' \
+    --exclude='./storage/afip_simulado' --exclude='./storage/logs/*' --exclude='./storage/uploads/*' --exclude='./storage/sessions/*' \
     -cf - . | tar -xf - -C "$STAGE"
 
 # Si el proyecto llega a usar librerías de Composer, se instalan solo las de producción.

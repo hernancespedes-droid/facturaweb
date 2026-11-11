@@ -9,6 +9,10 @@ use App\Core\Valida;
 use App\Core\View;
 use App\Http\Request;
 use App\Http\Response;
+use App\Modules\Arca\Arca;
+use App\Modules\Arca\ArcaSinRespuesta;
+use App\Modules\Arca\AutorizacionRechazada;
+use App\Modules\Arca\GrabacionFallida;
 use App\Modules\Auth\Auth;
 use App\Modules\Clientes\ClientesService;
 use App\Modules\Configuracion\Configuracion;
@@ -63,7 +67,7 @@ final class ComprobantesController
         if (!Tipos::valido($tipo)) {
             return new Response(404);
         }
-        $datos = ['tipo' => $tipo, 'forma_pago' => '2', 'items' => []];
+        $datos = ['tipo' => $tipo, 'forma_pago' => '2', 'items' => [], 'concepto' => (string) \App\Modules\Configuracion\Configuracion::entero('comprobantes.concepto_defecto', 1)];
         $desde = (int) ($req->query['desde'] ?? 0);
         if ($desde > 0 && $tipo !== 'FC') {
             $origen = $svc->obtener($desde);
@@ -106,7 +110,7 @@ final class ComprobantesController
         }
         return Response::html(View::render('comprobantes/revisar', [
             'title' => 'Revisar ' . Tipos::titulo($r['cbte']['tipo'], $r['cbte']['letra']), 'nav' => 'comprobantes_' . strtolower($r['cbte']['tipo']),
-            'c' => $r['cbte'], 'datos' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'operacion' => bin2hex(random_bytes(16)),
+            'c' => $r['cbte'], 'etiquetaArca' => Arca::etiqueta(), 'datos' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'operacion' => bin2hex(random_bytes(16)),
         ]));
     }
 
@@ -127,6 +131,13 @@ final class ComprobantesController
         } catch (\InvalidArgumentException) {
             Session::flash('error', 'La pantalla de revisión venció. Revisá el comprobante de nuevo.');
             return Response::redirect(url('/comprobantes/nuevo'));
+        } catch (AutorizacionRechazada $ex) { // ARCA dijo que no: no se grabó nada, se vuelve al formulario con el motivo
+            return self::form($svc, $datos, ['arca' => $ex->getMessage()], 422);
+        } catch (ArcaSinRespuesta $ex) {
+            return self::form($svc, $datos, ['arca' => $ex->getMessage()], 502);
+        } catch (GrabacionFallida $ex) {
+            Session::flash('error', $ex->getMessage());
+            return Response::redirect(url(Auth::puede('arca.administrar') ? '/arca' : '/comprobantes'));
         }
         Session::flash($e['repetido'] ? 'info' : 'ok', $e['repetido']
             ? 'Ese comprobante ya se había emitido (no se emitió otro).'
@@ -251,7 +262,9 @@ final class ComprobantesController
             'vendedores' => $pdo->query('SELECT codigo, descripcion FROM vendedores ORDER BY descripcion')->fetchAll(),
             'condiciones' => $pdo->query('SELECT codigo, descripcion FROM condicionpago ORDER BY descripcion')->fetchAll(),
             'formas' => $formas, 'bancos' => $pdo->query('SELECT codigo, descripcion FROM bancos ORDER BY descripcion')->fetchAll(),
-            'emisor' => $emisor, 'letra' => $letra, 'puedeCredito' => Auth::puede('comprobantes.credito'),
+            'emisor' => $emisor, 'letra' => $letra, 'modoArca' => Arca::modo(), 'etiquetaArca' => Arca::etiqueta(),
+            'electronicas' => array_filter($svc->sucursales(), static fn ($s) => Arca::electronica($s)),
+            'conceptoDefecto' => \App\Modules\Configuracion\Configuracion::entero('comprobantes.concepto_defecto', 1), 'puedeCredito' => Auth::puede('comprobantes.credito'),
             'deuda' => $cliente !== null ? $svc->deudaCliente((int) $cliente['codigo']) : 0.0,
         ]), $status);
     }

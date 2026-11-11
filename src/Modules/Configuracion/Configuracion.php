@@ -16,7 +16,7 @@ final class Configuracion
     public const MAX_ENTERO = 100000;
 
     /** Valores por si la migración todavía no se aplicó. */
-    private const PREDETERMINADOS = [self::POR_PAGINA => '50'];
+    private const PREDETERMINADOS = [self::POR_PAGINA => '50', 'comprobantes.nc_limite_factura' => '1', 'comprobantes.credito_cero_sin_limite' => '1', 'comprobantes.concepto_defecto' => '1'];
 
     /** @var array<string,string>|null */
     private static ?array $cache = null;
@@ -45,6 +45,12 @@ final class Configuracion
     }
 
     /** Renglones por página de las grillas (entre 10 y 500). */
+    /** Interruptor sí/no de Configuración (los de "decisiones de Claude, a confirmar": docs/decisiones-pendientes.md). */
+    public static function activo(string $clave): bool
+    {
+        return self::valor($clave) === '1';
+    }
+
     public static function porPagina(): int
     {
         return max(10, min(500, self::entero(self::POR_PAGINA, 50)));

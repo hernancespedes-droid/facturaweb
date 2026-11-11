@@ -7,15 +7,17 @@ use InvalidArgumentException;
 
 /**
  * Código QR propio, sin librerías (no hay Composer en el sandbox): modo byte, corrección de errores M (~15 %),
- * versiones 1 a 10 (hasta 213 bytes: alcanza de sobra para una URL). Sigue ISO/IEC 18004: Reed-Solomon sobre
+ * versiones 1 a 14 (hasta 362 bytes: alcanza para la URL del QR de ARCA). Sigue ISO/IEC 18004: Reed-Solomon sobre
  * GF(256), bloques intercalados, patrones de posición, alineación y sincronismo, información de formato y de
  * versión, y la máscara con menor penalidad. Se dibuja en SVG (nítido al imprimir).
  */
 final class Qr
 {
     /** Por versión (1..10), nivel M: códigos de corrección por bloque y cantidad de bloques. */
-    private const EC_POR_BLOQUE = [1 => 10, 16, 26, 18, 24, 16, 18, 22, 22, 26];
-    private const BLOQUES = [1 => 1, 1, 1, 2, 2, 4, 4, 4, 5, 5];
+    private const EC_POR_BLOQUE = [1 => 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24];
+    private const BLOQUES = [1 => 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9];
+    /** Versión más grande que se genera: la 14 con corrección M lleva hasta 362 bytes (la URL del QR de ARCA ronda los 310). */
+    private const VERSION_MAXIMA = 14;
     private const NIVEL_M = 0; // bits del nivel M en la información de formato
 
     /** @var array<int,array<int,bool>> */
@@ -38,7 +40,7 @@ final class Qr
     {
         $bytes = array_values(unpack('C*', $texto) ?: []);
         $version = null;
-        for ($v = 1; $v <= 10; $v++) {
+        for ($v = 1; $v <= self::VERSION_MAXIMA; $v++) {
             $bitsCuenta = $v <= 9 ? 8 : 16;
             if (4 + $bitsCuenta + 8 * count($bytes) <= self::datosPorVersion($v) * 8) {
                 $version = $v;
@@ -46,7 +48,7 @@ final class Qr
             }
         }
         if ($version === null) {
-            throw new InvalidArgumentException('Texto demasiado largo para el QR (máximo 213 bytes).');
+            throw new InvalidArgumentException('Texto demasiado largo para el QR (máximo 362 bytes).');
         }
         $q = new self($version);
         $q->patrones();

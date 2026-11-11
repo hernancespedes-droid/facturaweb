@@ -22,3 +22,4 @@ fi
 echo "==> Pruebas de navegador (Playwright)"
 php bin/migrate.php
 node e2e/recorrido.js
+node e2e/arca.js

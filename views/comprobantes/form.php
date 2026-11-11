@@ -28,16 +28,21 @@ foreach ($alicuotas as $a) {
 $formaPago = $v('forma_pago', '2');
 $fpagoElegida = $v('fpago');
 $sinSucursal = $sucursales === [];
-$errorGeneral = array_intersect_key($errores, array_flip(['tipo', 'emisor', 'sucursal', 'forma_pago', 'credito']));
+$errorGeneral = array_intersect_key($errores, array_flip(['arca', 'tipo', 'emisor', 'sucursal', 'forma_pago', 'credito']));
+$concepto = $v('concepto', (string) $conceptoDefecto);
+$hoyIso = date('Y-m-d');
 ?>
 <div class="page-head">
     <div>
-        <p class="eyebrow"><?= e($emisor['empresa'] ?: 'Empresa sin cargar') ?> · modo interno (sin CAE de ARCA todavía)</p>
+        <p class="eyebrow"><?= e($emisor['empresa'] ?: 'Empresa sin cargar') ?> · <?= e($etiquetaArca) ?></p>
         <h1><?= e($nombre) ?> <span data-letra-titulo><?= e($letra) ?></span></h1>
     </div>
 </div>
 
 <?php foreach ($errorGeneral as $mensaje): ?><div class="alerta alerta-error" role="alert"><?= nl2br(e($mensaje)) ?></div><?php endforeach; ?>
+<?php if ($modoArca !== 'interno' && $electronicas === []): ?>
+    <div class="alerta alerta-warn">ARCA está en modo <b><?= e($modoArca) ?></b> pero ninguna sucursal tiene tildada "Factura electrónica": los comprobantes salen internos. Se tilda en Tablas → Sucursales.</div>
+<?php endif; ?>
 <?php if ($sinSucursal): ?><div class="alerta alerta-error">No hay ninguna sucursal con punto de venta: cargala en Tablas → Sucursales.</div><?php endif; ?>
 
 <form method="post" action="<?= e(url('/comprobantes/revisar')) ?>" class="card form" id="form-comprobante" novalidate
@@ -148,6 +153,22 @@ $errorGeneral = array_intersect_key($errores, array_flip(['tipo', 'emisor', 'suc
     </div>
 
     <h2>Otros datos</h2>
+    <div class="grid-2">
+        <label class="field<?= isset($errores['concepto']) ? ' has-error' : '' ?>"><span>Concepto</span>
+            <select name="concepto" data-concepto>
+                <?php foreach ([1 => 'Productos', 2 => 'Servicios', 3 => 'Productos y servicios'] as $k => $t): ?>
+                    <option value="<?= $k ?>" <?= $concepto === (string) $k ? 'selected' : '' ?>><?= e($t) ?></option>
+                <?php endforeach; ?>
+            </select><?= $err('concepto') ?></label>
+    </div>
+    <div class="grid-2" data-servicios <?= (int) $concepto > 1 ? '' : 'hidden' ?>>
+        <label class="field<?= isset($errores['serv_desde']) ? ' has-error' : '' ?>"><span>Servicio desde</span>
+            <input type="date" name="serv_desde" value="<?= e($v('serv_desde', $hoyIso)) ?>"><?= $err('serv_desde') ?></label>
+        <label class="field<?= isset($errores['serv_hasta']) ? ' has-error' : '' ?>"><span>Servicio hasta</span>
+            <input type="date" name="serv_hasta" value="<?= e($v('serv_hasta', $hoyIso)) ?>"><?= $err('serv_hasta') ?></label>
+        <label class="field<?= isset($errores['vto_pago']) ? ' has-error' : '' ?>"><span>Vencimiento del pago</span>
+            <input type="date" name="vto_pago" value="<?= e($v('vto_pago', $hoyIso)) ?>"><?= $err('vto_pago') ?></label>
+    </div>
     <div class="grid-2">
         <label class="field<?= isset($errores['descuento']) ? ' has-error' : '' ?>"><span>Descuento general (%)</span>
             <input name="descuento" value="<?= e($v('descuento')) ?>" inputmode="decimal" data-decimales="2" data-descuento><?= $err('descuento') ?></label>

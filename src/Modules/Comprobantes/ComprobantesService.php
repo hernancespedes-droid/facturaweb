@@ -5,6 +5,11 @@ namespace App\Modules\Comprobantes;
 
 use App\Core\Db;
 use App\Core\Valida;
+use App\Modules\Arca\Arca;
+use App\Modules\Arca\ArcaSinRespuesta;
+use App\Modules\Arca\AutorizacionRechazada;
+use App\Modules\Arca\GrabacionFallida;
+use App\Modules\Configuracion\Configuracion;
 use PDO;
 
 /**
@@ -135,6 +140,14 @@ final class ComprobantesService
         if ($suc === null) {
             $err['sucursal'] = 'Elegí la sucursal (punto de venta). Si no hay ninguna, cargá el punto de venta en Tablas → Sucursales.';
         }
+        // Con ARCA: la sucursal tiene que poder emitir electrónicamente y lo que se corrige tiene que tener CAE
+        $electronica = $suc !== null && Arca::electronica($suc);
+        if ($electronica && ($problema = Arca::problema($suc)) !== null) {
+            $err['sucursal'] = $problema;
+        }
+        if ($electronica && is_array($asoc) && ((string) $asoc['fe_ccae'] === '' || (string) $asoc['fe_ccae'] === '.')) {
+            $err['asociado'] = 'El comprobante que se corrige no tiene CAE (es interno o de prueba): ARCA no lo conoce, no se puede hacer una nota electrónica sobre él.';
+        }
 
         // Letra
         $letra = '';
@@ -150,6 +163,28 @@ final class ComprobantesService
             $err['asociado'] = 'El comprobante asociado no es compatible con la condición de IVA de la empresa.';
         }
 
+        // Concepto (ARCA): productos, servicios o ambos. Con servicios hace falta el período y el vencimiento del pago.
+        // DECISIÓN D-11 (Claude, a confirmar por Hernán): el concepto por omisión sale de Configuración (el VFP mandaba siempre 1, productos).
+        $concepto = (int) ($in['concepto'] ?? Configuracion::entero('comprobantes.concepto_defecto', 1));
+        if (!in_array($concepto, [1, 2, 3], true)) {
+            $err['concepto'] = 'Elegí productos, servicios o ambos.';
+            $concepto = 1;
+        }
+        $servDesde = $servHasta = $vtoPago = null;
+        if ($concepto > 1) {
+            $hoy = date('Y-m-d');
+            foreach (['serv_desde' => &$servDesde, 'serv_hasta' => &$servHasta, 'vto_pago' => &$vtoPago] as $campo => &$ref) {
+                $ref = trim((string) ($in[$campo] ?? '')) === '' ? $hoy : Valida::fecha((string) $in[$campo]);
+                if ($ref === null) {
+                    $err[$campo] = 'La fecha no es válida.';
+                }
+            }
+            unset($ref);
+            if ($servDesde !== null && $servHasta !== null && $servHasta < $servDesde) {
+                $err['serv_hasta'] = 'El fin del período no puede ser anterior al inicio.';
+            }
+        }
+
         // Forma de pago
         $formaPago = (int) ($in['forma_pago'] ?? 0);
         if (!in_array($formaPago, [1, 2], true)) {
@@ -160,7 +195,9 @@ final class ComprobantesService
             $pago = $this->validarPago($in, $err);
         }
 
-        // Fecha: siempre la de hoy (como el VFP; ARCA no acepta fechas futuras ni muy viejas)
+        // DECISIÓN D-06 (Claude, a confirmar por Hernán): la fecha es siempre la de hoy, como el VFP (ARCA aceptaría hasta 5 días
+        // atrás en productos y 10 en servicios, nunca antes del último comprobante aprobado). Para permitir otra fecha habría que
+        // agregar el campo al formulario y validar contra el último comprobante de ese punto de venta y tipo.
         $fecha = date('Y-m-d');
 
         // Descuento, vendedor, condición de pago
@@ -204,7 +241,7 @@ final class ComprobantesService
             if ($texto === '' && $art !== null) {
                 $texto = (string) $art['descripcion'];
             }
-            if ($texto === '' || mb_strlen($texto) > 2000) {
+            if ($texto === '' || mb_strlen($texto) > 2000) { // D-10 (Claude, a confirmar): hasta 2.000 letras por renglón (el VFP de OYS llegó a 3.900)
                 $e[] = 'falta la descripción (hasta 2.000 letras)';
             }
             $cant = Valida::decimal($cantTxt);
@@ -250,17 +287,21 @@ final class ComprobantesService
             }
         }
 
-        // Notas de crédito: no pueden superar la factura
-        if ($calc !== null && $tipo === 'NC' && is_array($asoc) && !isset($err['items'])) {
+        // DECISIÓN D-01 (Claude, a confirmar por Hernán): una nota de crédito no puede superar lo que queda por acreditar de la
+        // factura. El VFP lo permitía. Se cambia en Configuración (comprobantes.nc_limite_factura) sin tocar el código.
+        if ($calc !== null && $tipo === 'NC' && is_array($asoc) && !isset($err['items']) && Configuracion::activo('comprobantes.nc_limite_factura')) {
             $libre = Calculadora::r2((float) $asoc['neto'] - $this->acreditado((int) $asoc['fe_clave']));
             if ($calc['total'] > $libre + 0.004) {
                 $err['items'] = 'La nota de crédito (' . plata($calc['total']) . ') supera lo que queda por acreditar de la factura (' . plata($libre) . ').';
             }
         }
 
-        // Crédito del cliente (solo cuenta corriente y si el cliente tiene límite)
+        // DECISIÓN D-02 (Claude, a confirmar por Hernán): un cliente con límite de crédito 0 no tiene control de crédito. En el VFP
+        // cada comprobante a cuenta corriente de un cliente con límite 0 pedía autorización de un supervisor. Se cambia en
+        // Configuración (comprobantes.credito_cero_sin_limite): destildado, el límite 0 significa "no se le puede fiar".
         $excede = false;
-        if ($calc !== null && $cliente !== null && $formaPago === 2 && $tipo !== 'NC' && (float) $cliente['credito'] > 0) {
+        $controlaCredito = $cliente !== null && ((float) $cliente['credito'] > 0 || !Configuracion::activo('comprobantes.credito_cero_sin_limite'));
+        if ($calc !== null && $cliente !== null && $formaPago === 2 && $tipo !== 'NC' && $controlaCredito) {
             $deuda = $this->deudaCliente($codCli);
             $excede = $deuda + $calc['total'] > (float) $cliente['credito'] + 0.004;
             if ($excede && !($puedeExcederCredito && ($in['excede_ok'] ?? '') === '1')) {
@@ -293,7 +334,8 @@ final class ComprobantesService
             'cliente' => $cliente, 'cond_arca' => $condArca, 'forma_pago' => $formaPago, 'pago' => $pago,
             'vendedor' => $vendedor, 'cond_pago' => $condPago, 'descuento' => $desc, 'observaciones' => $obs, 'orden_compra' => $oc,
             'email' => $mails, 'asociado' => is_array($asoc) ? $asoc : null, 'calculo' => $calc, 'excede_credito' => $excede,
-            'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor,
+            'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
+            'concepto' => $concepto, 'serv_desde' => $servDesde, 'serv_hasta' => $servHasta, 'vto_pago' => $vtoPago,
         ]];
     }
 
@@ -334,7 +376,12 @@ final class ComprobantesService
         return Calculadora::r2((float) $st->fetchColumn());
     }
 
-    /** @param array<string,string> $err @return array<string,mixed>|null */
+    /**
+     * DECISIÓN D-04 (Claude, a confirmar por Hernán): un solo medio de pago por comprobante (efectivo, tickets, tarjeta o cheque).
+     * El VFP tenía una pantalla de pagos mixtos (pagos_factu_ped) y cheques de terceros: eso va con las cobranzas (etapa 4).
+     *
+     * @param array<string,string> $err @return array<string,mixed>|null
+     */
     private function validarPago(array $in, array &$err): ?array
     {
         $cod = trim((string) ($in['fpago'] ?? ''));
@@ -393,11 +440,21 @@ final class ComprobantesService
 
     // ------------------------------------------------------------------ emitir
 
+    // DECISIÓN D-05 (Claude, a confirmar por Hernán): no hay anulación de comprobantes. Uno con CAE no se anula (se cancela con una
+    // nota de crédito, regla de ARCA) y los de prueba se borran juntos desde Sistema → ARCA. Si hace falta anular uno sin CAE hay
+    // que agregar acá una acción que lo marque (subdiario.estado = 'A') y ponga en cero su ctact.
+
     /**
-     * Numera y graba. Si la clave de la operación ya se usó, devuelve el comprobante ya emitido (no emite otro).
+     * Emite el comprobante. Si la clave de la operación ya se usó, devuelve el comprobante ya emitido (no emite otro).
+     *
+     *  - Sucursal electrónica (modo ≠ interno): registra la operación, pide el CAE a ARCA y graba con el número y el CAE de ARCA. Si ARCA
+     *    rechaza no se graba nada (AutorizacionRechazada). Si ARCA aprueba y no se puede grabar, queda todo registrado para recuperarlo
+     *    desde Sistema → ARCA (GrabacionFallida) y NUNCA se pide otro CAE para la misma operación.
+     *  - Si no: numera con la sucursal (FOR UPDATE) y graba como comprobante interno, sin CAE.
      *
      * @param array<string,mixed> $cbte el 'cbte' de armar()
      * @return array{id:int,numero:int,repetido:bool}
+     * @throws AutorizacionRechazada|ArcaSinRespuesta|GrabacionFallida
      */
     public function emitir(array $cbte, string $operacion, int $usuarioId): array
     {
@@ -408,6 +465,122 @@ final class ComprobantesService
         if ($previo !== null) {
             return $previo + ['repetido' => true];
         }
+        if (!empty($cbte['electronica'])) {
+            return $this->emitirConArca($cbte, $operacion, $usuarioId);
+        }
+        return $this->grabar($cbte, $operacion, $usuarioId, null);
+    }
+
+    // DECISIÓN D-13 (Claude, a confirmar por Hernán): si ARCA no contesta (corte, timeout) NO se reintenta sola ni se vuelve a pedir CAE con la
+    // misma operación: queda 'pendiente' y se revisa en Sistema → ARCA, para no duplicar un comprobante que ARCA pudo haber aprobado.
+    // DECISIÓN D-12 (Claude, a confirmar por Hernán): todo comprobante que no sea de producción (interno, simulado, homologación) se marca
+    // es_prueba = 1; el Master los borra juntos desde Sistema → ARCA (ArcaController::borrarPruebas) y el numerador vuelve atrás.
+    /** @return array{id:int,numero:int,repetido:bool} */
+    private function emitirConArca(array $cbte, string $operacion, int $usuarioId): array
+    {
+        $pdo = $this->pdo;
+        $entorno = Arca::entorno();
+        $json = static fn (mixed $v): string => (string) json_encode($v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION);
+        $c = $cbte['calculo'];
+        try { // 1) queda registrado ANTES de hablar con ARCA
+            $pdo->prepare('INSERT INTO afip_operaciones (operacion, estado, entorno, tipo_afip, pto_vta, total, usuario_id, solicitud) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                ->execute([$operacion, 'pendiente', $entorno, $cbte['tipo_afip'], $cbte['prefijo'], $c['total'], $usuarioId > 0 ? $usuarioId : null, $json($cbte)]);
+        } catch (\PDOException $e) {
+            if ($e->getCode() !== '23000') {
+                throw $e;
+            }
+            $op = $pdo->prepare('SELECT * FROM afip_operaciones WHERE operacion = ?');
+            $op->execute([$operacion]);
+            $f = $op->fetch();
+            if ($f === false) {
+                throw $e;
+            }
+            if ($f['estado'] === 'grabada' && $f['subdiario_id'] !== null) {
+                return ['id' => (int) $f['subdiario_id'], 'numero' => (int) $f['numero'], 'repetido' => true];
+            }
+            if (in_array($f['estado'], ['aprobada', 'error'], true)) { // ARCA ya lo aprobó: no se pide otro CAE, se graba
+                return $this->recuperar((int) $f['id']) + ['repetido' => true];
+            }
+            if ($f['estado'] === 'pendiente') {
+                throw new ArcaSinRespuesta('Esta operación ya se mandó a ARCA y no hay respuesta registrada. No se vuelve a pedir para no duplicar el comprobante: '
+                    . 'revisá Sistema → ARCA (comprobantes pendientes).');
+            }
+            $pdo->prepare("UPDATE afip_operaciones SET estado = 'pendiente', detalle = NULL WHERE id = ?")->execute([$f['id']]); // rechazada: se puede reintentar
+        }
+        $id = (int) $pdo->query('SELECT id FROM afip_operaciones WHERE operacion = ' . $pdo->quote($operacion))->fetchColumn();
+        $marcar = function (string $estado, array $campos = []) use ($pdo, $id): void {
+            $set = ['estado = ?'];
+            $par = [$estado];
+            foreach ($campos as $k => $v) {
+                $set[] = "{$k} = ?";
+                $par[] = $v;
+            }
+            $par[] = $id;
+            $pdo->prepare('UPDATE afip_operaciones SET ' . implode(', ', $set) . ' WHERE id = ?')->execute($par);
+        };
+        try { // 2) ARCA
+            $r = Arca::autorizar($cbte);
+        } catch (AutorizacionRechazada $e) {
+            $marcar('rechazada', ['detalle' => mb_substr($e->getMessage(), 0, 600)]);
+            throw $e;
+        } catch (ArcaSinRespuesta $e) {
+            $marcar('pendiente', ['detalle' => mb_substr($e->getMessage(), 0, 600)]);
+            throw $e;
+        }
+        // 3) aprobada: queda anotado el CAE antes de tocar los datos del comprobante
+        $marcar('aprobada', ['numero' => $r['numero'], 'cae' => $r['cae'], 'vence' => $r['vence'], 'respuesta' => $json($r['respuesta'])]);
+        Arca::registrar('operacion', 'aprobada', $json(['operacion' => $operacion, 'numero' => $r['numero'], 'cae' => $r['cae'], 'cbte' => $cbte]), '', 0.0);
+        try { // 4) grabar
+            $g = $this->grabar($cbte, $operacion, $usuarioId, $r);
+        } catch (\Throwable $e) {
+            $marcar('error', ['detalle' => mb_substr('Aprobado por ARCA y no se pudo grabar: ' . $e->getMessage(), 0, 600)]);
+            \App\App::registrar($e);
+            throw new GrabacionFallida('ARCA aprobó el comprobante (número ' . $r['numero'] . ', CAE ' . $r['cae'] . ') pero no se pudo grabar. Quedó registrado: '
+                . 'recuperalo desde Sistema → ARCA (no hace falta volver a emitirlo).');
+        }
+        $marcar('grabada', ['subdiario_id' => $g['id']]);
+        return $g;
+    }
+
+    /**
+     * Graba un comprobante que ARCA ya aprobó y no se había podido grabar (afip_operaciones en estado aprobada o error).
+     *
+     * @return array{id:int,numero:int,repetido:bool}
+     */
+    public function recuperar(int $operacionId): array
+    {
+        $st = $this->pdo->prepare("SELECT * FROM afip_operaciones WHERE id = ? AND estado IN ('aprobada', 'error')");
+        $st->execute([$operacionId]);
+        $f = $st->fetch();
+        if ($f === false || (string) $f['cae'] === '') {
+            throw new \RuntimeException('Esa operación no está pendiente de grabar.');
+        }
+        $previo = $this->porOperacion((string) $f['operacion']);
+        if ($previo !== null) { // ya estaba grabado
+            $this->pdo->prepare("UPDATE afip_operaciones SET estado = 'grabada', subdiario_id = ? WHERE id = ?")->execute([$previo['id'], $operacionId]);
+            return $previo + ['repetido' => true];
+        }
+        $cbte = json_decode((string) $f['solicitud'], true);
+        $resp = json_decode((string) $f['respuesta'], true) ?: [];
+        if (!is_array($cbte)) {
+            throw new \RuntimeException('La solicitud guardada no se puede leer.');
+        }
+        $r = ['numero' => (int) $f['numero'], 'cae' => (string) $f['cae'], 'vence' => (string) $f['vence'], 'fecha' => (string) $cbte['fecha'],
+            'observaciones' => (array) ($resp['observaciones'] ?? []), 'respuesta' => $resp];
+        $g = $this->grabar($cbte, (string) $f['operacion'], (int) $f['usuario_id'], $r);
+        $this->pdo->prepare("UPDATE afip_operaciones SET estado = 'grabada', subdiario_id = ?, detalle = NULL WHERE id = ?")->execute([$g['id'], $operacionId]);
+        return $g + ['repetido' => false];
+    }
+
+    /**
+     * Numera (con ARCA, o con la sucursal si $arca es null) y graba subdiario, iva, estadistica, caja y ctact en UNA transacción.
+     *
+     * @param array<string,mixed> $cbte
+     * @param array{numero:int,cae:string,vence:string,fecha:string,observaciones:string[]}|null $arca
+     * @return array{id:int,numero:int,repetido:bool}
+     */
+    private function grabar(array $cbte, string $operacion, int $usuarioId, ?array $arca): array
+    {
         $tipo = $cbte['tipo'];
         $letra = $cbte['letra'];
         $col = Tipos::columnaNumerador($tipo, $letra);
@@ -428,16 +601,20 @@ final class ComprobantesService
             if ($ultimo === false) {
                 throw new \RuntimeException('La sucursal ya no existe.');
             }
-            $numero = (int) $ultimo + 1;
-            $existe = $this->pdo->prepare('SELECT 1 FROM subdiario WHERE tipo = ? AND letra = ? AND sucursal = ? AND comprobante = ?');
-            while (true) { // como el VFP: si el número ya está usado en el subdiario, sigue con el próximo
-                $existe->execute([$tipo, $letra, $cbte['sucursal'], $numero]);
-                if ($existe->fetchColumn() === false) {
-                    break;
+            if ($arca !== null) { // con ARCA el número es el que dio ARCA; el último de la sucursal solo acompaña
+                $numero = (int) $arca['numero'];
+            } else {
+                $numero = (int) $ultimo + 1;
+                $existe = $this->pdo->prepare('SELECT 1 FROM subdiario WHERE tipo = ? AND letra = ? AND sucursal = ? AND comprobante = ?');
+                while (true) { // como el VFP: si el número ya está usado en el subdiario, sigue con el próximo
+                    $existe->execute([$tipo, $letra, $cbte['sucursal'], $numero]);
+                    if ($existe->fetchColumn() === false) {
+                        break;
+                    }
+                    $numero++;
                 }
-                $numero++;
             }
-            $this->pdo->prepare("UPDATE sucursales SET `{$col}` = ?, actualizacion = ? WHERE codigo = ?")->execute([$numero, $ahora, $cbte['sucursal']]);
+            $this->pdo->prepare("UPDATE sucursales SET `{$col}` = GREATEST(`{$col}`, ?), actualizacion = ? WHERE codigo = ?")->execute([$numero, $ahora, $cbte['sucursal']]);
 
             $this->insertar('subdiario', [
                 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'],
@@ -452,7 +629,13 @@ final class ComprobantesService
                 'fe_fecha_asoc' => $asoc !== null ? $asoc['fecha'] : null, 'cliente_razon_social' => $cli['razon_social'],
                 'cliente_domicilio' => $cli['domicilio'], 'cliente_localidad' => $cli['localidad'],
                 'creado_por' => $usuarioId > 0 ? $usuarioId : null, 'operacion' => $operacion,
-            ]);
+                'fe_concepto' => (int) ($cbte['concepto'] ?? 1), 'fe_serv_desde' => $cbte['serv_desde'] ?? null, 'fe_serv_hasta' => $cbte['serv_hasta'] ?? null,
+                'fe_vencimiento' => $cbte['vto_pago'] ?? null,
+            ] + ($arca === null
+                ? ['es_prueba' => 1, 'fe_entorno' => '']
+                : ['electronica' => 1, 'fe_nrocbte' => $numero, 'fe_ccae' => $arca['cae'], 'fe_dfecha' => $arca['fecha'], 'fe_dvtocae' => $arca['vence'],
+                   'fe_ntipoafip' => $cbte['tipo_afip'], 'fe_mobservaciones' => $arca['observaciones'] !== [] ? implode("\n", $arca['observaciones']) : null,
+                   'es_prueba' => Arca::entorno() === 'P' ? 0 : 1, 'fe_entorno' => Arca::entorno()]));
             $id = (int) $this->pdo->lastInsertId();
 
             foreach ($c['iva'] as $g) {
@@ -646,7 +829,7 @@ final class ComprobantesService
         [$total, $suma] = $st->fetch(PDO::FETCH_NUM);
         $desde = max(0, ($pagina - 1) * $porPagina);
         $st = $this->pdo->prepare(
-            "SELECT s.fe_clave, s.fecha, s.tipo, s.letra, s.prefijo, s.comprobante, s.fe_nrocbte, s.fe_ccae, s.cliente, s.neto, s.forma_pago, s.estado, s.electronica,
+            "SELECT s.fe_clave, s.fecha, s.tipo, s.letra, s.prefijo, s.comprobante, s.fe_nrocbte, s.fe_ccae, s.cliente, s.neto, s.forma_pago, s.estado, s.electronica, s.fe_entorno, s.es_prueba,
                     COALESCE(s.cliente_razon_social, c.razon_social) AS razon_social {$base}
               ORDER BY s.fecha DESC, s.fe_clave DESC LIMIT {$porPagina} OFFSET {$desde}"
         );

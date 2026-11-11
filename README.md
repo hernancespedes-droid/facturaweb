@@ -6,7 +6,7 @@ migraciones, página Sistema, pruebas). **Una instalación por cliente**: su car
 
 Análisis y etapas: [`docs/analisis-migracion.md`](docs/analisis-migracion.md). Factura electrónica (etapa 3): `lib/afip_fe/`.
 
-## Qué tiene (etapas 1 y 2, versión 0.3.0)
+## Qué tiene (etapas 1 a 3, versión 0.4.0)
 
 - **Ingreso** con bloqueo por intentos, "recordarme", contraseña temporal y cierre por inactividad.
 - **Usuarios y roles** (Sistema): cada usuario tiene un rol; cada rol, las opciones del menú que puede usar
@@ -15,7 +15,9 @@ Análisis y etapas: [`docs/analisis-migracion.md`](docs/analisis-migracion.md). 
   bancos, cotizaciones del dólar, vendedores, alícuotas de IVA, condiciones de pago, transportes y formas de pago.
 - **Clientes y artículos** con el esquema O&S (mismos nombres de tabla y campo que `datos.dbc`).
 - **Facturación** (etapa 2): facturas, notas de crédito y débito A, B y C con letra automática, IVA por alícuota, numeración, cuenta corriente,
-  impresión A4 y PDF propio y envío por mail. Todavía **sin CAE** de ARCA (etapa 3): los comprobantes son internos.
+  impresión A4 y PDF propio y envío por mail. Los comprobantes son internos hasta activar ARCA.
+- **Factura electrónica** (etapa 3): CAE de ARCA con QR, modos interno/simulado/homologación/producción, recuperación de lo aprobado y no grabado y
+  Sistema → ARCA. Puesta en marcha: [`docs/ARCA-PUESTA-EN-MARCHA.md`](docs/ARCA-PUESTA-EN-MARCHA.md); decisiones a confirmar: [`docs/decisiones-pendientes.md`](docs/decisiones-pendientes.md).
 - **Migrador DBF → MySQL** (`php bin/migrar-dbf.php` o subiendo un .zip en Sistema): ver [`docs/migracion-dbf.md`](docs/migracion-dbf.md).
 
 ## Desarrollo

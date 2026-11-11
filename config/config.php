@@ -28,6 +28,12 @@ $base = [
         'inactividad_minutos' => (int) env('AUTH_INACTIVIDAD_MINUTOS', '240'),
     ],
     // Envío de comprobantes por mail (SMTP). Vacío = no configurado. Se completa en config/local.php.
+    // Factura electrónica de ARCA. modo: interno (sin CAE) | simulado | homologacion | produccion. 'config' = ruta al
+    // config_afip.php del cliente, FUERA de public_html. Se completa en config/local.php (ver docs/ARCA-PUESTA-EN-MARCHA.md).
+    'afip' => [
+        'modo'   => env('AFIP_MODO', 'interno'),
+        'config' => env('AFIP_CONFIG', ''),
+    ],
     'mail' => [
         'host'      => env('MAIL_HOST', ''),
         'port'      => (int) env('MAIL_PORT', '587'),

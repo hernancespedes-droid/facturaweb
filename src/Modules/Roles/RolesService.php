@@ -37,6 +37,7 @@ final class RolesService
         'forma_de_pagos' => ['tablas.forma_de_pagos', []],
         'usuarios' => ['usuarios.administrar', []],
         'configuracion' => ['configuracion.administrar', []],
+        'arca' => ['arca.administrar', []],
     ];
     /** Qué más habilita cada opción en el menú (para que se entienda al tildar). */
     public const INCLUYE = [
