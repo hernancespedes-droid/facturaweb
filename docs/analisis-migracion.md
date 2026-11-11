@@ -165,4 +165,4 @@ Estimación actualizada el 11/11/2026 con las decisiones de Hernán (E, M, FCE, 
 
   - Hoy un RI tiene que hacer **A** a monotributistas (el histórico les hacía B).
   - "Exento (A)" / "Exento Especial (A)": a un exento hoy corresponde **B**. A confirmar con Hernán.
-- **`empresas.dbf`** dice "QUEDUL S.A." y `sucursales` "Organizacion & Sistemas": es una base de demostración/propia de O&S, no de un cliente externo.
+- **`empresas.dbf`** tiene el nombre de otra empresa (restos de una instalación anterior) y `sucursales` dice "Organizacion & Sistemas": confirmar qué datos son de OYS.
