@@ -33,7 +33,7 @@ description: Contexto, decisiones y estado del proyecto FacturaWeb (facturador w
 | # | Etapa | Estado |
 |---|---|---|
 | 1 | Base: login, usuarios y roles, 12 tablas, clientes, artículos, migrador DBF de maestros | **Hecha: versión 0.2.0** (nota `docs/entregas/0.2.0-etapa1.md`), falta la prueba de Hernán |
-| 2 | Facturación FC/NC/ND A, B, C (E si exportan), ítems, IVA por alícuota, numeración, impresión, mail | Pendiente |
+| 2 | Facturación FC/NC/ND A, B, C (E si exportan), ítems, IVA por alícuota, numeración, impresión, mail | **Hecha: versión 0.3.0** (nota `docs/entregas/0.3.0-etapa2.md`), **sin CAE**; falta la prueba de Hernán |
 | 3 | Factura electrónica con `lib/afip_fe` (A, B, C, M, FCE); WSFEX (E) en otra etapa | Pendiente |
 | 4 | Cta. cte. y cheques (recibos, imputación, ajustes, cartera) | Pendiente |
 | 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | Pendiente |
@@ -58,11 +58,24 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   un .zip en Sistema (Master). Usuarios del VFP: desactivados y sin contraseña (se resetea desde Usuarios).
 - Instalación sin SSH (Ferozo): `instalar_token` en `config/local.php` → `/instalar` crea tablas y Master.
 
+## Cómo quedó la etapa 2 (lo que hay que saber para seguir)
+
+- Emisión en `Modules/Comprobantes` (ver `CLAUDE.md`): `armar()` valida y calcula, `emitir()` numera con la sucursal bloqueada y graba `subdiario`, `iva`,
+  `estadistica`, `caja` y `ctact` en una transacción. Letra con `Tipos::letra` (RI: A a inscriptos y monotributistas, B al resto; monotributo/exento: C),
+  condición del cliente → Id de ARCA por `equivalencias_afip` ('Equivaliencia', ya sembrada con lo aprobado).
+- **Hallazgo con los datos reales**: el número interno de los comprobantes del VFP **no es único** (ARCA renumera: 28 pares repetidos y 3.281 de 3.371
+  con número interno ≠ número de ARCA). Clave = tipo + letra + sucursal + número + **fecha**; hijos con `subdiario_id`; mostrar `numero_visible()`.
+- Impresión: página A4 y PDF propio (`Core\Pdf`, `ComprobantePdf`), "COMPROBANTE INTERNO" mientras no haya CAE. Mail: `Core\Mailer` (SMTP propio).
+- Migrador con comprobantes: 3.371 de OYS coinciden al centavo; huérfanos del VFP (42 renglones, 28 caja, 28 ctact, 17 iva) y 56 IVA vinculados por neto.
+- Diferencias con el VFP decididas por Claude, **a confirmar con Hernán**: NC no puede superar la factura; descuento solo general; crédito 0 = sin límite;
+  un solo medio de pago por comprobante (el mixto y los cheques de terceros van con la etapa 4); sin anulación (se corrige con NC).
+- Etapa 3: el comprobante nace con el número de ARCA; arma el `Comprobante` de `lib/afip_fe` desde lo calculado; punto de venta y certificado propios de la web.
+
 ## Datos de OYS (copia 11/11/2026, en Drive, nunca al repo)
 
 `datos_facturador_web20261111122233.rar` (RAR5, se abre con `unrar`). 3.371 comprobantes (2010–2025, PV 0004, casi todo FC A),
 519 clientes, 65 artículos, 8 usuarios. `empresas.dbf`/`sucursales` tienen nombres de otra instalación: son los datos del facturador de OYS
-(confirmado). `DET.DBF` no son ítems: son 906 precios de otra instalación (no se migran); los ítems parecen estar en `estadistica.dbf` (3.821). Clientes con CUIT inválido: 107, 245, 287.
+(confirmado). `DET.DBF` no son ítems: son 906 precios de otra instalación (no se migran); los ítems están en `estadistica.dbf` (3.821, confirmado). Clientes con CUIT inválido: 107, 245, 287.
 
 ## Preguntas abiertas para Hernán / OYS
 
@@ -70,4 +83,6 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 - Retenciones en recibos (`cobra.COD_RT1..5`) y percepciones de IIBB (`tributos`).
 - Cuántos usuarios y sucursales a la vez.
 - Nombre real del vendedor `01` y de la provincia `30` que se agregaron en la migración.
+- Si hace falta anular comprobantes sin CAE y qué hacer con el crédito 0.
+- SMTP de la casilla que envía las facturas.
 - Hosting/dominio de la instalación de OYS (`facturador.oys.com.ar`, base propia) y desde qué rama despliega Ferozo.

@@ -3,7 +3,7 @@
 El migrador lee la carpeta de datos del sistema VFP (los `.dbf`, sus memos `.fpt` y `datos.dbc`) y carga las tablas del
 facturador. Está escrito en PHP (`src/Modules/Migracion/`), sin librerías: el mismo código corre por consola o desde la web.
 
-## Qué migra (etapa 1)
+## Qué migra (etapas 1 y 2)
 
 | MySQL | DBF | Notas |
 |---|---|---|
@@ -13,7 +13,26 @@ facturador. Está escrito en PHP (`src/Modules/Migracion/`), sin librerías: el 
 | `parametros` (fila 1) | `parametros.dbf` | Razón social, CUIT, IVA, textos impresos, último cliente / recibo. Si `empresa` no tiene un nombre, se toma de `fe_configuracion` |
 | `usuarios` | `cla_usuarios.dbf` | Se crean **desactivados**, con contraseña al azar (la del VFP no se migra). Supervisor → Administrador, el resto → Operador. Nombres de menos de 3 letras no se migran; los repetidos en mayúsculas/minúsculas quedan como uno |
 
-Los comprobantes (`subdiario`, `iva`, `DET`), la cuenta corriente y la configuración de factura electrónica se migran en sus etapas.
+| `equivalencias_afip` | `equivalencias_afip.dbf` | **Se suma** a lo que hay (las de la condición de IVA aprobadas ya vienen cargadas), no se reemplaza |
+| `subdiario`, `iva`, `estadistica` (renglones), `caja`, `ctact` | mismo nombre | El histórico completo de comprobantes. Ver abajo |
+
+La configuración de factura electrónica (`fe_parametros`...) se migra en la etapa 3 y los recibos, imputaciones y cheques en la etapa 4.
+
+### Comprobantes: lo que mostraron los datos reales
+
+- **El número interno no es único.** El servicio de ARCA renumera al aprobar: en OYS hay 28 pares de comprobantes con el mismo
+  tipo + letra + sucursal + número y distinta fecha, y en 3.281 de 3.371 el número interno es distinto del que dio ARCA (`fe_nrocbte`).
+  El VFP los distingue con la **fecha**. Acá: la clave única es tipo + letra + sucursal + número + fecha, y cada fila de `iva`, `estadistica`,
+  `caja` y `ctact` apunta a su comprobante con `subdiario_id` (el `fe_clave` del subdiario). Para mostrar un comprobante se usa el número de
+  ARCA si tiene CAE (`numero_visible()`), si no el interno.
+- **Los `fe_clave` de las tablas hijas no son únicos** en el VFP (hay repetidos): no se migran, los asigna MySQL.
+- **Vínculo**: renglones, caja y cta. cte. se unen por tipo + letra + sucursal + número + **fecha**. El IVA no tiene fecha: si el número está
+  repetido se elige el comprobante con el mismo neto (56 filas en OYS: conviene controlar el Libro IVA de esos).
+- **Huérfanos del VFP** (ya estaban así): 42 renglones, 28 filas de caja, 28 de cta. cte. y 17 de IVA no tienen comprobante en el subdiario; se
+  cargan sin vincular y se avisa. 3 comprobantes con IVA no tienen filas de IVA.
+- **Descripciones largas**: el texto de un renglón puede tener varios renglones (hasta ~4.000 letras en OYS); se guarda completo.
+- Resultado con la copia de OYS: 3.371 comprobantes, 3.377 filas de IVA, 3.821 renglones, 731 de caja y 810 de cta. cte.; cantidades, neto, IVA y
+  cta. cte. por tipo **coinciden al centavo** con el DBF. Los 3.371 se imprimen en PDF sin errores (5 s en total).
 
 ## Cómo trabaja
 

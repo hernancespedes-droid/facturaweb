@@ -204,8 +204,8 @@ final class ComprobantesService
             if ($texto === '' && $art !== null) {
                 $texto = (string) $art['descripcion'];
             }
-            if ($texto === '' || mb_strlen($texto) > 255) {
-                $e[] = 'falta la descripción (hasta 255 letras)';
+            if ($texto === '' || mb_strlen($texto) > 2000) {
+                $e[] = 'falta la descripción (hasta 2.000 letras)';
             }
             $cant = Valida::decimal($cantTxt);
             if ($cant === null || $cant <= 0 || $cant > 999999999.999) {
@@ -303,7 +303,7 @@ final class ComprobantesService
         if ($feClave <= 0) {
             return 'Elegí el comprobante que se corrige (factura o nota de débito del cliente).';
         }
-        $st = $this->pdo->prepare('SELECT fe_clave, tipo, letra, sucursal, comprobante, fecha, cliente, neto, estado FROM subdiario WHERE fe_clave = ?');
+        $st = $this->pdo->prepare('SELECT fe_clave, tipo, letra, sucursal, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, cliente, neto, estado FROM subdiario WHERE fe_clave = ?');
         $st->execute([$feClave]);
         $a = $st->fetch();
         if ($a === false) {
@@ -327,7 +327,8 @@ final class ComprobantesService
         $st = $this->pdo->prepare(
             "SELECT COALESCE(SUM(n.neto), 0) FROM subdiario n JOIN subdiario a ON a.fe_clave = ?
               WHERE n.tipo = 'NC' AND n.estado = '' AND n.sucursal = a.sucursal AND n.letra = a.letra
-                AND n.fe_tipocbte_asoc = a.tipo AND n.fe_nrocbte_asoc = a.comprobante"
+                AND n.fe_tipocbte_asoc = a.tipo AND n.fe_nrocbte_asoc = " . Tipos::sqlNumeroVisible('a') . "
+                AND (n.fe_fecha_asoc IS NULL OR n.fe_fecha_asoc = a.fecha)"
         );
         $st->execute([$feClaveAsociado]);
         return Calculadora::r2((float) $st->fetchColumn());
@@ -447,7 +448,7 @@ final class ComprobantesService
                 'vendedor' => $cbte['vendedor'] ?? ($cli['vendedor'] ?: null), 'forma_pago' => $cbte['forma_pago'], 'cond_pago' => $cbte['cond_pago'],
                 'orden_compra' => $cbte['orden_compra'] !== '' ? $cbte['orden_compra'] : null, 'actualizacion' => $ahora, 'nrointerno' => $numero,
                 'tipoafipoys' => $cbte['tipo_afip'], 'fe_cemailenvio' => $cbte['email'],
-                'fe_tipocbte_asoc' => $asoc !== null ? $asoc['tipo'] : '', 'fe_nrocbte_asoc' => $asoc !== null ? (int) $asoc['comprobante'] : 0,
+                'fe_tipocbte_asoc' => $asoc !== null ? $asoc['tipo'] : '', 'fe_nrocbte_asoc' => $asoc !== null ? Tipos::numeroVisible($asoc) : 0,
                 'fe_fecha_asoc' => $asoc !== null ? $asoc['fecha'] : null, 'cliente_razon_social' => $cli['razon_social'],
                 'cliente_domicilio' => $cli['domicilio'], 'cliente_localidad' => $cli['localidad'],
                 'creado_por' => $usuarioId > 0 ? $usuarioId : null, 'operacion' => $operacion,
@@ -455,13 +456,13 @@ final class ComprobantesService
             $id = (int) $this->pdo->lastInsertId();
 
             foreach ($c['iva'] as $g) {
-                $this->insertar('iva', ['tipo' => $tipo, 'letra' => $letra, 'sucursal' => $cbte['sucursal'], 'comprobante' => $numero,
+                $this->insertar('iva', ['subdiario_id' => $id, 'tipo' => $tipo, 'letra' => $letra, 'sucursal' => $cbte['sucursal'], 'comprobante' => $numero,
                     'alicuota' => $g['alicuota'], 'monto' => $g['base'], 'importe' => $g['importe'], 'actualizacion' => $ahora]);
             }
 
             foreach ($c['items'] as $i => $it) {
                 $this->insertar('estadistica', [
-                    'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'],
+                    'subdiario_id' => $id, 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'],
                     'comprobante' => $numero, 'orden' => $i + 1, 'articulo' => $it['articulo'], 'codigo_de_barras' => $it['codigo_de_barras'],
                     'unidades' => $it['cantidad'], 'unidades_ori' => $it['cantidad'], 'lista' => 'E', 'precio' => $it['precio'],
                     'precio_siniva' => $it['precio_siniva'], 'porcentaje_descuento' => $c['descuento'], 'observaciones' => $it['descripcion'],
@@ -474,7 +475,7 @@ final class ComprobantesService
             if ($tipo !== 'NC') {
                 $pago = $cbte['pago'];
                 $this->insertar('caja', [
-                    'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $cbte['sucursal'],
+                    'subdiario_id' => $id, 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $cbte['sucursal'],
                     'prefijo' => $cbte['prefijo'], 'comprobante' => $numero, 'cliente' => $cli['codigo'],
                     'p_fpago' => $cbte['forma_pago'] === 2 ? $this->codigoCuentaCorriente() : $pago['codigo'], 'p_nro' => $pago['nro'] ?? null,
                     'p_fecvto' => $cbte['forma_pago'] === 2 ? $cbte['fecha'] : ($pago['vencimiento'] ?? null), 'p_banco' => (int) ($pago['banco'] ?? 0),
@@ -484,7 +485,7 @@ final class ComprobantesService
             // Cuenta corriente: la factura y la nota de débito generan deuda; la nota de crédito, saldo a favor
             if ($cbte['forma_pago'] === 2) {
                 $this->insertar('ctact', [
-                    'cliente' => $cli['codigo'], 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'tico' => Tipos::tico($tipo), 'letra' => $letra,
+                    'subdiario_id' => $id, 'cliente' => $cli['codigo'], 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'tico' => Tipos::tico($tipo), 'letra' => $letra,
                     'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'], 'numero' => $numero, 'neto' => $c['total'], 'descuento' => 0,
                     'saldo' => $c['total'], 'vencimiento' => $cbte['fecha'], 'valor_dolar' => $this->cotizacionDolar($cbte['fecha']), 'actualizacion' => $ahora,
                 ]);
@@ -551,16 +552,15 @@ final class ComprobantesService
         if ($h === false) {
             return null;
         }
-        $clave = [$h['tipo'], $h['letra'], $h['sucursal'], $h['comprobante']];
-        $st = $this->pdo->prepare('SELECT * FROM estadistica WHERE tipo = ? AND letra = ? AND sucursal = ? AND comprobante = ? ORDER BY orden, fe_clave');
-        $st->execute($clave);
+        $st = $this->pdo->prepare('SELECT * FROM estadistica WHERE subdiario_id = ? ORDER BY orden, fe_clave');
+        $st->execute([$feClave]);
         $h['items'] = $st->fetchAll();
-        $st = $this->pdo->prepare('SELECT * FROM iva WHERE tipo = ? AND letra = ? AND sucursal = ? AND comprobante = ? ORDER BY alicuota');
-        $st->execute($clave);
+        $st = $this->pdo->prepare('SELECT * FROM iva WHERE subdiario_id = ? ORDER BY alicuota');
+        $st->execute([$feClave]);
         $h['iva'] = $st->fetchAll();
         $st = $this->pdo->prepare('SELECT c.*, f.descripcion AS fpago_descripcion FROM caja c LEFT JOIN forma_de_pagos f ON f.codigo = c.p_fpago
-                                    WHERE c.tipo = ? AND c.letra = ? AND c.sucursal = ? AND c.comprobante = ? ORDER BY c.fe_clave');
-        $st->execute($clave);
+                                    WHERE c.subdiario_id = ? ORDER BY c.fe_clave');
+        $st->execute([$feClave]);
         $h['pagos'] = $st->fetchAll();
         $st = $this->pdo->prepare('SELECT * FROM clientes WHERE codigo = ?');
         $st->execute([$h['cliente']]);
@@ -570,8 +570,8 @@ final class ComprobantesService
         $h['sucursal_datos'] = $st->fetch() ?: null;
         $h['asociado_clave'] = null;
         if ($h['fe_nrocbte_asoc'] > 0) {
-            $st = $this->pdo->prepare('SELECT fe_clave FROM subdiario WHERE tipo = ? AND letra = ? AND sucursal = ? AND comprobante = ?');
-            $st->execute([$h['fe_tipocbte_asoc'], $h['letra'], $h['sucursal'], $h['fe_nrocbte_asoc']]);
+            $st = $this->pdo->prepare('SELECT fe_clave FROM subdiario WHERE tipo = ? AND letra = ? AND sucursal = ? AND ' . Tipos::sqlNumeroVisible() . ' = ? AND (? IS NULL OR fecha = ?) LIMIT 1');
+            $st->execute([$h['fe_tipocbte_asoc'], $h['letra'], $h['sucursal'], $h['fe_nrocbte_asoc'], $h['fe_fecha_asoc'], $h['fe_fecha_asoc']]);
             $a = $st->fetchColumn();
             $h['asociado_clave'] = $a === false ? null : (int) $a;
         }
@@ -583,10 +583,11 @@ final class ComprobantesService
     private function notasDe(array $h): array
     {
         $st = $this->pdo->prepare(
-            "SELECT fe_clave, tipo, letra, prefijo, comprobante, fecha, neto FROM subdiario
-              WHERE tipo IN ('NC', 'ND') AND estado = '' AND sucursal = ? AND letra = ? AND fe_tipocbte_asoc = ? AND fe_nrocbte_asoc = ? ORDER BY fecha, comprobante"
+            "SELECT fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto FROM subdiario
+              WHERE tipo IN ('NC', 'ND') AND estado = '' AND sucursal = ? AND letra = ? AND fe_tipocbte_asoc = ? AND fe_nrocbte_asoc = ?
+                AND (fe_fecha_asoc IS NULL OR fe_fecha_asoc = ?) ORDER BY fecha, comprobante"
         );
-        $st->execute([$h['sucursal'], $h['letra'], $h['tipo'], $h['comprobante']]);
+        $st->execute([$h['sucursal'], $h['letra'], $h['tipo'], Tipos::numeroVisible($h), $h['fecha']]);
         return $st->fetchAll();
     }
 
@@ -657,7 +658,7 @@ final class ComprobantesService
     public function asociables(int $cliente): array
     {
         $st = $this->pdo->prepare(
-            "SELECT fe_clave, tipo, letra, prefijo, comprobante, fecha, neto FROM subdiario
+            "SELECT fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto FROM subdiario
               WHERE cliente = ? AND tipo IN ('FC', 'ND') AND estado = '' ORDER BY fecha DESC, comprobante DESC LIMIT 200"
         );
         $st->execute([$cliente]);

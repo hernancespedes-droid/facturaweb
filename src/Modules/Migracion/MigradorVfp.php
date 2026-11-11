@@ -27,7 +27,12 @@ final class MigradorVfp
         'condicionpago' => 'condicionpago', 'transportes' => 'transportes', 'forma_de_pagos' => 'forma_de_pagos',
         'unidad_venta' => 'unidad_venta', 'clientes' => 'clientes', 'articulos' => 'articulos', 'articulos_precios' => 'articulos_precios',
         'parametros' => 'parametros', 'usuarios' => 'cla_usuarios',
+        // etapa 2: comprobantes y lo que cuelga de ellos
+        'equivalencias_afip' => 'equivalencias_afip', 'subdiario' => 'subdiario', 'iva' => 'iva', 'estadistica' => 'estadistica',
+        'caja' => 'caja', 'ctact' => 'ctact',
     ];
+    /** Tablas que se completan sin borrar lo que hay (se suman las filas que faltan): las equivalencias aprobadas ya vienen cargadas. */
+    private const SUMAR = ['equivalencias_afip'];
     /** Tablas con valores iniciales de la instalación: se reemplazan sin pedir confirmación. */
     private const SEMILLAS = ['tasas_iva', 'provincias', 'unidad_venta'];
     private const MAX_AVISOS = 200;
@@ -73,7 +78,7 @@ final class MigradorVfp
         if (!$reemplazar) {
             $conDatos = [];
             foreach ($tablas as $t) {
-                if (!in_array($t, [...self::SEMILLAS, 'parametros', 'usuarios'], true)
+                if (!in_array($t, [...self::SEMILLAS, ...self::SUMAR, 'parametros', 'usuarios'], true)
                     && (int) $this->pdo->query("SELECT COUNT(*) FROM `{$t}`")->fetchColumn() > 0) {
                     $conDatos[] = $t;
                 }
@@ -101,6 +106,9 @@ final class MigradorVfp
                     default => $this->tabla($t),
                 };
             }
+            if (array_intersect($tablas, ['subdiario', 'iva', 'estadistica', 'caja', 'ctact']) !== []) {
+                $this->vincular();
+            }
             if (in_array('clientes', $tablas, true)) {
                 // El próximo cliente sigue la numeración del VFP.
                 $this->ejecutar('UPDATE parametros SET ultimo_cliente = GREATEST(ultimo_cliente, (SELECT COALESCE(MAX(codigo), 0) FROM clientes)) WHERE id = 1', []);
@@ -127,6 +135,74 @@ final class MigradorVfp
         return $this->resumen;
     }
 
+    /**
+     * Une cada renglón, forma de pago, cuenta corriente e IVA con su comprobante (subdiario_id). El VFP los relaciona por
+     * tipo + letra + sucursal + número + fecha (el número solo no alcanza: se repite entre fechas); el IVA no tiene fecha, así
+     * que si el número está repetido se elige el comprobante con el mismo neto. Lo que no encuentra comprobante queda sin
+     * vincular y se avisa (son huérfanos que ya estaban en el VFP).
+     */
+    private function vincular(): void
+    {
+        $r = &$this->iniciar('vinculos');
+        $filas = [
+            'estadistica' => 'x.comprobante', 'caja' => 'x.comprobante', 'ctact' => 'x.numero',
+        ];
+        foreach ($filas as $tabla => $colNumero) {
+            $where = $tabla === 'ctact' ? "AND x.tipo IN ('FC', 'NC', 'ND')" : '';
+            $this->ejecutar("UPDATE `{$tabla}` x JOIN subdiario s ON s.tipo = x.tipo AND s.letra = x.letra AND s.sucursal = x.sucursal
+                              AND s.comprobante = {$colNumero} AND s.fecha = x.fecha SET x.subdiario_id = s.fe_clave WHERE x.subdiario_id IS NULL {$where}", []);
+            $r['grabadas'] += (int) $this->pdo->query("SELECT COUNT(*) FROM `{$tabla}` WHERE subdiario_id IS NOT NULL")->fetchColumn();
+            $huerfanas = (int) $this->pdo->query("SELECT COUNT(*) FROM `{$tabla}` x WHERE x.subdiario_id IS NULL " . ($tabla === 'ctact' ? "AND x.tipo IN ('FC', 'NC', 'ND')" : ''))->fetchColumn();
+            if ($huerfanas > 0) {
+                $this->aviso($r, "{$huerfanas} fila(s) de {$tabla} no tienen comprobante en el subdiario (ya estaban así en el VFP): quedan cargadas sin vincular.");
+            }
+        }
+        // IVA: número único => directo; repetido => el comprobante con el mismo neto, en orden de fecha
+        $this->ejecutar("UPDATE iva x JOIN (SELECT tipo, letra, sucursal, comprobante, MIN(fe_clave) AS id FROM subdiario GROUP BY tipo, letra, sucursal, comprobante HAVING COUNT(*) = 1) s
+                          ON s.tipo = x.tipo AND s.letra = x.letra AND s.sucursal = x.sucursal AND s.comprobante = x.comprobante SET x.subdiario_id = s.id WHERE x.subdiario_id IS NULL", []);
+        $pend = $this->pdo->query('SELECT fe_clave, tipo, letra, sucursal, comprobante, monto FROM iva WHERE subdiario_id IS NULL ORDER BY fe_clave')->fetchAll();
+        $candidatos = $this->pdo->prepare('SELECT fe_clave, neto_grabado FROM subdiario WHERE tipo = ? AND letra = ? AND sucursal = ? AND comprobante = ? ORDER BY fecha');
+        $usados = [];
+        $sinPar = 0;
+        foreach ($pend as $x) {
+            $candidatos->execute([$x['tipo'], $x['letra'], $x['sucursal'], $x['comprobante']]);
+            $cands = $candidatos->fetchAll();
+            $elegido = null;
+            foreach ($cands as $c) { // primero el que tiene el mismo neto y no se usó
+                if (!isset($usados[$c['fe_clave']]) && abs((float) $c['neto_grabado'] - (float) $x['monto']) < 0.005) {
+                    $elegido = (int) $c['fe_clave'];
+                    break;
+                }
+            }
+            if ($elegido === null) {
+                foreach ($cands as $c) {
+                    if (!isset($usados[$c['fe_clave']])) {
+                        $elegido = (int) $c['fe_clave'];
+                        break;
+                    }
+                }
+            }
+            if ($elegido === null) {
+                $sinPar++;
+                continue;
+            }
+            $usados[$elegido] = true;
+            $this->ejecutar('UPDATE iva SET subdiario_id = ? WHERE fe_clave = ?', [$elegido, $x['fe_clave']]);
+        }
+        $r['grabadas'] += (int) $this->pdo->query('SELECT COUNT(*) FROM iva WHERE subdiario_id IS NOT NULL')->fetchColumn();
+        $huerfanas = (int) $this->pdo->query('SELECT COUNT(*) FROM iva WHERE subdiario_id IS NULL')->fetchColumn();
+        if ($huerfanas > 0) {
+            $this->aviso($r, "{$huerfanas} fila(s) de iva no tienen comprobante en el subdiario (ya estaban así en el VFP): quedan cargadas sin vincular.");
+        }
+        if ($usados !== []) {
+            $this->aviso($r, count($usados) . ' fila(s) de IVA de comprobantes con número repetido se vincularon por el neto (el IVA del VFP no tiene fecha): conviene controlar el Libro IVA de esos comprobantes.');
+        }
+        $sinIva = (int) $this->pdo->query("SELECT COUNT(*) FROM subdiario s WHERE s.iva_1 > 0 AND NOT EXISTS (SELECT 1 FROM iva i WHERE i.subdiario_id = s.fe_clave)")->fetchColumn();
+        if ($sinIva > 0) {
+            $this->aviso($r, "{$sinIva} comprobante(s) con IVA no tienen filas de IVA (ya estaban así en el VFP).");
+        }
+    }
+
     /** Copia una tabla del VFP a la del mismo esquema en MySQL (borrando lo que había). */
     private function tabla(string $tabla): void
     {
@@ -138,7 +214,13 @@ final class MigradorVfp
         $columnas = $this->columnas($tabla);
         $nombres = $this->nombresLargos(self::TABLAS[$tabla], $dbf, $r, array_keys($columnas));
         $usar = array_values(array_intersect(array_keys($columnas), $nombres));
-        $this->ejecutar("DELETE FROM `{$tabla}`", []);
+        if (in_array($tabla, ['iva', 'estadistica', 'caja', 'ctact'], true)) {
+            // el número interno de estas tablas se repite en el VFP: acá lo asigna MySQL (el vínculo con el comprobante es subdiario_id)
+            $usar = array_values(array_diff($usar, ['fe_clave']));
+        }
+        if (!in_array($tabla, self::SUMAR, true)) {
+            $this->ejecutar("DELETE FROM `{$tabla}`", []);
+        }
 
         $cortos = $dbf->nombres();
         $ins = 'INSERT INTO `' . $tabla . '` (`' . implode('`, `', $usar) . '`) VALUES (' . implode(', ', array_fill(0, count($usar), '?')) . ')';
@@ -160,7 +242,9 @@ final class MigradorVfp
                 if ($e->getCode() !== '23000') {
                     throw $e;
                 }
-                $this->aviso($r, 'Repetido, no se cargó: ' . $this->describir($tabla, $fila));
+                if (!in_array($tabla, self::SUMAR, true)) {
+                    $this->aviso($r, 'No se cargó (' . mb_substr((string) ($e->errorInfo[2] ?? $e->getMessage()), 0, 120) . '): ' . $this->describir($tabla, $fila));
+                }
             }
         }
         $this->completarFaltantes($tabla, $r);

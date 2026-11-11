@@ -1034,3 +1034,4 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 @media (max-width: 720px) { .totales, .totales-rev { max-width: none; } }
 .renglones select[data-alicuota] { min-width: 6.5em; }
 .totales [data-t-iva-filas] { display: grid; gap: 6px; }
+.pre-linea { white-space: pre-line; }

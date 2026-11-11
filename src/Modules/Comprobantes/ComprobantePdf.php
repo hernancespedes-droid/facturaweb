@@ -139,7 +139,7 @@ final class ComprobantePdf
         $yp = self::PIE + 4;
         if ($d['cae'] !== null) {
             $pdf->rect($m, $yp, self::ANCHO, 18, 0.3);
-            $pdf->texto($m + 3, $yp + 7, 'CAE: ' . $d['cae']['cae'] . '    Vto. CAE: ' . $d['cae']['vto'], 10, true);
+            $pdf->texto($m + 3, $yp + 7, 'CAE: ' . $d['cae']['cae'] . ($d['cae']['vto'] !== '' ? '    Vto. CAE: ' . $d['cae']['vto'] : ''), 10, true);
             $pdf->texto($m + 3, $yp + 13, 'Comprobante Autorizado ARCA', 8.5);
         } else {
             $pdf->rect($m, $yp, self::ANCHO, 18, 0.5);

@@ -236,3 +236,16 @@ if (!function_exists('plata_dec')) {
         return ($f < 0 ? '−' : '') . '$ ' . number_format(abs($f), 2, ',', '.');
     }
 }
+
+if (!function_exists('numero_visible')) {
+    /**
+     * Número con el que se conoce un comprobante: el que dio ARCA si tiene CAE (en los comprobantes del VFP el número interno
+     * puede ser otro), y si no el interno. $c necesita prefijo, comprobante y, si los tiene, fe_nrocbte y fe_ccae.
+     */
+    function numero_visible(array $c): string
+    {
+        $cae = (string) ($c['fe_ccae'] ?? '');
+        $arca = (int) ($c['fe_nrocbte'] ?? 0);
+        return numero_cbte($c['prefijo'], $cae !== '' && $cae !== '.' && $arca > 0 ? $arca : $c['comprobante']);
+    }
+}

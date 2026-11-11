@@ -30,6 +30,9 @@ final class MigracionTest extends DbTestCase
         $pdo->exec("DELETE FROM articulos WHERE codigo LIKE 'M-%'");
         $pdo->exec("DELETE FROM vendedores WHERE descripcion LIKE '%(DEL VFP)'");
         $pdo->exec('DELETE FROM migracion_vfp');
+        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact'] as $t) {
+            $pdo->exec("DELETE FROM `{$t}`");
+        }
     }
 
     public function testLeeTiposMemosNulosVarcharYSalteaBorrados(): void
@@ -149,5 +152,72 @@ final class MigracionTest extends DbTestCase
         $this->assertStringContainsString('DELETE FROM `clientes`', $texto);
         $this->assertStringContainsString("'PEÑA SA'", $texto);
         $this->assertStringContainsString('COMMIT;', $texto);
+    }
+
+    public function testComprobantesConNumeroRepetidoSeVinculanPorFechaYElIvaPorElNeto(): void
+    {
+        $d = $this->dir;
+        DbfFalso::dbc($d . '/datos.dbc', [
+            'subdiario' => ['fecha', 'tipo', 'letra', 'sucursal', 'prefijo', 'comprobante', 'cliente', 'neto_grabado', 'iva_1', 'neto', 'fe_clave'],
+            'estadistica' => ['fecha', 'tipo', 'letra', 'sucursal', 'comprobante', 'total_item', 'observaciones', 'fe_clave'],
+            'iva' => ['tipo', 'letra', 'sucursal', 'comprobante', 'alicuota', 'monto', 'importe', 'fe_clave'],
+            'caja' => ['fecha', 'tipo', 'letra', 'sucursal', 'comprobante', 'p_fpago', 'p_importe', 'fe_clave'],
+            'ctact' => ['cliente', 'fecha', 'tipo', 'tico', 'letra', 'sucursal', 'numero', 'neto', 'saldo', 'fe_clave'],
+        ]);
+        $cab = [['FECHA', 'D'], ['TIPO', 'C', 2], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 2], ['PREFIJO', 'N', 4], ['COMPROBANT', 'N', 7], ['CLIENTE', 'N', 5],
+            ['NETO_GRABA', 'N', 11, 2], ['IVA_1', 'N', 11, 2], ['NETO', 'N', 11, 2], ['FE_CLAVE', 'I']];
+        $fc = fn (string $f, int $n, float $neto, int $clave) => ['FECHA' => $f, 'TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'PREFIJO' => 4, 'COMPROBANT' => $n, 'CLIENTE' => 5,
+            'NETO_GRABA' => $neto, 'IVA_1' => $neto * 0.21, 'NETO' => $neto * 1.21, 'FE_CLAVE' => $clave];
+        DbfFalso::escribir($d . '/subdiario.dbf', $cab, [$fc('2019-01-02', 5, 100, 1001), $fc('2019-03-04', 5, 200, 1002), $fc('2019-03-05', 6, 50, 1003)]);
+        DbfFalso::escribir($d . '/estadistica.dbf', [['FECHA', 'D'], ['TIPO', 'C', 2], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 2], ['COMPROBANT', 'N', 7], ['TOTAL_ITEM', 'N', 11, 2], ['OBSERVACIO', 'M'], ['FE_CLAVE', 'I']], [
+            ['FECHA' => '2019-01-02', 'TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'COMPROBANT' => 5, 'TOTAL_ITEM' => 100, 'OBSERVACIO' => str_repeat("Línea larga\n", 40), 'FE_CLAVE' => 7],
+            ['FECHA' => '2019-03-04', 'TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'COMPROBANT' => 5, 'TOTAL_ITEM' => 200, 'OBSERVACIO' => 'otro', 'FE_CLAVE' => 7],
+            ['FECHA' => '2018-01-01', 'TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'COMPROBANT' => 99, 'TOTAL_ITEM' => 1, 'OBSERVACIO' => 'huérfano', 'FE_CLAVE' => 8],
+        ]);
+        // el IVA se carga en otro orden y sin fecha: se vincula por el neto
+        DbfFalso::escribir($d . '/iva.dbf', [['TIPO', 'C', 2], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 2], ['COMPROBANT', 'N', 7], ['ALICUOTA', 'N', 5, 2], ['MONTO', 'N', 10, 2], ['IMPORTE', 'N', 10, 2], ['FE_CLAVE', 'N', 14]], [
+            ['TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'COMPROBANT' => 5, 'ALICUOTA' => 21, 'MONTO' => 200, 'IMPORTE' => 42, 'FE_CLAVE' => 3],
+            ['TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'COMPROBANT' => 5, 'ALICUOTA' => 21, 'MONTO' => 100, 'IMPORTE' => 21, 'FE_CLAVE' => 3],
+            ['TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'COMPROBANT' => 6, 'ALICUOTA' => 21, 'MONTO' => 50, 'IMPORTE' => 10.5, 'FE_CLAVE' => 3],
+            ['TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'COMPROBANT' => 77, 'ALICUOTA' => 21, 'MONTO' => 9, 'IMPORTE' => 1.89, 'FE_CLAVE' => 4],
+        ]);
+        DbfFalso::escribir($d . '/caja.dbf', [['FECHA', 'D'], ['TIPO', 'C', 2], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 2], ['COMPROBANT', 'N', 7], ['P_FPAGO', 'C', 2], ['P_IMPORTE', 'N', 11, 2], ['FE_CLAVE', 'I']], [
+            ['FECHA' => '2019-03-04', 'TIPO' => 'FC', 'LETRA' => 'A', 'SUCURSAL' => 1, 'COMPROBANT' => 5, 'P_FPAGO' => 'CC', 'P_IMPORTE' => 242, 'FE_CLAVE' => 9],
+        ]);
+        DbfFalso::escribir($d . '/ctact.dbf', [['CLIENTE', 'N', 5], ['FECHA', 'D'], ['TIPO', 'C', 2], ['TICO', 'N', 1], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 2], ['NUMERO', 'N', 8], ['NETO', 'N', 10, 2], ['SALDO', 'N', 10, 2], ['FE_CLAVE', 'I']], [
+            ['CLIENTE' => 5, 'FECHA' => '2019-01-02', 'TIPO' => 'FC', 'TICO' => 1, 'LETRA' => 'A', 'SUCURSAL' => 1, 'NUMERO' => 5, 'NETO' => 121, 'SALDO' => 121, 'FE_CLAVE' => 1],
+            ['CLIENTE' => 5, 'FECHA' => '2019-04-01', 'TIPO' => 'AC', 'TICO' => 9, 'LETRA' => 'A', 'SUCURSAL' => 1, 'NUMERO' => 5, 'NETO' => 30, 'SALDO' => 30, 'FE_CLAVE' => 1],
+        ]);
+
+        $r = (new MigradorVfp(Db::pdo(), $d))->migrar(['subdiario', 'iva', 'estadistica', 'caja', 'ctact'], true);
+        $pdo = Db::pdo();
+        $this->assertSame(3, $r['subdiario']['grabadas'], 'los dos números 5 de distinta fecha entran');
+        $this->assertSame(3, $r['estadistica']['grabadas'], 'el fe_clave repetido del VFP no se usa como clave');
+        $id = static fn (string $f) => (int) Db::pdo()->query("SELECT fe_clave FROM subdiario WHERE comprobante = 5 AND fecha = '{$f}'")->fetchColumn();
+        $primero = $id('2019-01-02');
+        $segundo = $id('2019-03-04');
+        $this->assertTrue($primero > 0 && $segundo > 0 && $primero !== $segundo);
+        $item = static fn (int $sub) => (string) Db::pdo()->query("SELECT total_item FROM estadistica WHERE subdiario_id = {$sub}")->fetchColumn();
+        $this->assertSame('100.00', $item($primero));
+        $this->assertSame('200.00', $item($segundo));
+        $ivaDe = static fn (int $sub) => (string) Db::pdo()->query("SELECT importe FROM iva WHERE subdiario_id = {$sub}")->fetchColumn();
+        $this->assertSame('21.00', $ivaDe($primero), 'el IVA de monto 100 es del comprobante de neto 100');
+        $this->assertSame('42.00', $ivaDe($segundo));
+        $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM caja WHERE subdiario_id = {$segundo}")->fetchColumn(), 'la caja se une por fecha');
+        $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM ctact WHERE subdiario_id = {$primero}")->fetchColumn());
+        $this->assertSame(1, (int) $pdo->query("SELECT COUNT(*) FROM ctact WHERE subdiario_id IS NULL AND tipo = 'AC'")->fetchColumn(), 'los pagos a cuenta no son comprobantes');
+        $avisos = implode("\n", $r['vinculos']['avisos']);
+        $this->assertStringContainsString('1 fila(s) de estadistica no tienen comprobante', $avisos);
+        $this->assertStringContainsString('1 fila(s) de iva no tienen comprobante', $avisos);
+        $this->assertStringContainsString('vincularon por el neto', $avisos);
+        $this->assertStringNotContainsString('ctact no tienen', $avisos);
+        // la descripción larga entra completa y se puede imprimir
+        $largo = (string) $pdo->query("SELECT observaciones FROM estadistica WHERE subdiario_id = {$primero}")->fetchColumn();
+        $this->assertTrue(mb_strlen($largo) > 255);
+        $svc = new \App\Modules\Comprobantes\ComprobantesService();
+        $h = $svc->obtener($primero);
+        $this->assertCount(1, $h['items']);
+        $pdf = \App\Modules\Comprobantes\ComprobantePdf::generar(\App\Modules\Comprobantes\ComprobanteImpreso::datos($h, $svc->emisor()));
+        $this->assertStringStartsWith('%PDF', $pdf);
     }
 }

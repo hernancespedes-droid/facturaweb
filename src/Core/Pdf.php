@@ -78,21 +78,21 @@ final class Pdf
         return rtrim($s) . '...';
     }
 
-    /** Parte un texto en renglones que entren en $max milímetros. @return string[] */
+    /** Parte un texto en renglones que entren en $max milímetros (respeta los saltos de línea del texto). @return string[] */
     public function partir(string $s, float $max, float $size = 9.0, bool $bold = false): array
     {
         $out = [];
-        $linea = '';
-        foreach (preg_split('/\s+/u', trim($s)) ?: [] as $palabra) {
-            $prueba = $linea === '' ? $palabra : $linea . ' ' . $palabra;
-            if ($linea !== '' && $this->ancho($prueba, $size, $bold) > $max) {
-                $out[] = $linea;
-                $linea = $palabra;
-            } else {
-                $linea = $prueba;
+        foreach (preg_split('/\R/u', trim($s)) ?: [''] as $parrafo) {
+            $linea = '';
+            foreach (preg_split('/\s+/u', trim($parrafo)) ?: [] as $palabra) {
+                $prueba = $linea === '' ? $palabra : $linea . ' ' . $palabra;
+                if ($linea !== '' && $this->ancho($prueba, $size, $bold) > $max) {
+                    $out[] = $linea;
+                    $linea = $palabra;
+                } else {
+                    $linea = $prueba;
+                }
             }
-        }
-        if ($linea !== '') {
             $out[] = $linea;
         }
         return $out ?: [''];

@@ -26,9 +26,9 @@ Varios de los utilitarios **no hacen falta en web** (reindexar, ZAP, backup de D
 
 | Tabla VFP | Registros | Qué guarda | En MySQL |
 |---|---|---|---|
-| `subdiario` | 3.396 | Cabecera de cada comprobante (FC/NC/ND A/B/C/E), totales, IVA, CAE, vto. CAE, comprobante asociado, mail enviado | `comprobantes` |
-| `iva` | 3.383 | IVA por alícuota de cada comprobante | `comprobante_iva` |
-| `DET` / `ITEMS` | 906 / 0 | ~~Ítems de los comprobantes~~ `DET` resultó ser una lista de precios de otra instalación (no se migra); `ITEMS` está vacía. Los ítems de OYS parecen estar en `estadistica` (3.821 renglones con artículo, cantidad y precio por comprobante): confirmarlo en la etapa 2 | `comprobante_items` |
+| `subdiario` | 3.396 | Cabecera de cada comprobante (FC/NC/ND A/B/C/E), totales, IVA, CAE, vto. CAE, comprobante asociado, mail enviado | `subdiario` (misma tabla; clave con fecha: ver `docs/migracion-dbf.md`) |
+| `iva` | 3.383 | IVA por alícuota de cada comprobante | `iva` |
+| `estadistica` | 3.821 | Renglones de los comprobantes (confirmado en la etapa 2; `DET` es una lista de precios de otra instalación y `ITEMS` está vacía) | `estadistica` (con `subdiario_id`) |
 | `ctact` | 3.489 | Movimientos de cuenta corriente | `ctacte_movimientos` |
 | `caja` | 3.340 | Valores de cada cobro/factura (forma de pago, cheque: banco, número, vencimiento) | `valores` |
 | `cobra`, `imputaciones` | 30 / 54 | Recibos, retenciones, imputación a facturas | `recibos`, `imputaciones` |
@@ -105,7 +105,7 @@ Cada instalación: `facturador.<dominio>` → carpeta propia → base propia →
 | # | Etapa | Contenido |
 |---|---|---|
 | 1 | Base y estructura | Login, usuarios y permisos, empresa, puntos de venta, tablas (12), clientes, artículos; script de migración de maestros. **Hecha: 0.2.0** (`docs/entregas/0.2.0-etapa1.md`) |
-| 2 | Facturación | FC/NC/ND A, B, C (y E si exportan), ítems, IVA por alícuota, formas de pago, comprobante asociado en NC, numeración, impresión, mail |
+| 2 | Facturación | FC/NC/ND A, B, C (y E si exportan), ítems, IVA por alícuota, formas de pago, comprobante asociado en NC, numeración, impresión, mail. **Hecha: 0.3.0** (`docs/entregas/0.3.0-etapa2.md`), sin CAE (etapa 3) |
 | 3 | Factura electrónica ARCA | Integrar `lib/afip_fe` (A, B, C, M, FCE): configuración, ABM de equivalencias de IVA, Revisar → Emitir, QR. La **E (WSFEX) queda para otra etapa** (los clientes actuales son todos nacionales) |
 | 4 | Cta. cte. y cheques | Recibos con retenciones y valores, imputación manual y automática, ajustes, cartera de cheques |
 | 5 | Listados | Subdiario de ventas, cobranzas, cta. cte. por fecha / comprobante, deuda pendiente, resumen de deuda, cheques diferidos, clientes, Libro IVA digital; todo a Excel |

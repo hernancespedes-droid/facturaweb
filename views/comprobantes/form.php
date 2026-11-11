@@ -68,7 +68,7 @@ $errorGeneral = array_intersect_key($errores, array_flip(['tipo', 'emisor', 'suc
                 <option value="">Elegí la factura o nota de débito</option>
                 <?php foreach ($asociables as $a): ?>
                     <option value="<?= e($a['fe_clave']) ?>" data-letra="<?= e($a['letra']) ?>" <?= $v('asociado') === (string) $a['fe_clave'] ? 'selected' : '' ?>>
-                        <?= e(Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_cbte($a['prefijo'], $a['comprobante']) . ' del ' . fecha($a['fecha']) . ' · ' . plata($a['neto'])) ?></option>
+                        <?= e(Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a) . ' del ' . fecha($a['fecha']) . ' · ' . plata($a['neto'])) ?></option>
                 <?php endforeach; ?>
             </select><?= $err('asociado') ?></label>
     <?php endif; ?>

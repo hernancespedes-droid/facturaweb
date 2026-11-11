@@ -44,7 +44,7 @@ $paginas = (int) ceil($total / max(1, $porPagina));
             <?php foreach ($filas as $c): $conCae = $c['fe_ccae'] !== '' && $c['fe_ccae'] !== '.'; ?>
                 <tr>
                     <td data-label="Fecha" class="nw"><?= e(fecha($c['fecha'])) ?></td>
-                    <td data-label="Comprobante" class="nw"><a href="<?= e(url('/comprobantes/' . $c['fe_clave'])) ?>"><b><?= e(Tipos::titulo($c['tipo'], $c['letra'])) ?></b> <?= e(numero_cbte($c['prefijo'], $c['comprobante'])) ?></a></td>
+                    <td data-label="Comprobante" class="nw"><a href="<?= e(url('/comprobantes/' . $c['fe_clave'])) ?>"><b><?= e(Tipos::titulo($c['tipo'], $c['letra'])) ?></b> <?= e(numero_visible($c)) ?></a></td>
                     <td data-label="Cliente"><?= e($c['razon_social']) ?> <small class="muted">(<?= e($c['cliente']) ?>)</small></td>
                     <td data-label="Pago"><?= (int) $c['forma_pago'] === 2 ? 'Cta. cte.' : 'Contado' ?></td>
                     <td data-label="Total" class="nw"><?= $c['tipo'] === 'NC' ? '−' : '' ?><?= e(plata_dec($c['neto'])) ?></td>

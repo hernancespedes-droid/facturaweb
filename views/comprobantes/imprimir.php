@@ -34,6 +34,7 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
         table.items th { background: #d9d9d9; border: 1px solid #000; padding: 1.5mm; font-size: 11px; text-align: right; }
         table.items th:first-child, table.items td:first-child { text-align: left; }
         table.items td { padding: 1.2mm 1.5mm; text-align: right; vertical-align: top; }
+        table.items td:first-child { white-space: pre-line; }
         table.items tbody tr:nth-child(even) td { background: #f0f0f0; }
         table.items tbody { border-bottom: 1px solid #000; }
         .pie { display: grid; grid-template-columns: 1fr 80mm; gap: 6mm; margin-top: 4mm; align-items: start; }
@@ -96,7 +97,7 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
         </div>
     </div>
     <?php if ($d['cae'] !== null): ?>
-        <div class="estado"><b>CAE: <?= e($d['cae']['cae']) ?> &nbsp; Vto. CAE: <?= e($d['cae']['vto']) ?></b>Comprobante Autorizado ARCA</div>
+        <div class="estado"><b>CAE: <?= e($d['cae']['cae']) ?><?= $d['cae']['vto'] !== '' ? ' &nbsp; Vto. CAE: ' . e($d['cae']['vto']) : '' ?></b>Comprobante Autorizado ARCA</div>
     <?php else: ?>
         <div class="estado"><b>COMPROBANTE INTERNO</b>Sin CAE de ARCA: no tiene validez fiscal</div>
     <?php endif; ?>

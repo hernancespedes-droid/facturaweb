@@ -197,8 +197,8 @@ final class ComprobantesTest extends ComprobantesTestCase
 
     public function testFallaALaMitadNoDejaNadaGrabadoNiConsumeNumero(): void
     {
-        $r = $this->svc->armar($this->pedido());
-        $r['cbte']['calculo']['items'][0]['descripcion'] = str_repeat('x', 400); // revienta el INSERT de estadistica (VARCHAR 255)
+        $r = $this->svc->armar($this->pedido(['forma_pago' => '1', 'fpago' => 'EF', 'cliente' => '990002']));
+        $r['cbte']['pago']['codigo'] = 'XXXX'; // revienta el INSERT de caja (VARCHAR 2), cuando ya se grabaron la cabecera, el IVA y los renglones
         try {
             $this->svc->emitir($r['cbte'], bin2hex(random_bytes(16)), 0);
             $this->fail('tenía que fallar');
@@ -248,5 +248,37 @@ final class ComprobantesTest extends ComprobantesTestCase
         $this->assertSame(0, $this->svc->listar(['tipo' => 'NC'], 1, 50)['total']);
         $this->assertSame(0, $this->svc->listar(['desde' => '01/01/2000', 'hasta' => '02/01/2000'], 1, 50)['total']);
         $this->assertCount(1, $this->svc->asociables(990001));
+    }
+
+    public function testUnComprobanteConCaeSeConoceConElNumeroDeArca(): void
+    {
+        // Como los del VFP: el número interno (1) es distinto del que dio ARCA (50).
+        $fc = $this->emitir($this->pedido());
+        Db::pdo()->prepare("UPDATE subdiario SET fe_ccae = '71234567890123', fe_nrocbte = 50, fe_dvtocae = '2027-01-10', electronica = 1 WHERE fe_clave = ?")->execute([$fc['id']]);
+        $h = $this->svc->obtener($fc['id']);
+        $this->assertSame('0009-00000050', numero_visible($h));
+        $d = \App\Modules\Comprobantes\ComprobanteImpreso::datos($h, $this->svc->emisor());
+        $this->assertSame('0009-00000050', $d['numero']);
+        $this->assertSame('71234567890123', $d['cae']['cae']);
+        $this->assertSame('Factura_A_0009-00000050.pdf', $d['nombre_archivo']);
+
+        $nc = $this->emitir($this->pedido(['tipo' => 'NC', 'asociado' => (string) $fc['id'], 'items' => [['descripcion' => 'x', 'cantidad' => '1', 'precio' => '100', 'alicuota' => '21']]]));
+        $hn = $this->svc->obtener($nc['id']);
+        $this->assertSame(50, (int) $hn['fe_nrocbte_asoc'], 'la nota apunta al número de ARCA');
+        $this->assertSame($fc['id'], $hn['asociado_clave']);
+        $this->assertStringStartsWith('Factura A 0009-00000050', \App\Modules\Comprobantes\ComprobanteImpreso::datos($hn, $this->svc->emisor())['asociado']);
+        $this->assertCount(1, $this->svc->obtener($fc['id'])['notas']);
+        $this->assertSame(121.0, $this->svc->porAcreditar($this->svc->obtener($fc['id'])));
+        $this->assertSame(1, $this->svc->listar(['numero' => '50'], 1, 50)['total'], 'se busca por el número de ARCA');
+    }
+
+    public function testComprobantesConElMismoNumeroYDistintaFechaConviven(): void
+    {
+        $a = $this->emitir($this->pedido());
+        // un comprobante histórico con el mismo tipo/letra/sucursal/número pero de otra fecha (pasa en los datos del VFP)
+        Db::pdo()->exec("INSERT INTO subdiario (fecha, tipo, letra, sucursal, prefijo, comprobante, cliente, neto) VALUES ('2019-01-01', 'FC', 'A', 99, 9, 1, 990001, 10)");
+        $this->assertSame(2, (int) Db::pdo()->query("SELECT COUNT(*) FROM subdiario WHERE comprobante = 1")->fetchColumn());
+        $this->assertCount(1, $this->svc->obtener($a['id'])['items'], 'cada comprobante ve solo sus renglones');
+        $this->assertSame(2, $this->emitir($this->pedido())['numero'], 'sigue la numeración');
     }
 }

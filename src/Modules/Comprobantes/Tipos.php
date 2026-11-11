@@ -17,6 +17,20 @@ final class Tipos
     /** Ids de ARCA de la condición del receptor a los que un emisor Responsable Inscripto les hace factura A. */
     private const RECEPTOR_CON_A = [1, 6, 13, 16];
 
+    /** Expresión SQL del número con el que se conoce un comprobante: el de ARCA si tiene CAE, si no el interno. $a = alias de la tabla. */
+    public static function sqlNumeroVisible(string $a = ''): string
+    {
+        $p = $a === '' ? '' : $a . '.';
+        return "IF({$p}fe_ccae NOT IN ('', '.') AND {$p}fe_nrocbte > 0, {$p}fe_nrocbte, {$p}comprobante)";
+    }
+
+    /** Lo mismo en PHP, a partir de una fila con comprobante y, si los tiene, fe_nrocbte y fe_ccae. */
+    public static function numeroVisible(array $c): int
+    {
+        $cae = (string) ($c['fe_ccae'] ?? '');
+        return $cae !== '' && $cae !== '.' && (int) ($c['fe_nrocbte'] ?? 0) > 0 ? (int) $c['fe_nrocbte'] : (int) $c['comprobante'];
+    }
+
     public static function valido(string $tipo): bool
     {
         return isset(self::NOMBRES[$tipo]);

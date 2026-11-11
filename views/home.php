@@ -13,6 +13,10 @@ if (puede('clientes.ver')) {
 if (puede('articulos.ver')) {
     $kpis[] = ['n' => $pdo->query("SELECT COUNT(*) FROM articulos WHERE estado = 'AC'")->fetchColumn(), 'l' => 'artículos activos', 'url' => '/articulos'];
 }
+if (puede('comprobantes.ver')) {
+    $m = $pdo->query("SELECT COUNT(*), COALESCE(SUM(IF(tipo = 'NC', -neto, neto)), 0) FROM subdiario WHERE estado = '' AND fecha >= DATE_FORMAT(CURDATE(), '%Y-%m-01')")->fetch(PDO::FETCH_NUM);
+    $kpis[] = ['n' => $m[0], 'l' => 'comprobantes este mes · ' . plata_dec($m[1]), 'url' => '/comprobantes'];
+}
 ?>
 <section class="hero">
     <p class="eyebrow"><?= e($emp['empresa'] !== '' ? $emp['empresa'] : 'Facturador web') ?><?= $emp['cuit'] ? ' · CUIT ' . e(cuit_texto($emp['cuit'])) : '' ?></p>

@@ -17,7 +17,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
 <div class="page-head">
     <div>
         <p class="eyebrow"><?= e(fecha($h['fecha'])) ?> · <?= $conCae ? 'Con CAE' : 'Interno, sin CAE' ?><?= $h['estado'] !== '' ? ' · ANULADO' : '' ?></p>
-        <h1><?= e($titulo) ?> <?= e(numero_cbte($h['prefijo'], $h['comprobante'])) ?></h1>
+        <h1><?= e($titulo) ?> <?= e(numero_visible($h)) ?></h1>
     </div>
     <div class="acciones">
         <a class="btn" href="<?= e(url('/comprobantes/' . $h['fe_clave'] . '/imprimir')) ?>" target="_blank" rel="noopener">Imprimir</a>
@@ -44,7 +44,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
         <?php endif; ?>
         <?php if ($h['observaciones']): ?><div><dt>Observaciones</dt><dd><?= e($h['observaciones']) ?></dd></div><?php endif; ?>
         <?php if ($h['orden_compra']): ?><div><dt>Orden de compra</dt><dd><?= e($h['orden_compra']) ?></dd></div><?php endif; ?>
-        <?php if ($conCae): ?><div><dt>CAE</dt><dd><?= e($h['fe_ccae']) ?> · vence <?= e(fecha($h['fe_dvtocae'])) ?></dd></div><?php endif; ?>
+        <?php if ($conCae): ?><div><dt>CAE</dt><dd><?= e($h['fe_ccae']) ?><?= $h['fe_dvtocae'] ? ' · vence ' . e(fecha($h['fe_dvtocae'])) : '' ?></dd></div><?php endif; ?>
     </dl>
 </section>
 
@@ -53,7 +53,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
         <thead><tr><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>IVA</th><th>Importe</th></tr></thead>
         <tbody>
         <?php foreach ($h['items'] as $it): ?>
-            <tr><td data-label="Descripción"><?= e($it['observaciones']) ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
+            <tr><td data-label="Descripción" class="pre-linea"><?= e($it['observaciones']) ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
                 <td data-label="Cantidad"><?= e(numero($it['unidades'], 3)) ?></td>
                 <td data-label="Precio" class="nw"><?= e(numero($it['precio'], 4)) ?></td>
                 <td data-label="IVA"><?= $h['letra'] === 'C' ? '—' : ((float) $it['por_iva'] > 0 ? e(numero($it['por_iva']) . ' %') : 'Exento') ?></td>
@@ -81,7 +81,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
         <h2>Notas asociadas</h2>
         <ul class="list small">
             <?php foreach ($h['notas'] as $n): ?>
-                <li><a href="<?= e(url('/comprobantes/' . $n['fe_clave'])) ?>"><?= e(Tipos::titulo($n['tipo'], $n['letra']) . ' ' . numero_cbte($n['prefijo'], $n['comprobante'])) ?></a>
+                <li><a href="<?= e(url('/comprobantes/' . $n['fe_clave'])) ?>"><?= e(Tipos::titulo($n['tipo'], $n['letra']) . ' ' . numero_visible($n)) ?></a>
                     · <?= e(fecha($n['fecha'])) ?> · <?= e(plata_dec($n['neto'])) ?></li>
             <?php endforeach; ?>
         </ul>

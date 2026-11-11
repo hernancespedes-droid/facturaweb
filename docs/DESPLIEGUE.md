@@ -23,7 +23,9 @@ Ferozo clona el repositorio dentro de `public_html/`.
 6. Abrir `https://<dominio>/instalar`: pide la clave de instalación, crea las tablas y el usuario **Master** (O&S).
    Después **borrar `instalar_token`** de `local.php` (la ruta igual queda apagada porque ya existe un Master).
 7. `/salud` → `"ok":true` y la versión. Ingresar con el Master.
-8. Datos del cliente: **Tablas → Parámetros** (razón social, CUIT, condición de IVA, inicio de actividades) y, si viene del
+8. **Mail de salida** (para enviar comprobantes): en `config/local.php` completar la sección `mail` con la casilla del dominio del cliente
+   (host, puerto, `tls` o `ssl`, usuario, contraseña, `from`); sin eso el botón Enviar queda deshabilitado.
+9. Datos del cliente: **Tablas → Parámetros** (razón social, CUIT, condición de IVA, inicio de actividades) y, si viene del
    VFP, **Sistema → Migración desde el sistema VFP** (ver `docs/migracion-dbf.md`).
 
 ## Con SSH

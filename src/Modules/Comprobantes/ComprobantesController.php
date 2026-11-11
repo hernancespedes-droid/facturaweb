@@ -48,7 +48,7 @@ final class ComprobantesController
             return new Response(404);
         }
         return Response::html(View::render('comprobantes/ver', [
-            'title' => Tipos::titulo($h['tipo'], $h['letra']) . ' ' . numero_cbte($h['prefijo'], $h['comprobante']), 'nav' => 'comprobantes',
+            'title' => Tipos::titulo($h['tipo'], $h['letra']) . ' ' . numero_visible($h), 'nav' => 'comprobantes',
             'h' => $h, 'emisor' => $svc->emisor(), 'porAcreditar' => $h['tipo'] === 'NC' ? 0.0 : $svc->porAcreditar($h),
             'puedeEmitir' => Auth::puede('comprobantes.emitir'),
         ]));
@@ -195,7 +195,7 @@ final class ComprobantesController
     {
         $out = [];
         foreach ((new ComprobantesService())->asociables((int) ($req->query['cliente'] ?? 0)) as $a) {
-            $out[] = ['id' => (int) $a['fe_clave'], 'letra' => $a['letra'], 'texto' => Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_cbte($a['prefijo'], $a['comprobante'])
+            $out[] = ['id' => (int) $a['fe_clave'], 'letra' => $a['letra'], 'texto' => Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a)
                 . ' del ' . fecha($a['fecha']) . ' · ' . plata($a['neto'])];
         }
         return Response::json($out);

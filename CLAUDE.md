@@ -24,13 +24,26 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
   para que la migración y `lib/afip_fe` (adaptador `OysSubdiario`) trabajen casi 1 a 1. Lo que agrega la web se documenta en la migración.
 - `parametros` = datos de la empresa (tabla O&S, fila id=1). La configuración del sistema web es la tabla `configuracion`.
 
+## Facturación (etapa 2)
+
+- `Modules/Comprobantes`: `Calculadora` (lógica pura, las reglas de importes), `Tipos` (letra, códigos ARCA, numeradores), `ComprobantesService`
+  (`armar()` valida y calcula; `emitir()` numera con `FOR UPDATE` en `sucursales` y graba todo en una transacción; clave de operación contra el doble envío),
+  `ComprobanteImpreso` (datos para imprimir) + `ComprobantePdf` y `Core\Pdf` (PDF sin librerías) + `Core\Mailer` (SMTP sin librerías).
+- **El número interno no es único en los datos del VFP**: la clave es tipo + letra + sucursal + número + **fecha** y las tablas hijas (`iva`, `estadistica`,
+  `caja`, `ctact`) apuntan con `subdiario_id`. Mostrar siempre `numero_visible()` (el de ARCA si tiene CAE). Ver `docs/migracion-dbf.md`.
+- Convención de renglones: `precio` y `total_item` son lo que se ve (A neto; B y C con IVA); `precio_siniva` y `total_siniva` netos y con el descuento. El
+  IVA oficial está en `iva`, no se recalcula desde los renglones.
+- Para la etapa 3 (CAE): `Autorizador` entre "Revisar" y grabar; `lib/afip_fe` arma el `Comprobante` a partir de lo calculado (no de nuevo desde los
+  renglones); el comprobante nace con el número de ARCA; `numero_visible()` y `Tipos::numeroVisible()` ya lo contemplan.
+- Los campos de importe usan `data-decimales` (la máscara de `app.js` pone puntos de miles: `Valida::decimal` y `comprobante.js` los leen igual).
+
 ## Estructura y convenciones
 
 - Módulos en `src/Modules/<Nombre>/` con `routes.php`; vistas en `views/<modulo>/`. Handlers `function (Request $req, array $params): Response`.
 - Las 12 tablas del VFP se declaran en `src/Modules/Tablas/Definiciones.php` (campos, clave O&S, grilla, quién las usa) y tienen
   una sola pantalla genérica. Clientes y Artículos declaran sus campos igual (`campos()`); `App\Core\Form` los dibuja y
   `App\Core\Validador` los valida.
-- Menú: `App\Core\Menu` (grupos Maestros, Tablas, Sistema). Permiso por opción del VFP (`tablas.rubros`, `clientes.ver`/`clientes.editar`…).
+- Menú: `App\Core\Menu` (grupos Maestros, Facturación, Tablas, Sistema). Permiso por opción del VFP (`tablas.rubros`, `clientes.ver`/`clientes.editar`…).
 - Permiso nuevo: insertarlo en `permisos` y darlo en la misma migración a los roles `WHERE es_admin = 1 OR es_master = 1`; si es pantalla, sumarlo a `RolesService::MENU` y a `Menu`.
 - Cambios de base: solo migraciones nuevas `database/migrations/NNNN_*.sql`, idempotentes; nunca editar una ya entregada.
 - Textos en español rioplatense. URLs con `url()`, texto con `e()`.
@@ -46,7 +59,7 @@ Nada de datos reales de clientes en el repo ni en pruebas (las pruebas del migra
 1. Migraciones, código y vistas responsive.
 2. Pruebas de PHP (lógica, permisos por rol, concurrencia si numera) y el flujo en `e2e/recorrido.js`. `bash bin/test.sh` pasa completo.
 3. Se recorrió de verdad con el navegador (escritorio y celular).
-4. `VERSION` subida (0.2.0 = etapa 1, 0.3.0 = etapa 2…; 1.0.0 = pase a producción de OYS), commit y `bin/package.sh` arma `dist/facturaweb-<version>.zip`.
+4. `VERSION` subida (0.2.0 = etapa 1, 0.3.0 = etapa 2, 0.4.0 = etapa 3…; 1.0.0 = pase a producción de OYS), commit y `bin/package.sh` arma `dist/facturaweb-<version>.zip`.
 5. Nota de entrega `docs/entregas/<version>-<etapa>.md` (qué incluye, qué probar con qué usuario, cómo desplegar y revertir, qué falta del cliente).
 6. Skill `facturaweb-proyecto` actualizado si cambió el estado o una decisión.
 
