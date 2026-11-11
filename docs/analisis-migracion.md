@@ -44,9 +44,22 @@ Tablas con nombre `Copia de…`, `tmp_*`, `temp*`, `pp`, `gig`, `ABC` parecen re
 
 ### Factura electrónica hoy
 
-El VFP **no** habla con AFIP directamente: graba el comprobante en `subdiario` y llama a un **programa externo** (`sucursales.pathElectronica`, clase `metodosexpo`) que pide el CAE y lo escribe en `fe_ccae` / `fe_dvtocae`. Ese ejecutable no está en el repo.
+El VFP **no** habla con ARCA directamente: graba el comprobante en `subdiario` y llama a un **programa externo** (`sucursales.pathElectronica`, clase `metodosexpo`) que pide el CAE y lo escribe en `fe_ccae` / `fe_dvtocae`.
 
-En web hay que **programar WSAA + WSFEv1 en PHP**: firma del ticket de acceso con el certificado (`openssl`) y SOAP a ARCA, más el QR de la RG 4892. Se reutiliza el **mismo certificado y clave privada** que usa hoy el programa externo, si el CUIT y el punto de venta son los mismos.
+### Factura electrónica en la web: módulo `afip_fe` (ya probado en Reciclados)
+
+Se reutiliza el módulo PHP `afip_fe` v2 (10/11/2026), copiado en `lib/afip_fe/` (carpeta no pública, `lib/.htaccess` niega el acceso). Lineamientos en `lib/afip_fe/GUIA_NUEVO_PROYECTO.md`.
+
+- Este facturador VFP usa **el mismo esquema O&S** que el módulo espera: `subdiario` con los campos `fe_*`, `iva`, `tributos`, `fe_parametros`, `fe_actualizacion` y `equivalencias_afip` (con `TABLA`, `CODIGOAFIP`, `CODIGOOYS`). Por eso conviene **mantener esos nombres de tablas y campos en MySQL**: el adaptador `OysSubdiario` funciona casi sin cambios y la migración de datos es casi 1 a 1.
+- Flujo de pantalla del módulo: formulario → **Revisar** → **Emitir y pedir CAE**; si ARCA rechaza no se graba nada; protección contra doble envío; impresión A4 con QR (`FacturaHtml`).
+- Pruebas: `tests/prueba_facturador.php` pasa acá (ARCA simulado). `prueba.php` y `prueba_abm.php` necesitan la base de prueba de Reciclados, que no está en el paquete.
+
+**Puesta en marcha (según la guía), con cambios respecto de lo que dije antes:**
+- **Certificado propio para la web**, no el mismo del programa externo (ARCA da un solo ticket por certificado y se trabarían hasta 12 h). Lo ideal: "Agregar certificado" en el alias que ya funciona, con el mismo DN. Claude genera la clave y el `.csr`; el trámite en ARCA lo hace Hernán.
+- **Punto de venta propio para la web** (RECE para aplicativo y web services), para no competir por los números con el escritorio mientras convivan.
+- `config_afip.php`, `.crt`, `.key` y `cacert.pem` **fuera de `public_html`** (por ejemplo `<raíz del hosting>/afip_facturador/`).
+- Se entrega en **modo prueba** (`factura_grabar = false`); la facturación real la activa Hernán.
+- Antes de emitir: `probar_conexion.php` tiene que dar OK (FEDummy, TA, puntos de venta, último número, condiciones de IVA).
 
 ## 2. Propuesta técnica
 
@@ -64,7 +77,7 @@ En web hay que **programar WSAA + WSFEv1 en PHP**: firma del ticket de acceso co
 |---|---|---|
 | 1 | Base y estructura | Login, usuarios y permisos, empresa, puntos de venta, tablas (12), clientes, artículos; script de migración de maestros |
 | 2 | Facturación | FC/NC/ND A, B, C (y E si exportan), ítems, IVA por alícuota, formas de pago, comprobante asociado en NC, numeración, impresión, mail |
-| 3 | Factura electrónica ARCA | WSAA + WSFEv1 (homologación y producción), CAE, QR, reintento ante caídas, consulta de último número |
+| 3 | Factura electrónica ARCA | Integrar `lib/afip_fe` (ya hecho y probado): configuración, ABM de equivalencias de IVA, Revisar → Emitir, QR, certificado y punto de venta de la web |
 | 4 | Cta. cte. y cheques | Recibos con retenciones y valores, imputación manual y automática, ajustes, cartera de cheques |
 | 5 | Listados | Subdiario de ventas, cobranzas, cta. cte. por fecha / comprobante, deuda pendiente, resumen de deuda, cheques diferidos, clientes, Libro IVA digital; todo a Excel |
 | 6 | Pase a producción | Migración de datos históricos, controles de saldos contra VFP, capacitación |
@@ -75,16 +88,18 @@ Solo el menú de facturación (`menu1`). Producción textil, aparte.
 
 | | Humano (dev solo) | Con IA |
 |---|---|---|
-| Desarrollo | 160–240 h | 22–34 h de sesión |
-| Pruebas | 40–60 h | 6–10 h (automáticas) |
-| Entorno por sesión | — | ~15 min × 10–14 sesiones |
-| Tiempo de Hernán (revisar, probar, ARCA homologación, desplegar, cliente) | — | 30–45 h |
-| **Horas hombre reales** | **200–300 h** | **30–45 h de Hernán** |
-| Calendario | 2–3 meses | 4–6 semanas, según las pruebas de Hernán y del cliente |
+| Desarrollo | 150–225 h | 18–28 h de sesión |
+| Pruebas | 38–55 h | 5–8 h (automáticas) |
+| Entorno por sesión | — | ~15 min × 8–12 sesiones |
+| Tiempo de Hernán (revisar, probar, certificado y PV en ARCA, desplegar, cliente) | — | 26–40 h |
+| **Horas hombre reales** | **190–280 h** | **26–40 h de Hernán** |
+| Calendario | 2–3 meses | 4–5 semanas, según las pruebas de Hernán y del cliente |
 
-Por etapa (con IA, horas de sesión): 1) 4–6 h · 2) 6–9 h · 3) 5–8 h · 4) 6–9 h · 5) 4–6 h · 6) 3–5 h.
+Por etapa (con IA, horas de sesión): 1) 4–6 h · 2) 6–9 h · 3) **1,5–3 h** (antes 5–8 h, gracias a `afip_fe`) · 4) 6–9 h · 5) 4–6 h · 6) 3–5 h.
 
-- Mis horas son menos confiables que las humanas. Lo que puede duplicarlas: **ARCA** (el sandbox no llega a los servicios de AFIP, así que la homologación la prueba Hernán), reglas escondidas en `facturacion_ped` (8.800 líneas), y datos viejos inconsistentes en los DBF.
+Estimación actualizada el 11/11/2026 al sumar el módulo `afip_fe`. Un humano también ahorra: el módulo ya resuelve WSAA/WSFE, QR, bloqueo de números y recuperación ante cortes.
+
+- Mis horas son menos confiables que las humanas. Lo que puede alargarlas: reglas escondidas en `facturacion_ped` (8.800 líneas), datos viejos inconsistentes en los DBF y el trámite del certificado en ARCA (el sandbox no llega a ARCA: lo prueba Hernán).
 - **Cuello de botella:** pruebas de homologación con ARCA y el control de saldos migrados contra el VFP, no el desarrollo.
 
 ## 5. Preguntas abiertas
@@ -94,6 +109,6 @@ Por etapa (con IA, horas de sesión): 1) 4–6 h · 2) 6–9 h · 3) 5–8 h · 
 3. ¿Qué comprobantes emiten hoy: A, B, C, **E (exportación)**, NC, ND, remitos, tickets con **controlador fiscal**? (`sucursales` tiene campos de controlador fiscal y comprobante manual.)
 4. ¿Se usan **lista de precios** por cliente, descuentos, precios en dólares (`cotizacion_dolar`, `valor_dolar`)?
 5. ¿Qué **retenciones** se cargan en los recibos (`cobra.COD_RT1..5`)?
-6. Certificado de ARCA: ¿lo tienen (`.crt` + `.key`) y en qué CUIT y punto de venta?
+6. ARCA: ¿qué CUIT y alias usa hoy el programa externo? ¿Se puede crear un punto de venta nuevo para la web?
 7. ¿Cuántos **usuarios y sucursales** van a usar el web a la vez?
 8. ¿Se migra **todo el histórico** o solo saldos de cta. cte. + maestros?
