@@ -90,6 +90,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await enviar(page);
     ok((await page.textContent('.alerta-error, .field-error')).includes('CUIT'), 'CUIT inválido: avisa');
     await page.fill('#f-cuit', '30-70765648-0');
+    await page.selectOption('#f-iva', '1');
     await enviar(page);
     ok((await page.textContent('.alerta')).includes('Cambios guardados'), 'parámetros guardados');
 
@@ -122,6 +123,88 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.goto(BASE + '/articulos?q=e2e');
     ok((await page.content()).includes('1.234,5'), 'artículo en la grilla con el precio');
 
+    // ---- Facturación
+    await page.goto(BASE + '/clientes/nuevo');
+    await page.fill('#f-razon_social', 'CLIENTE E2E FINAL');
+    await page.selectOption('#f-iva', '3');
+    await enviar(page);
+    ok((await page.textContent('.alerta')).includes('creado'), 'cliente consumidor final creado');
+
+    await page.goto(BASE + '/comprobantes/nuevo?tipo=FC');
+    ok((await page.textContent('h1')).includes('Factura'), 'abre el formulario de factura');
+    await page.fill('#cliente-q', 'CLIENTE E2E SRL');
+    await page.waitForSelector('[data-cliente-lista] li');
+    await page.click('[data-cliente-lista] li');
+    ok((await page.textContent('[data-cliente-info]')).includes('Inscripto'), 'elige el cliente y muestra su condición');
+    ok((await page.textContent('[data-letra-titulo]')).trim() === 'A', 'cliente inscripto: factura A');
+    // renglón 1: artículo del maestro
+    const r1 = page.locator('[data-renglon]').nth(0);
+    await r1.locator('[data-articulo]').fill('abono');
+    await r1.locator('[data-articulo]').blur();
+    await page.waitForFunction(() => document.querySelector('[data-descripcion]').value.includes('MANTENIMIENTO'));
+    ok((await r1.locator('[data-descripcion]').inputValue()).includes('ABONO'), 'el artículo trae su descripción');
+    await r1.locator('[data-cantidad]').fill('2');
+    await r1.locator('[data-precio]').fill('1000');
+    // renglón 2: libre, al 10,5 %
+    const r2 = page.locator('[data-renglon]').nth(1);
+    await r2.locator('[data-descripcion]').fill('Servicio libre');
+    await r2.locator('[data-cantidad]').fill('1');
+    await r2.locator('[data-precio]').fill('500');
+    await r2.locator('[data-alicuota]').selectOption({ label: '10,5 %' });
+    ok((await page.textContent('[data-t-total]')).includes('2.972,50'), 'total en vivo: 2.000 + 500 + IVA 472,50 = 2.972,50');
+    ok((await page.textContent('[data-t-iva-filas]')).includes('420,00'), 'IVA 21 % discriminado en la A');
+    await page.screenshot({ path: path.join(CAPTURAS, 'factura-form.png'), fullPage: true });
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+    ok((await page.textContent('h1')).includes('Factura A'), 'revisión de la factura A');
+    ok((await page.textContent('.totales-rev')).includes('2.972,50'), 'la revisión recalcula en el servidor');
+    await page.screenshot({ path: path.join(CAPTURAS, 'factura-revisar.png'), fullPage: true });
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    ok((await page.textContent('.alerta')).includes('emitida'), 'factura emitida');
+    const urlFactura = page.url();
+    ok(/Factura A 0004-\d{8}/.test(await page.textContent('h1')), 'numerada con el punto de venta 0004');
+    await page.screenshot({ path: path.join(CAPTURAS, 'factura-ver.png'), fullPage: true });
+    // impresión y PDF
+    const pdf = await ctx.request.get(urlFactura + '/pdf');
+    ok(pdf.status() === 200 && (pdf.headers()['content-type'] || '').includes('application/pdf'), 'el PDF se baja');
+    await page.goto(urlFactura + '/imprimir');
+    ok((await page.textContent('body')).includes('COMPROBANTE INTERNO'), 'la página imprimible dice que es interno');
+    await page.screenshot({ path: path.join(CAPTURAS, 'factura-imprimir.png'), fullPage: true });
+    // nota de crédito desde la factura
+    await page.goto(urlFactura);
+    await Promise.all([page.waitForNavigation(), page.click('text=Hacer nota de crédito')]);
+    ok((await page.textContent('h1')).includes('Nota de crédito'), 'abre la nota de crédito');
+    ok((await page.inputValue('[data-renglon] [data-descripcion]')).includes('ABONO'), 'trae los renglones de la factura');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    ok(/Nota de crédito A 0004-\d{8}/.test(await page.textContent('h1')), 'nota de crédito emitida');
+    await page.goto(urlFactura);
+    ok(!(await page.content()).includes('Hacer nota de crédito'), 'la factura ya está acreditada por completo');
+    // consumidor final, contado: factura B con IVA incluido
+    await page.goto(BASE + '/comprobantes/nuevo?tipo=FC');
+    await page.fill('#cliente-q', 'CLIENTE E2E FINAL');
+    await page.waitForSelector('[data-cliente-lista] li');
+    await page.click('[data-cliente-lista] li');
+    ok((await page.textContent('[data-letra-titulo]')).trim() === 'B', 'consumidor final: factura B');
+    await page.check('input[name=forma_pago][value="1"]');
+    ok(await page.isVisible('[data-fpago]'), 'contado: elige con qué paga');
+    const b1 = page.locator('[data-renglon]').nth(0);
+    await b1.locator('[data-descripcion]').fill('Consulta');
+    await b1.locator('[data-cantidad]').fill('1');
+    await b1.locator('[data-precio]').fill('1210');
+    ok((await page.textContent('[data-t-total]')).includes('1.210,00'), 'en la B el total es el precio con IVA');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+    ok((await page.textContent('.totales-rev')).includes('IVA contenido: $ 210,00'), 'IVA contenido de la B');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    ok(/Factura B 0004-\d{8}/.test(await page.textContent('h1')), 'factura B emitida');
+    ok((await page.textContent('body')).includes('Contado'), 'queda como contado');
+    // listado
+    await page.goto(BASE + '/comprobantes?cliente=E2E');
+    ok((await page.locator('tbody tr').count()) === 3, 'el listado muestra las tres (A, NC y B)');
+    await page.screenshot({ path: path.join(CAPTURAS, 'comprobantes-lista.png'), fullPage: true });
+    // sin mail configurado el envío está deshabilitado
+    await page.goto(urlFactura);
+    ok(await page.isDisabled('#mail button[type=submit]'), 'sin SMTP configurado el botón Enviar está deshabilitado');
+
     // Borrar el vendedor que usa un cliente: no deja.
     await page.goto(BASE + '/tablas/vendedores?q=E2E');
     await page.click('text=ZZ');
@@ -137,6 +220,10 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await login(p2, 'e2e_operador');
     const menu = await p2.content();
     ok(!menu.includes('/usuarios"') && !menu.includes('/tablas/sucursales"'), 'operador: el menú no muestra Usuarios ni Sucursales');
+    ok(menu.includes('/comprobantes/nuevo?tipo=FC'), 'operador: el menú muestra Nueva factura');
+    await p2.goto(BASE + '/comprobantes/nuevo?tipo=FC');
+    ok(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: el formulario de factura no se desborda');
+    await p2.screenshot({ path: path.join(CAPTURAS, 'celular-factura.png'), fullPage: true });
     const r = await p2.goto(BASE + '/tablas/sucursales');
     ok(r.status() === 403, 'operador: Sucursales responde 403');
     await p2.goto(urlCliente);

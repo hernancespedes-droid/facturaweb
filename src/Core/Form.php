@@ -57,7 +57,7 @@ final class Form
                 $attrs = ' inputmode="numeric" pattern="\d*"';
                 break;
             case 'decimal':
-                $attrs = ' inputmode="decimal"';
+                $attrs = ' inputmode="decimal" data-decimales="' . (int) ($c['dec'] ?? 2) . '"';
                 $v = $v === '' ? '' : (is_numeric($v) ? numero($v, (int) ($c['dec'] ?? 2)) : $v);
                 break;
             case 'fecha':

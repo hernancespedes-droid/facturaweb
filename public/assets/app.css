@@ -1012,3 +1012,25 @@ a.pag-btn:hover, a.pag-num:hover, a.pag-btn:focus-visible, a.pag-num:focus-visib
   background: color-mix(in srgb, var(--brand) 12%, transparent); font-size: .88rem; }
 .chip-filtro a { display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 50%; text-decoration: none; color: inherit; }
 .chip-filtro a:hover { background: color-mix(in srgb, var(--brand) 25%, transparent); }
+
+/* ---- Facturación (etapa 2) ---- */
+.has-picker { position: relative; }
+.picker-lista { position: absolute; z-index: 20; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 4px; list-style: none; max-height: 280px; overflow: auto;
+  background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; box-shadow: 0 12px 28px -12px rgba(20, 30, 50, .45); }
+.picker-lista li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.picker-lista li:hover, .picker-lista li:focus { background: var(--panel-2); outline: none; }
+.picker-lista small { display: block; opacity: .7; }
+.picker-info { margin-top: 4px; min-height: 1.2em; }
+.renglones input, .renglones select { width: 100%; min-width: 0; }
+.renglones td { vertical-align: middle; }
+.totales { margin: 16px 0 8px auto; max-width: 360px; display: grid; gap: 6px; }
+.totales > div, .totales [data-t-iva-filas] > div { display: flex; justify-content: space-between; gap: 16px; }
+.totales .total-final, .totales-rev .total-final { border-top: 2px solid var(--line-2); padding-top: 8px; font-size: 1.15rem; }
+.totales-rev { max-width: 460px; margin-left: auto; }
+.totales-rev .datos > div { display: flex; justify-content: space-between; gap: 16px; }
+form.inline { display: inline-block; margin-right: 8px; }
+fieldset.field { border: 0; padding: 0; margin: 0; }
+fieldset.field legend { padding: 0; margin-bottom: 4px; }
+@media (max-width: 720px) { .totales, .totales-rev { max-width: none; } }
+.renglones select[data-alicuota] { min-width: 6.5em; }
+.totales [data-t-iva-filas] { display: grid; gap: 6px; }

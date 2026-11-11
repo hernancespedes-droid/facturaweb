@@ -487,7 +487,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var limpio = v.replace(/[^\d,]/g, '');
     var coma = limpio.indexOf(',');
     var entero = (coma < 0 ? limpio : limpio.slice(0, coma)).replace(/^0+(?=\d)/, '');
-    var dec = coma < 0 ? null : limpio.slice(coma + 1).replace(/,/g, '').slice(0, 2);
+    var maxDec = parseInt(el.getAttribute('data-decimales') || '2', 10);
+    var dec = coma < 0 ? null : limpio.slice(coma + 1).replace(/,/g, '').slice(0, maxDec);
     var cero = dec !== null && entero === ''; // ",5" → "0,5" (el cursor corre uno por el 0 agregado)
     if (cero) antes++;
     var nuevo = (neg ? '-' : '') + grupos(entero) + (dec === null ? '' : (cero ? '0' : '') + ',' + dec);

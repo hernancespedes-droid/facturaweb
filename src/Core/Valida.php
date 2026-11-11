@@ -24,8 +24,10 @@ final class Valida
     }
 
     /**
-     * Número escrito a mano: "1.234,56", "1234,56" o "1234.56". Null si no es un número.
-     * Con coma, la coma es el decimal y los puntos son de miles; sin coma, un solo punto es el decimal.
+     * Número escrito a mano o por la máscara de los campos de importe (que agrega puntos de miles): "1.234,56", "1234,56",
+     * "1.000" (mil), "1234.56". Con coma, la coma es el decimal y los puntos son de miles. Sin coma, los puntos son de miles
+     * solo si agrupan de a tres dígitos ("1.000", "12.345.678"); si no, el punto es el decimal ("12.5", "0.500").
+     * Null si no es un número.
      */
     public static function decimal(string $v): ?float
     {
@@ -36,7 +38,7 @@ final class Valida
         if (str_contains($v, ',')) {
             $v = str_replace('.', '', $v);
             $v = str_replace(',', '.', $v);
-        } elseif (substr_count($v, '.') > 1) {
+        } elseif (preg_match('/^-?[1-9]\d{0,2}(\.\d{3})+$/', $v) === 1) {
             $v = str_replace('.', '', $v);
         }
         return preg_match('/^-?\d+(\.\d+)?$/', $v) === 1 ? (float) $v : null;

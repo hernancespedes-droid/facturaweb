@@ -18,6 +18,16 @@ return [
         // y volver a dejarla vacía.
         'instalar_token' => '',
     ],
+    // Mail de salida para enviar los comprobantes (casilla del dominio del cliente en el hosting).
+    'mail' => [
+        'host'      => 'smtp.dominio.com',
+        'port'      => 587,
+        'secure'    => 'tls',          // tls (587) o ssl (465)
+        'user'      => 'facturas@dominio.com',
+        'pass'      => 'CONTRASEÑA_DE_LA_CASILLA',
+        'from'      => 'facturas@dominio.com',
+        'from_name' => 'Nombre de la empresa',
+    ],
     'db' => [
         'host' => 'localhost',
         'name' => 'NOMBRE_DE_LA_BASE',

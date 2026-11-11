@@ -27,6 +27,16 @@ $base = [
         // Minutos sin uso tras los cuales la sesión se cierra sola.
         'inactividad_minutos' => (int) env('AUTH_INACTIVIDAD_MINUTOS', '240'),
     ],
+    // Envío de comprobantes por mail (SMTP). Vacío = no configurado. Se completa en config/local.php.
+    'mail' => [
+        'host'      => env('MAIL_HOST', ''),
+        'port'      => (int) env('MAIL_PORT', '587'),
+        'secure'    => env('MAIL_SECURE', 'tls'),   // tls (587), ssl (465) o vacío (solo pruebas locales)
+        'user'      => env('MAIL_USER', ''),
+        'pass'      => env('MAIL_PASS', ''),
+        'from'      => env('MAIL_FROM', ''),
+        'from_name' => env('MAIL_FROM_NAME', ''),
+    ],
     'db' => [
         'host'    => env('DB_HOST', '127.0.0.1'),
         'port'    => (int) env('DB_PORT', '3306'),

@@ -22,6 +22,7 @@ final class RolesService
     public const MENU = [
         'clientes' => ['clientes.ver', ['clientes.editar']],
         'articulos' => ['articulos.ver', ['articulos.editar']],
+        'comprobantes' => ['comprobantes.ver', ['comprobantes.emitir', 'comprobantes.credito']],
         'sucursales' => ['tablas.sucursales', []],
         'rubros' => ['tablas.rubros', []],
         'subrubros' => ['tablas.subrubros', []],

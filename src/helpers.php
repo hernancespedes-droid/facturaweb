@@ -219,3 +219,20 @@ if (!function_exists('fecha')) {
         return $t === false ? $f : date('d/m/Y', $t);
     }
 }
+
+if (!function_exists('numero_cbte')) {
+    /** Número de comprobante como se imprime: 0004-00000123 (punto de venta y número). */
+    function numero_cbte(mixed $prefijo, mixed $numero): string
+    {
+        return sprintf('%04d-%08d', (int) $prefijo, (int) $numero);
+    }
+}
+
+if (!function_exists('plata_dec')) {
+    /** "$ 15.000,00": importe en pesos siempre con dos decimales (comprobantes). */
+    function plata_dec(mixed $v): string
+    {
+        $f = (float) $v;
+        return ($f < 0 ? '−' : '') . '$ ' . number_format(abs($f), 2, ',', '.');
+    }
+}

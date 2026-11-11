@@ -21,6 +21,12 @@ final class ValidaTest extends TestCase
         $this->assertSame(1234.56, Valida::decimal('1234.56'));
         $this->assertSame(1234.5, Valida::decimal('$ 1234,5'));
         $this->assertSame(1234567.0, Valida::decimal('1.234.567'));
+        $this->assertSame(1000.0, Valida::decimal('1.000'), 'la máscara de los importes agrega puntos de miles');
+        $this->assertSame(8500.0, Valida::decimal('8.500'));
+        $this->assertSame(12.5, Valida::decimal('12.5'));
+        $this->assertSame(0.5, Valida::decimal('0.500'), 'con cero adelante el punto es decimal');
+        $this->assertSame(1234.5678, Valida::decimal('1.234,5678'));
+        $this->assertSame(12.3456, Valida::decimal('12,3456'));
         $this->assertNull(Valida::decimal('12a'));
         $this->assertNull(Valida::decimal(''));
     }

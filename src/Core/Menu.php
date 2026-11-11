@@ -7,7 +7,7 @@ use App\Modules\Auth\Auth;
 use App\Modules\Tablas\Definiciones;
 
 /**
- * Menú del sistema, agrupado como el del VFP (Maestros, Tablas) más Sistema. Cada opción se muestra solo si el rol
+ * Menú del sistema, agrupado como el del VFP (Maestros, Facturación, Tablas) más Sistema. Cada opción se muestra solo si el rol
  * tiene su permiso; las rutas lo vuelven a verificar en el servidor.
  */
 final class Menu
@@ -19,6 +19,10 @@ final class Menu
             'clientes' => ['texto' => 'Clientes', 'ruta' => '/clientes', 'permiso' => 'clientes.ver', 'grupo' => 'Maestros'],
             'articulos' => ['texto' => 'Artículos', 'ruta' => '/articulos', 'permiso' => 'articulos.ver', 'grupo' => 'Maestros'],
         ];
+        $o['comprobantes_fc'] = ['texto' => 'Nueva factura', 'ruta' => '/comprobantes/nuevo?tipo=FC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
+        $o['comprobantes_nc'] = ['texto' => 'Nueva nota de crédito', 'ruta' => '/comprobantes/nuevo?tipo=NC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
+        $o['comprobantes_nd'] = ['texto' => 'Nueva nota de débito', 'ruta' => '/comprobantes/nuevo?tipo=ND', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
+        $o['comprobantes'] = ['texto' => 'Comprobantes', 'ruta' => '/comprobantes', 'permiso' => 'comprobantes.ver', 'grupo' => 'Facturación'];
         foreach (Definiciones::todas() as $t => $d) {
             $o[$t] = ['texto' => $d['titulo'], 'ruta' => '/tablas/' . $t, 'permiso' => 'tablas.' . $t, 'grupo' => 'Tablas'];
         }
