@@ -82,7 +82,7 @@ Se reutiliza el módulo PHP `afip_fe` v2 (10/11/2026), copiado en `lib/afip_fe/`
 | Actualizar versión | Un `git pull` por instalación + "Aplicar cambios" (se automatiza con un script) | Una sola vez |
 | Costo de hosting | Una base y una carpeta por cliente (Ferozo lo permite) | Una sola |
 
-Se deja preparado para pasar a multi-empresa más adelante si se llega a muchos clientes. Si un cliente tiene **varios CUIT**, se le da una instalación por CUIT o se suma "emisores" dentro de la instalación cuando haga falta.
+**Aprobado por Hernán (11/11/2026): una instalación por cliente.** Se deja preparado para pasar a multi-empresa más adelante si se llega a muchos clientes. Si un cliente tiene **varios CUIT**, se le da una instalación por CUIT o se suma "emisores" dentro de la instalación cuando haga falta.
 
 Cada instalación: `facturador.<dominio>` → carpeta propia → base propia → `afip_<cliente>/` fuera de `public_html`. Un archivo de **licencia** por instalación (vencimiento de la suscripción) bloquea la emisión si no se renovó, con aviso previo.
 
@@ -106,7 +106,7 @@ Cada instalación: `facturador.<dominio>` → carpeta propia → base propia →
 |---|---|---|
 | 1 | Base y estructura | Login, usuarios y permisos, empresa, puntos de venta, tablas (12), clientes, artículos; script de migración de maestros |
 | 2 | Facturación | FC/NC/ND A, B, C (y E si exportan), ítems, IVA por alícuota, formas de pago, comprobante asociado en NC, numeración, impresión, mail |
-| 3 | Factura electrónica ARCA | Integrar `lib/afip_fe` (A, B, C, M, FCE): configuración, ABM de equivalencias de IVA, Revisar → Emitir, QR. **Sumar WSFEX para la E** |
+| 3 | Factura electrónica ARCA | Integrar `lib/afip_fe` (A, B, C, M, FCE): configuración, ABM de equivalencias de IVA, Revisar → Emitir, QR. La **E (WSFEX) queda para otra etapa** (los clientes actuales son todos nacionales) |
 | 4 | Cta. cte. y cheques | Recibos con retenciones y valores, imputación manual y automática, ajustes, cartera de cheques |
 | 5 | Listados | Subdiario de ventas, cobranzas, cta. cte. por fecha / comprobante, deuda pendiente, resumen de deuda, cheques diferidos, clientes, Libro IVA digital; todo a Excel |
 | 6 | Pase a producción OYS | Migración de todo el histórico, controles de saldos contra VFP, capacitación |
@@ -134,7 +134,6 @@ Estimación actualizada el 11/11/2026 con las decisiones de Hernán (E, M, FCE, 
 
 ## 5. Preguntas abiertas
 
-1. ¿Cuántas facturas **E** emite OYS por mes? (si son pocas, WSFEX puede ir después del pase)
 2. ¿Se usan **listas de precios** por cliente, descuentos, precios en dólares (`cotizacion_dolar`, `valor_dolar`)?
 3. ¿Qué **retenciones** se cargan en los recibos (`cobra.COD_RT1..5`)? ¿Percepciones de IIBB en las facturas (`tributos`)?
 4. ¿Cuántos **usuarios y sucursales** de OYS van a usarlo a la vez?
