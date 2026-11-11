@@ -1,0 +1,63 @@
+-- MB Maestro de artículos, con los campos de articulos.dbf (nombres largos de datos.dbc). Los campos de
+-- producción textil (modelo, manga, cierre, tela, color, talle...) se conservan para no perder datos, pero no
+-- se muestran (producción no entra en el facturador).
+CREATE TABLE IF NOT EXISTS articulos (
+  codigo                          VARCHAR(15)   NOT NULL,
+  descripcion                     VARCHAR(100)  NOT NULL,
+  codigo_asociado                 VARCHAR(15)   NULL,
+  rubro                           VARCHAR(3) COLLATE utf8mb4_bin NULL,
+  subrubro                        VARCHAR(3) COLLATE utf8mb4_bin NULL,
+  codigo_de_barras                VARCHAR(20)   NULL,
+  unidad_de_medida                VARCHAR(2)    NULL,
+  unidades_por_pack               SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  cantidad_de_unidades            INT UNSIGNED  NOT NULL DEFAULT 0,
+  forma_de_venta                  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  estado                          VARCHAR(2)    NOT NULL DEFAULT 'AC' COMMENT 'AC activo, BA baja',
+  stock_minimo_unidades           INT           NOT NULL DEFAULT 0,
+  stock_minimo_kilos              DECIMAL(12,3) NOT NULL DEFAULT 0,
+  bonificacion_a                  DECIMAL(6,2)  NOT NULL DEFAULT 0,
+  bonificacion_b                  DECIMAL(6,2)  NOT NULL DEFAULT 0,
+  bonificacion_mercaderia_cada    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  bonificacion_mercaderia_cuanto  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  precio_de_venta_1               DECIMAL(15,4) NOT NULL DEFAULT 0,
+  precio_de_venta_2               DECIMAL(15,4) NOT NULL DEFAULT 0,
+  precio_de_venta_3               DECIMAL(15,4) NOT NULL DEFAULT 0,
+  precio_de_oferta                DECIMAL(15,4) NOT NULL DEFAULT 0,
+  margen                          DECIMAL(6,2)  NOT NULL DEFAULT 0,
+  base_costo                      DECIMAL(6,2)  NOT NULL DEFAULT 0,
+  precio_unitario                 DECIMAL(15,4) NOT NULL DEFAULT 0,
+  lista_forzada                   TINYINT(1)    NOT NULL DEFAULT 0,
+  lista_forzada_mi                TINYINT(1)    NOT NULL DEFAULT 0,
+  incluirlista                    TINYINT(1)    NOT NULL DEFAULT 1,
+  columnas                        TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  local_de_venta                  TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  grabado                         TINYINT(1)    NOT NULL DEFAULT 1 COMMENT 'Gravado con IVA',
+  alicuota                        VARCHAR(2) COLLATE utf8mb4_bin NULL COMMENT 'tasas_iva.codigo',
+  proveedor                       INT UNSIGNED  NULL,
+  costo                           DECIMAL(15,4) NOT NULL DEFAULT 0,
+  moneda                          VARCHAR(3)    NOT NULL DEFAULT '$' COMMENT '$ o u$s',
+  unidad_venta                    VARCHAR(2) COLLATE utf8mb4_bin NULL,
+  actualizacion                   DATETIME      NULL,
+  modelo                          VARCHAR(4)    NULL,
+  manga                           VARCHAR(2)    NULL,
+  cierre                          VARCHAR(2)    NULL,
+  tela                            VARCHAR(3)    NULL,
+  color                           VARCHAR(3)    NULL,
+  talle                           TINYINT UNSIGNED NULL,
+  talle_en_letras                 VARCHAR(3)    NULL,
+  promedio                        DECIMAL(8,2)  NOT NULL DEFAULT 0,
+  cta_contable                    SMALLINT UNSIGNED NULL,
+  PRIMARY KEY (codigo),
+  KEY ix_articulos_descripcion (descripcion),
+  KEY ix_articulos_barras (codigo_de_barras),
+  KEY ix_articulos_rubro (rubro, subrubro)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Precios por lista (articulos_precios.dbf; en OYS está vacía).
+CREATE TABLE IF NOT EXISTS articulos_precios (
+  articulo       VARCHAR(15)   NOT NULL,
+  num_lista      SMALLINT UNSIGNED NOT NULL,
+  valor          DECIMAL(15,4) NOT NULL DEFAULT 0,
+  actualizacion  DATETIME      NULL,
+  PRIMARY KEY (articulo, num_lista)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,5 +1,21 @@
-node_modules/
-data/
-*.db
-*.db-journal
-.env
+/vendor/
+/dist/
+/config/local.php
+/e2e/node_modules/
+/e2e/capturas/
+/storage/logs/*
+/storage/sessions/*
+!/storage/logs/.gitkeep
+!/storage/sessions/.gitkeep
+*.log
+.DS_Store
+# Datos de clientes (DBF, volcados): nunca al repositorio.
+*.dbf
+*.DBF
+*.fpt
+*.FPT
+*.cdx
+*.CDX
+*.rar
+*.sql.gz
+/storage/migracion/

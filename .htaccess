@@ -1,0 +1,16 @@
+# Usar SOLO si el dominio apunta a la raíz del proyecto y no se puede apuntar a public/.
+# Lo ideal es que la carpeta pública del dominio sea public/ (ver docs/DESPLIEGUE.md).
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Nada de código, configuración ni datos accesible desde la web.
+    RewriteRule ^(src|config|database|storage|tests|vendor|views|bin|docs|e2e|lib|vfp)(/|$) - [F,L]
+    RewriteRule ^(composer\.(json|lock)|VERSION|README\.md|CLAUDE\.md)$ - [F,L]
+    RewriteRule (^|/)\.(?!well-known) - [F,L]
+
+    # El resto se sirve desde public/.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
