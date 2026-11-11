@@ -163,6 +163,5 @@ Estimación actualizada el 11/11/2026 con las decisiones de Hernán (E, M, FCE, 
 | 8 | Exento Especial (A) | 0 | 4 |
 | 9 | Exento Especial (B) | 0 | 4 |
 
-  - Hoy un RI tiene que hacer **A** a monotributistas (el histórico les hacía B).
-  - "Exento (A)" / "Exento Especial (A)": a un exento hoy corresponde **B**. A confirmar con Hernán.
-- **`empresas.dbf`** tiene el nombre de otra empresa (restos de una instalación anterior) y `sucursales` dice "Organizacion & Sistemas": confirmar qué datos son de OYS.
+  - **Decisión de Hernán (11/11/2026): regla actual de ARCA.** RI emite **A** a RI y monotributistas, **B** al resto (exentos incluidos, aunque el VFP tenga "Exento (A)"). Equivalencias aprobadas como en la tabla.
+- **`empresas.dbf`** tiene el nombre de otra empresa (restos de una instalación anterior) y `sucursales` dice "Organizacion & Sistemas": **son los datos del facturador de OYS** (confirmado por Hernán). Se usan como instalación de prueba para la aprobación del CEO.
