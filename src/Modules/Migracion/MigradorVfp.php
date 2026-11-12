@@ -44,6 +44,9 @@ final class MigradorVfp
 
     /** Modo incremental (agente de sincronización): suma solo los comprobantes que la web todavía no tiene. */
     private bool $incremental = false;
+    /** Modo maestros del agente: clientes y artículos se suman y se actualizan por código (nada se borra). */
+    private bool $maestros = false;
+    private int $filasAfectadas = 0;
     private string $origen = '';
     /** @var array<string,bool> comprobantes ya cargados (clave tipo|letra|sucursal|número|fecha) */
     private array $existentes = [];
@@ -85,6 +88,19 @@ final class MigradorVfp
         $this->incremental = true;
         $this->origen = $origen;
         return $this->migrar(['subdiario', 'iva', 'estadistica', 'caja', 'ctact'], true);
+    }
+
+    /**
+     * Sincronización de maestros desde el VFP (agente): agrega los clientes y artículos nuevos y actualiza los que ya estaban, por código, solo con las
+     * columnas que trae el VFP (lo que agrega la web —activo, EAN, SKU, bultos, control de stock— no se toca). No borra nada. D-21.
+     *
+     * @return array<string,array{leidas:int,grabadas:int,avisos:string[]}>
+     */
+    public function sumarMaestros(string $origen, array $tablas = ['clientes', 'articulos']): array
+    {
+        $this->maestros = true;
+        $this->origen = $origen;
+        return $this->migrar(array_values(array_intersect($tablas, ['clientes', 'articulos'])), true);
     }
 
     public function migrar(?array $tablas = null, bool $reemplazar = false, bool $simular = false, ?string $archivoSql = null): array
@@ -241,7 +257,7 @@ final class MigradorVfp
             // el número interno de estas tablas se repite en el VFP: acá lo asigna MySQL (el vínculo con el comprobante es subdiario_id)
             $usar = array_values(array_diff($usar, ['fe_clave']));
         }
-        if (!in_array($tabla, self::SUMAR, true) && !$this->incremental) {
+        if (!in_array($tabla, self::SUMAR, true) && !$this->incremental && !$this->maestros) {
             $this->ejecutar("DELETE FROM `{$tabla}`", []);
         }
         if ($this->incremental && $tabla === 'subdiario') {
@@ -252,6 +268,11 @@ final class MigradorVfp
 
         $cortos = $dbf->nombres();
         $ins = 'INSERT INTO `' . $tabla . '` (`' . implode('`, `', $usar) . '`) VALUES (' . implode(', ', array_fill(0, count($usar), '?')) . ')';
+        if ($this->maestros) {
+            $sets = array_map(static fn (string $c) => "`{$c}` = VALUES(`{$c}`)", array_diff($usar, ['codigo']));
+            $ins .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', $sets);
+            $r['actualizadas'] = 0;
+        }
         $refs = $this->referencias($tabla);
         $this->faltantes = [];
         foreach ($dbf->filas() as $fila) {
@@ -268,7 +289,16 @@ final class MigradorVfp
             $this->revisar($tabla, $fila, $refs, $r);
             try {
                 $this->ejecutar($ins, $valores);
-                $r['grabadas']++;
+                if ($this->maestros) {
+                    // MySQL: 1 = fila nueva, 2 = fila existente que cambió, 0 = igual que antes
+                    if ($this->filasAfectadas === 1) {
+                        $r['grabadas']++;
+                    } elseif ($this->filasAfectadas === 2) {
+                        $r['actualizadas']++;
+                    }
+                } else {
+                    $r['grabadas']++;
+                }
             } catch (\PDOException $e) {
                 if ($e->getCode() !== '23000') {
                     throw $e;
@@ -599,7 +629,9 @@ final class MigradorVfp
     /** Ejecuta en la base y, si se pidió, lo deja escrito en el .sql. */
     private function ejecutar(string $sql, array $params): void
     {
-        $this->pdo->prepare($sql)->execute($params);
+        $st = $this->pdo->prepare($sql);
+        $st->execute($params);
+        $this->filasAfectadas = $st->rowCount();
         if ($this->sql !== null) {
             $i = 0;
             $texto = preg_replace_callback('/\?/', function () use ($params, &$i): string {

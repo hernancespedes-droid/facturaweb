@@ -143,6 +143,79 @@ final class AgenteTest extends DbTestCase
         $this->assertSame(401, $mal->status);
     }
 
+    private function dbfsMaestros(string $razon, float $precio): void
+    {
+        $d = $this->dir;
+        DbfFalso::dbc($d . '/datos.dbc', [
+            'clientes' => ['codigo', 'razon_social', 'iva', 'cuit'],
+            'articulos' => ['codigo', 'descripcion', 'estado', 'precio_de_venta_1'],
+        ]);
+        DbfFalso::escribir($d . '/clientes.dbf', [['CODIGO', 'N', 7], ['RAZON_SOCI', 'C', 40], ['IVA', 'N', 1], ['CUIT', 'N', 11]], [
+            ['CODIGO' => 990001, 'RAZON_SOCI' => $razon, 'IVA' => 1, 'CUIT' => 30714357537],
+            ['CODIGO' => 990002, 'RAZON_SOCI' => 'T AGENTE DOS', 'IVA' => 3, 'CUIT' => 0],
+        ]);
+        DbfFalso::escribir($d . '/articulos.dbf', [['CODIGO', 'C', 15], ['DESCRIPCIO', 'C', 40], ['ESTADO', 'C', 2], ['PRECIO_DE_', 'N', 11, 4]], [
+            ['CODIGO' => 'T-AG1', 'DESCRIPCIO' => 'ARTICULO AGENTE', 'ESTADO' => 'AC', 'PRECIO_DE_' => $precio],
+        ]);
+    }
+
+    public function testAgenteSumaYActualizaClientesYArticulosSinPisarLoDeLaWeb(): void
+    {
+        $pdo = Db::pdo();
+        $pdo->exec("DELETE FROM clientes WHERE codigo IN (990001, 990002)");
+        $pdo->exec("DELETE FROM articulos WHERE codigo = 'T-AG1'");
+        try {
+            $this->dbfsMaestros('T AGENTE UNO', 100);
+            $r = (new MigradorVfp($pdo, $this->dir))->sumarMaestros('agente:test');
+            $this->assertSame(2, $r['clientes']['grabadas']);
+            $this->assertSame(1, $r['articulos']['grabadas']);
+            // lo que agrega la web no lo toca el VFP
+            $pdo->exec("UPDATE clientes SET activo = 0 WHERE codigo = 990001");
+            $pdo->exec("UPDATE articulos SET sku = 'SKU-WEB' WHERE codigo = 'T-AG1'");
+            // sin cambios: no hay nada nuevo ni actualizado
+            $r = (new MigradorVfp($pdo, $this->dir))->sumarMaestros('agente:test');
+            $this->assertSame(0, $r['clientes']['grabadas'] + $r['clientes']['actualizadas']);
+            // cambia en el VFP: se actualiza en la web
+            $this->dbfsMaestros('T AGENTE UNO MODIFICADO', 250);
+            $r = (new MigradorVfp($pdo, $this->dir))->sumarMaestros('agente:test');
+            $this->assertSame(1, $r['clientes']['actualizadas']);
+            $this->assertSame(1, $r['articulos']['actualizadas']);
+            $this->assertSame('T AGENTE UNO MODIFICADO', $pdo->query('SELECT razon_social FROM clientes WHERE codigo = 990001')->fetchColumn());
+            $this->assertSame('0', (string) $pdo->query('SELECT activo FROM clientes WHERE codigo = 990001')->fetchColumn(), 'activo es de la web');
+            $this->assertSame('SKU-WEB', $pdo->query("SELECT sku FROM articulos WHERE codigo = 'T-AG1'")->fetchColumn(), 'el SKU es de la web');
+            $this->assertSame(250.0, (float) $pdo->query("SELECT precio_de_venta_1 FROM articulos WHERE codigo = 'T-AG1'")->fetchColumn());
+        } finally {
+            $pdo->exec("DELETE FROM clientes WHERE codigo IN (990001, 990002)");
+            $pdo->exec("DELETE FROM articulos WHERE codigo = 'T-AG1'");
+        }
+    }
+
+    public function testApiMaestrosPorHttp(): void
+    {
+        $pdo = Db::pdo();
+        $pdo->exec("DELETE FROM clientes WHERE codigo IN (990001, 990002)");
+        $pdo->exec("DELETE FROM articulos WHERE codigo = 'T-AG1'");
+        try {
+            $clave = ApiClaves::crear('T PC maestros', null);
+            $this->dbfsMaestros('T AGENTE UNO', 100);
+            $zip = $this->dir . '.zip';
+            $z = new \ZipArchive();
+            $z->open($zip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+            foreach (glob($this->dir . '/*') as $f) {
+                $z->addFile($f, basename($f));
+            }
+            $z->close();
+            $r = $this->conClave($clave, 'POST', '/api/v1/vfp/maestros', ['zip' => ['error' => UPLOAD_ERR_OK, 'tmp_name' => $zip, 'name' => 'x.zip']]);
+            @unlink($zip);
+            $this->assertSame(200, $r->status, $r->body);
+            $this->assertSame(2, json_decode($r->body, true)['detalle']['clientes']['grabadas']);
+            $this->assertSame(401, $this->conClave('fwk_' . str_repeat('0', 48), 'POST', '/api/v1/vfp/maestros')->status);
+        } finally {
+            $pdo->exec("DELETE FROM clientes WHERE codigo IN (990001, 990002)");
+            $pdo->exec("DELETE FROM articulos WHERE codigo = 'T-AG1'");
+        }
+    }
+
     private function conClave(string $clave, string $metodo, string $ruta, array $files = []): \App\Http\Response
     {
         $req = new \App\Http\Request($metodo, $ruta, [], [], ['HTTP_AUTHORIZATION' => 'Bearer ' . $clave, 'REMOTE_ADDR' => '10.0.0.1'], $files);

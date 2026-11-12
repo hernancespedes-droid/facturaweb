@@ -13,6 +13,7 @@ use App\Modules\Migracion\MigradorVfp;
  * API para el agente (sin sesión ni CSRF: se autentica con la clave en Authorization: Bearer fwk_…, siempre por HTTPS).
  *   GET  /api/v1/ping                  comprueba la conexión y la clave
  *   POST /api/v1/vfp/comprobantes      un .zip con subdiario, iva, estadistica, caja y ctact (+ datos.dbc): suma los comprobantes nuevos
+ *   POST /api/v1/vfp/maestros          un .zip con clientes y/o articulos (+ datos.dbc): suma los nuevos y actualiza los que ya estaban (por código)
  * Los comprobantes que la web ya tiene se saltean (la sincronización se puede repetir sin duplicar nada).
  */
 final class ApiController
@@ -48,6 +49,35 @@ final class ApiController
     }
 
     public static function comprobantes(Request $req, array $params): Response
+    {
+        return self::recibirZip($req, 'subdiario|iva|estadistica|caja|ctact', 'subdiario', static function (string $dir, array $clave): array {
+            $resumen = (new MigradorVfp(Db::pdo(), $dir))->sumarComprobantes('agente:' . $clave['nombre']);
+            return ['ok' => true, 'nuevos' => $resumen['subdiario']['grabadas'] ?? 0, 'leidos' => $resumen['subdiario']['leidas'] ?? 0,
+                'detalle' => self::detalle($resumen)];
+        });
+    }
+
+    public static function maestros(Request $req, array $params): Response
+    {
+        return self::recibirZip($req, 'clientes|articulos', null, static function (string $dir, array $clave): array {
+            $hay = array_values(array_filter(['clientes', 'articulos'], static fn ($t) => is_file($dir . '/' . $t . '.dbf')));
+            $resumen = (new MigradorVfp(Db::pdo(), $dir))->sumarMaestros('agente:' . $clave['nombre'], $hay);
+            return ['ok' => true, 'detalle' => self::detalle($resumen)];
+        });
+    }
+
+    /** @param array<string,array<string,mixed>> $resumen */
+    private static function detalle(array $resumen): array
+    {
+        return array_map(static fn ($r) => ['leidas' => $r['leidas'], 'grabadas' => $r['grabadas'], 'actualizadas' => $r['actualizadas'] ?? 0,
+            'avisos' => array_slice($r['avisos'], 0, 5)], $resumen);
+    }
+
+    /**
+     * Recibe el .zip (cuerpo crudo o formulario), deja en una carpeta temporal solo los DBF/FPT permitidos (+ datos.dbc) y llama a $procesar.
+     * @param callable(string,array<string,mixed>):array<string,mixed> $procesar
+     */
+    private static function recibirZip(Request $req, string $tablas, ?string $obligatoria, callable $procesar): Response
     {
         $c = self::autenticar($req);
         if ($c instanceof Response) {
@@ -85,7 +115,7 @@ final class ApiController
             $hay = [];
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $nombre = basename(str_replace('\\', '/', (string) $zip->getNameIndex($i)));
-                if (preg_match('/^(subdiario|iva|estadistica|caja|ctact)\.(dbf|fpt)$|^datos\.(dbc|dct)$/i', $nombre) !== 1) {
+                if (preg_match('/^(' . $tablas . ')\.(dbf|fpt)$|^datos\.(dbc|dct)$/i', $nombre) !== 1) {
                     continue;
                 }
                 $d = $zip->getFromIndex($i);
@@ -95,13 +125,14 @@ final class ApiController
                 }
             }
             $zip->close();
-            if (!isset($hay['subdiario'])) {
-                return self::json(['ok' => false, 'error' => 'El zip no trae subdiario.dbf.'], 400);
+            if ($obligatoria !== null && !isset($hay[$obligatoria])) {
+                return self::json(['ok' => false, 'error' => "El zip no trae {$obligatoria}.dbf."], 400);
+            }
+            if ($obligatoria === null && !array_intersect_key($hay, array_flip(explode('|', $tablas)))) {
+                return self::json(['ok' => false, 'error' => 'El zip no trae ninguna de las tablas esperadas (' . str_replace('|', ', ', $tablas) . ').'], 400);
             }
             @set_time_limit(600);
-            $resumen = (new MigradorVfp(Db::pdo(), $dir))->sumarComprobantes('agente:' . $c['nombre']);
-            return self::json(['ok' => true, 'nuevos' => $resumen['subdiario']['grabadas'] ?? 0, 'leidos' => $resumen['subdiario']['leidas'] ?? 0,
-                'detalle' => array_map(static fn ($r) => ['leidas' => $r['leidas'], 'grabadas' => $r['grabadas'], 'avisos' => array_slice($r['avisos'], 0, 5)], $resumen)]);
+            return self::json($procesar($dir, $c));
         } catch (\Throwable $e) {
             App::registrar($e);
             return self::json(['ok' => false, 'error' => 'No se pudo cargar: ' . mb_substr($e->getMessage(), 0, 300)], 500);

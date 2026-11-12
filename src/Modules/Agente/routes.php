@@ -10,6 +10,7 @@ return function (Router $r): void {
     // API del agente: sin sesión (la clave va en el encabezado). Las rutas /api/ no abren sesión ni piden CSRF.
     $r->get('/api/v1/ping', [P::class, 'ping']);
     $r->post('/api/v1/vfp/comprobantes', [P::class, 'comprobantes']);
+    $r->post('/api/v1/vfp/maestros', [P::class, 'maestros']);
     // Administración de claves
     $r->get('/agente', Guard::permiso('agente.administrar', [A::class, 'index']));
     $r->post('/agente', Guard::permiso('agente.administrar', [A::class, 'crear']));

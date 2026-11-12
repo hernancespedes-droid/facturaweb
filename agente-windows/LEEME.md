@@ -1,6 +1,6 @@
 # Agente de sincronización FacturaWeb (Windows 10)
 
-Manda a la web los comprobantes nuevos del sistema VFP. **No instala nada**: es un script de PowerShell (viene con Windows 10).
+Manda a la web los comprobantes, clientes y artículos del sistema VFP. **No instala nada**: es un script de PowerShell (viene con Windows 10).
 Solo lee los DBF del VFP (no los modifica) y se conecta él a la web por HTTPS; no hace falta abrir puertos.
 
 ## Instalación (una vez)
@@ -20,8 +20,8 @@ Solo lee los DBF del VFP (no los modifica) y se conecta él a la web por HTTPS; 
    - Argumentos: `-NoProfile -ExecutionPolicy Bypass -File C:\FacturaWebAgente\FacturaWebAgente.ps1`
 
 ## Qué hace en cada ejecución
-Copia `subdiario`, `iva`, `estadistica`, `caja` y `ctact` (y `datos.dbc`) a una carpeta temporal —así no interfiere con el VFP que está abierto—, las comprime y las manda. Si
-no cambió nada desde el último envío, no manda. La web suma solo los comprobantes que no tenía: repetir un envío no duplica nada. Todo queda en `agente.log`.
+Copia `subdiario`, `iva`, `estadistica`, `caja` y `ctact` (y `datos.dbc`) —y, en un segundo envío, `clientes` y `articulos`— a una carpeta temporal (así no interfiere con el VFP que está abierto), las comprime y las manda. Cada envío se salta si
+no cambió nada desde el último. Los clientes y artículos **nuevos se suman y los que cambiaron en el VFP se actualizan** en la web (por código); lo que la web agrega por su cuenta —cliente desactivado, EAN, SKU, bultos, control de stock— no se pisa. Nada se borra. La web suma solo los comprobantes que no tenía: repetir un envío no duplica nada. Todo queda en `agente.log`.
 
 ## Si algo falla
 - «Clave inválida»: la clave está mal copiada o fue revocada (Sistema → Agente).
