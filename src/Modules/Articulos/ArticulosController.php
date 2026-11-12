@@ -32,7 +32,7 @@ final class ArticulosController
 
     public static function nuevo(Request $req, array $params): Response
     {
-        return self::form(null, ['estado' => 'AC', 'moneda' => '$', 'grabado' => '1', 'incluirlista' => '1', 'alicuota' => '21', 'unidad_venta' => '01'], []);
+        return self::form(null, ['estado' => 'AC', 'moneda' => '$', 'grabado' => '1', 'incluirlista' => '1', 'controla_stock' => '1', 'alicuota' => '21', 'unidad_venta' => '01'], []);
     }
 
     public static function crear(Request $req, array $params): Response

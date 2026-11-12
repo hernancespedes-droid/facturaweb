@@ -207,6 +207,16 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.goto(BASE + '/comprobantes?cliente=E2E');
     ok((await page.locator('tbody tr').count()) === 3, 'el listado muestra las tres (A, NC y B)');
     await page.screenshot({ path: path.join(CAPTURAS, 'comprobantes-lista.png'), fullPage: true });
+    // stock: ingreso con bultos y consulta de saldos
+    await page.goto(BASE + '/stock/ajuste');
+    await page.fill('input[name=articulo]', 'e2e-001');
+    await page.fill('input[name=cantidad]', '15');
+    await page.fill('input[name=motivo]', 'stock inicial e2e');
+    await enviar(page, 'form.card button[type=submit]');
+    ok(!(await page.locator('.alerta-error').count()) && page.url().includes('/stock/articulo/'), 'el ingreso de stock se registra' + ((await page.locator('.alerta-error').count()) ? ': ' + await page.textContent('.alerta-error') : ''));
+    await page.goto(BASE + '/stock?q=e2e');
+    ok((await page.content()).includes('E2E-001'), 'saldos de stock: aparece el artículo con saldo');
+    await page.screenshot({ path: path.join(CAPTURAS, 'stock-saldos.png'), fullPage: true });
     // subdiario de IVA ventas (los comprobantes internos son de prueba: hay que tildar incluirlos)
     await page.goto(BASE + '/listados/iva-ventas?pruebas=1');
     ok((await page.textContent('h1')).includes('Subdiario de IVA ventas'), 'abre el subdiario de IVA ventas');

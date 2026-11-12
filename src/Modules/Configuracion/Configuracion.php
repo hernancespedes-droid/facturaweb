@@ -16,7 +16,7 @@ final class Configuracion
     public const MAX_ENTERO = 100000;
 
     /** Valores por si la migración todavía no se aplicó. */
-    private const PREDETERMINADOS = [self::POR_PAGINA => '50', 'comprobantes.nc_limite_factura' => '1', 'comprobantes.credito_cero_sin_limite' => '1', 'comprobantes.concepto_defecto' => '1'];
+    private const PREDETERMINADOS = [self::POR_PAGINA => '50', 'comprobantes.nc_limite_factura' => '1', 'comprobantes.credito_cero_sin_limite' => '1', 'comprobantes.concepto_defecto' => '1', 'stock.controlar' => '0'];
 
     /** @var array<string,string>|null */
     private static ?array $cache = null;
