@@ -96,7 +96,8 @@
 </section>
 
 <div class="grid-2">
-    <section class="card">
+    <section class="card"><p>Estado de la suscripción: <a href="<?= e(url('/sistema/licencia')) ?>">Licencia</a></p></section>
+<section class="card">
         <h2>Servidor</h2>
         <dl class="datos datos-col">
             <?php foreach ($servidor as $k => $v): ?>

@@ -128,6 +128,8 @@ final class ComprobantesController
         }
         try {
             $e = $svc->emitir($r['cbte'], (string) ($req->post['operacion'] ?? ''), (int) Auth::id());
+        } catch (\App\Modules\Licencia\LicenciaVencida $ex) {
+            return self::form($svc, $datos, ['licencia' => $ex->getMessage()], 403);
         } catch (\InvalidArgumentException) {
             Session::flash('error', 'La pantalla de revisión venció. Revisá el comprobante de nuevo.');
             return Response::redirect(url('/comprobantes/nuevo'));

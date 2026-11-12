@@ -29,6 +29,8 @@ Cada una está marcada en el código con `DECISIÓN D-xx (Claude, a confirmar po
 | D-23 | Web → VFP: los números internos del VFP (FE_CLAVE, número de movimiento de stock) los asigna el VFP al grabar; viajan tal cual el número de comprobante y el CAE. | `vfp-importador/IMPORTAR_WEB.PRG` | — |
 | D-24 | Web → VFP, stock: un movimiento de stock del VFP por comprobante (BS = baja para facturas, AS = alta para notas de crédito) y uno por cada movimiento suelto; la sucursal del VFP sale del depósito (`depositos.sucursal_vfp`). | `IMPORTAR_WEB.PRG`, `ExportadorVfp` | Cambiar los tipos en el PRG |
 | D-25 | Web → VFP: los comprobantes de la web (PV 7) no mueven los numeradores del VFP (PV 4). | `IMPORTAR_WEB.PRG` | — |
+| D-26 | Licencia mensual: más de 10 días = ok; de 10 a 0 días = aviso a Master/Administrador; hasta 5 días vencida = aviso a todos y se sigue emitiendo; después no se emite (sí consulta e imprime). Sin licencia o con firma mala tampoco se emite. | `Licencia/Licencia` (`AVISO_DIAS`, `GRACIA_DIAS`) | Cambiar las constantes |
+| D-27 | La licencia va firmada (Ed25519) con una clave privada que solo tiene O&S, lleva el CUIT y tiene que coincidir con el de Parámetros. Solo se controla si la instalación tiene `licencia.exigir` (OYS no). | `Licencia/Licencia`, `bin/licencia.php` | Quitar `exigir` de `config/local.php` |
 | D-15 | (reservado) | | |
 | D-16 | **Decisión de Hernán:** un receptor monotributista lleva factura A. | `Tipos` | — |
 
