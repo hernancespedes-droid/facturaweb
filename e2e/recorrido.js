@@ -209,7 +209,11 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.screenshot({ path: path.join(CAPTURAS, 'comprobantes-lista.png'), fullPage: true });
     // stock: ingreso con bultos y consulta de saldos
     await page.goto(BASE + '/stock/ajuste');
-    await page.fill('input[name=articulo]', 'e2e-001');
+    await page.fill('input[name=articulo]', 'articulo e2');   // se busca por texto: aparecen las coincidencias y se elige una
+    await page.waitForSelector('.sugerencias li[role=option]');
+    ok((await page.textContent('.sugerencias')).includes('E2E-001'), 'stock: el buscador muestra las coincidencias debajo del campo');
+    await page.click('.sugerencias li[role=option]');
+    ok((await page.inputValue('input[name=articulo]')) === 'E2E-001', 'stock: al elegir queda el código del artículo');
     await page.fill('input[name=cantidad]', '15');
     await page.fill('input[name=motivo]', 'stock inicial e2e');
     await enviar(page, 'form.card button[type=submit]');

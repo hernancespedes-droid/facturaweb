@@ -123,6 +123,17 @@ final class StockTest extends ComprobantesTestCase
         $this->assertSame(94.0, $suma, 'el saldo guardado coincide con la suma de los movimientos');
     }
 
+    public function testBuscadorDeArticulosEnStockRespetaPermisos(): void
+    {
+        $this->loginComo($this->crearUsuario('t_op', 'operador'));
+        $this->assertSame(403, $this->get('/stock/buscar-articulo', ['q' => 'T-ART'])->status, 'sin stock.ver no busca');
+        $this->loginComo($this->crearUsuario('t_adm', 'admin'));
+        $r = json_decode($this->get('/stock/buscar-articulo', ['q' => 'articulo prue'])->body, true);
+        $this->assertSame('T-ART', $r[0]['codigo'], 'por palabras de la descripción');
+        $this->assertStringContainsString('data-buscador-url', $this->get('/stock/ajuste')->body, 'el campo del formulario es un buscador');
+        $this->assertStringContainsString('data-buscador-url', $this->get('/stock/transferir')->body);
+    }
+
     public function testPermisosYPantallas(): void
     {
         $this->stock->cargar('INGRESO', 'T-ART', $this->principal, '5', 'unidades', '', null);

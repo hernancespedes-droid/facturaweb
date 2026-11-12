@@ -50,6 +50,12 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
 - Cambios de base: solo migraciones nuevas `database/migrations/NNNN_*.sql`, idempotentes; nunca editar una ya entregada.
 - Textos en español rioplatense. URLs con `url()`, texto con `e()`.
 
+## Buscar artículos y clientes (regla de Hernán)
+
+Siempre que una pantalla pida un artículo o un cliente, el campo es un **buscador** (código, código de barras, SKU, CUIT o nombre) que muestra las coincidencias
+debajo y **el usuario elige siempre**; nunca se toma la primera. Reutilizar `Articulos\BuscadorArticulos` + `public/assets/buscador.js` (artículos) y
+`Comprobantes → buscarCliente` (clientes). Detalle en el skill `facturaweb-proyecto`.
+
 ## Seguridad
 
 Sentencias preparadas siempre (los nombres de tabla/columna solo salen de definiciones del código), `password_hash`, CSRF en todo POST,
