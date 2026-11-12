@@ -139,9 +139,15 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.textContent('[data-letra-titulo]')).trim() === 'A', 'cliente inscripto: factura A');
     // renglón 1: artículo del maestro
     const r1 = page.locator('[data-renglon]').nth(0);
-    await r1.locator('[data-articulo]').fill('abono');
-    await r1.locator('[data-articulo]').blur();
+    await r1.locator('[data-articulo]').fill('abono por mant');   // el buscador sugiere por descripción
+    await page.waitForSelector('#articulos-sugerencias li');
+    ok((await page.textContent('#articulos-sugerencias')).toUpperCase().includes('MANTENIMIENTO'), 'el buscador muestra coincidencias por descripción');
+    await page.screenshot({ path: path.join(CAPTURAS, 'buscador-renglon.png') });
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
     await page.waitForFunction(() => document.querySelector('[data-descripcion]').value.includes('MANTENIMIENTO'));
+    ok(await page.locator('#articulos-sugerencias').isHidden(), 'al elegir se cierra la lista');
+    await r1.locator('[data-texto]').fill('Servicio de febrero\nVisita en sucursal');
     ok((await r1.locator('[data-descripcion]').inputValue()).includes('ABONO'), 'el artículo trae su descripción');
     await r1.locator('[data-cantidad]').fill('2');
     await r1.locator('[data-precio]').fill('1000');

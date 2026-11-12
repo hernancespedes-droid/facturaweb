@@ -224,6 +224,7 @@ final class ComprobantesService
             $cantTxt = trim((string) ($r['cantidad'] ?? ''));
             $precioTxt = trim((string) ($r['precio'] ?? ''));
             $codArt = trim((string) ($r['articulo'] ?? ''));
+            $adicional = trim((string) ($r['texto'] ?? '')); // texto extra del renglón, se imprime debajo de la descripción
             if ($texto === '' && $cantTxt === '' && $precioTxt === '' && $codArt === '') {
                 continue; // renglón en blanco
             }
@@ -231,9 +232,17 @@ final class ComprobantesService
             $e = [];
             $art = null;
             if ($codArt !== '') {
+                // Se acepta el código interno, el EAN-13, el DUN-14, el SKU o el código de barras anterior (si es uno solo).
                 $st = $this->pdo->prepare('SELECT codigo, descripcion, codigo_de_barras FROM articulos WHERE codigo = ?');
                 $st->execute([mb_strtoupper($codArt)]);
                 $art = $st->fetch() ?: null;
+                if ($art === null) {
+                    $st = $this->pdo->prepare("SELECT codigo, descripcion, codigo_de_barras FROM articulos
+                        WHERE estado = 'AC' AND (ean13 = ? OR dun14 = ? OR sku = ? OR codigo_de_barras = ?) LIMIT 2");
+                    $st->execute([$codArt, $codArt, $codArt, $codArt]);
+                    $hallados = $st->fetchAll();
+                    $art = count($hallados) === 1 ? $hallados[0] : null;
+                }
                 if ($art === null) {
                     $e[] = 'el artículo ' . mb_strtoupper($codArt) . ' no existe';
                 }
@@ -243,6 +252,9 @@ final class ComprobantesService
             }
             if ($texto === '' || mb_strlen($texto) > 2000) { // D-10 (Claude, a confirmar): hasta 2.000 letras por renglón (el VFP de OYS llegó a 3.900)
                 $e[] = 'falta la descripción (hasta 2.000 letras)';
+            }
+            if (mb_strlen($adicional) > 2000) {
+                $e[] = 'el texto para imprimir admite hasta 2.000 letras';
             }
             $cant = Valida::decimal($cantTxt);
             if ($cant === null || $cant <= 0 || $cant > 999999999.999) {
@@ -262,7 +274,7 @@ final class ComprobantesService
             }
             $items[] = [
                 'articulo' => $art['codigo'] ?? null, 'codigo_de_barras' => $art['codigo_de_barras'] ?? null,
-                'descripcion' => $texto, 'cantidad' => round($cant, 3), 'precio' => round($precio, 4),
+                'descripcion' => $texto, 'texto' => $adicional, 'cantidad' => round($cant, 3), 'precio' => round($precio, 4),
                 'alicuota' => $alic[$codAlic], 'cod_alicuota' => $codAlic,
             ];
         }
@@ -648,7 +660,7 @@ final class ComprobantesService
                     'subdiario_id' => $id, 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'],
                     'comprobante' => $numero, 'orden' => $i + 1, 'articulo' => $it['articulo'], 'codigo_de_barras' => $it['codigo_de_barras'],
                     'unidades' => $it['cantidad'], 'unidades_ori' => $it['cantidad'], 'lista' => 'E', 'precio' => $it['precio'],
-                    'precio_siniva' => $it['precio_siniva'], 'porcentaje_descuento' => $c['descuento'], 'observaciones' => $it['descripcion'],
+                    'precio_siniva' => $it['precio_siniva'], 'porcentaje_descuento' => $c['descuento'], 'observaciones' => $it['descripcion'], 'texto_impresion' => ($it['texto'] ?? '') !== '' ? $it['texto'] : null,
                     'total_item' => $it['importe'], 'total_siniva' => $it['neto'], 'cliente' => $cli['codigo'], 'grabado' => $it['exento'] ? 0 : 1,
                     'por_iva' => $it['alicuota'], 'actualizacion' => $ahora,
                 ]);

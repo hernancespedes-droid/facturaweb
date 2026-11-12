@@ -39,6 +39,16 @@ final class Validador
                         $errores[$campo] = 'Hasta ' . ($c['largo'] ?? 255) . ' caracteres.';
                         break;
                     }
+                    if (!empty($c['digitos'])) { // código de barras: solo números, del largo exacto y con el dígito verificador GS1 bien
+                        if (preg_match('/^\d{' . (int) $c['digitos'] . '}$/', $v) !== 1) {
+                            $errores[$campo] = 'Tienen que ser ' . (int) $c['digitos'] . ' dígitos, solo números.';
+                            break;
+                        }
+                        if (!empty($c['gs1']) && !self::gs1Valido($v)) {
+                            $errores[$campo] = 'El dígito verificador no coincide: revisá el código.';
+                            break;
+                        }
+                    }
                     $valores[$campo] = !empty($c['clave']) ? mb_strtoupper($v) : $v;
                     break;
                 case 'entero':
@@ -120,5 +130,19 @@ final class Validador
     public static function olvidar(): void
     {
         self::$cache = [];
+    }
+
+    /** Dígito verificador GS1 (EAN-13, DUN-14, GTIN en general): el último dígito completa la suma a múltiplo de 10. */
+    public static function gs1Valido(string $codigo): bool
+    {
+        if (preg_match('/^\d{8,18}$/', $codigo) !== 1) {
+            return false;
+        }
+        $suma = 0;
+        $n = strlen($codigo);
+        for ($i = $n - 2, $peso = 3; $i >= 0; $i--, $peso = $peso === 3 ? 1 : 3) {
+            $suma += (int) $codigo[$i] * $peso;
+        }
+        return (10 - $suma % 10) % 10 === (int) $codigo[$n - 1];
     }
 }

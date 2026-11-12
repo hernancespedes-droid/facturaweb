@@ -1035,3 +1035,13 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .renglones select[data-alicuota] { min-width: 6.5em; }
 .totales [data-t-iva-filas] { display: grid; gap: 6px; }
 .pre-linea { white-space: pre-line; }
+
+/* Buscador de artículos del renglón (comprobante.js) */
+.sugerencias { position: fixed; z-index: 60; max-height: 18rem; overflow: auto; margin: 0; padding: 4px; list-style: none;
+  background: var(--panel, #fff); border: 1px solid var(--line, #cfd6e4); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .18); }
+.sugerencias[hidden] { display: none; }
+.sugerencias li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.sugerencias li:hover, .sugerencias li[aria-selected="true"] { background: var(--panel-2, #eef2fb); }
+.sugerencias small { opacity: .7; }
+.renglones textarea[data-texto] { width: 100%; min-width: 0; margin-top: 4px; resize: vertical; font-size: .85em; }
+@media (max-width: 720px) { .sugerencias { left: 8px !important; right: 8px; min-width: 0 !important; } }

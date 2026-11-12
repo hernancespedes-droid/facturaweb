@@ -186,40 +186,100 @@
   cuerpo.addEventListener('change', recalcular);
   form.querySelector('[data-descuento]').addEventListener('input', recalcular);
 
-  // artículo: sugerencias mientras se escribe y datos al elegirlo
-  var dl = document.getElementById('articulos-lista');
-  var timerArt = null;
+  // artículo: buscador por código, código de barras (EAN-13 / DUN-14), SKU o descripción; sugiere mientras se escribe
+  var listaArt = document.getElementById('articulos-sugerencias');
+  var urlArt = form.getAttribute('data-url-articulo');
+  var timerArt = null, pedido = 0, activo = null, opciones = [], marcada = -1;
+  function cerrarLista() { listaArt.hidden = true; listaArt.innerHTML = ''; opciones = []; marcada = -1; }
+  function aplicar(tr, a) {
+    tr.querySelector('[data-articulo]').value = a.codigo;
+    tr.querySelector('[data-descripcion]').value = a.descripcion;
+    if (a.precio) tr.querySelector('[data-precio]').value = a.precio;
+    var cant = tr.querySelector('[data-cantidad]');
+    if (a.cantidad) cant.value = String(a.cantidad); // D-17: el DUN-14 trae las unidades del bulto
+    else if (cant.value.trim() === '') cant.value = '1';
+    var sel = tr.querySelector('[data-alicuota]');
+    for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === a.alicuota) sel.selectedIndex = i;
+    recalcular();
+  }
+  function elegir(i) {
+    if (!activo || !opciones[i]) return;
+    var tr = activo.closest('[data-renglon]');
+    aplicar(tr, opciones[i]);
+    cerrarLista();
+    var c = tr.querySelector('[data-cantidad]'); c.focus(); c.select();
+  }
+  function marcar(i) {
+    var lis = listaArt.children;
+    if (!lis.length) return;
+    marcada = (i + lis.length) % lis.length;
+    for (var k = 0; k < lis.length; k++) lis[k].setAttribute('aria-selected', k === marcada ? 'true' : 'false');
+    lis[marcada].scrollIntoView({ block: 'nearest' });
+  }
+  function mostrar(inp, arr) {
+    opciones = arr; marcada = -1; listaArt.innerHTML = '';
+    if (!arr.length) { listaArt.hidden = true; return; }
+    arr.forEach(function (a, i) {
+      var li = document.createElement('li');
+      li.setAttribute('role', 'option');
+      var cod = document.createElement('b'); cod.textContent = a.codigo;
+      var det = document.createElement('span'); det.textContent = ' ' + a.descripcion;
+      var extra = document.createElement('small');
+      extra.textContent = [a.sku ? 'SKU ' + a.sku : '', a.ean13 ? 'EAN ' + a.ean13 : '', a.precio ? '$ ' + a.precio : ''].filter(Boolean).join(' · ');
+      li.appendChild(cod); li.appendChild(det); li.appendChild(document.createElement('br')); li.appendChild(extra);
+      li.addEventListener('mousedown', function (ev) { ev.preventDefault(); elegir(i); });
+      listaArt.appendChild(li);
+    });
+    var r = inp.getBoundingClientRect();
+    listaArt.style.left = Math.max(8, r.left) + 'px';
+    listaArt.style.top = (r.bottom + 2) + 'px';
+    listaArt.style.minWidth = Math.max(r.width, 320) + 'px';
+    listaArt.hidden = false;
+  }
+  function buscarExacto(inp, alResolver) {
+    var q = inp.value.trim();
+    if (q === '') return;
+    fetch(urlArt + '?exacto=1&q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (arr) { if (arr.length) { aplicar(inp.closest('[data-renglon]'), arr[0]); if (alResolver) alResolver(); } });
+  }
   cuerpo.addEventListener('input', function (ev) {
     var inp = ev.target.closest('[data-articulo]');
-    if (!inp || inp.value.trim().length < 2) return;
+    if (!inp) return;
+    activo = inp;
     clearTimeout(timerArt);
+    if (inp.value.trim().length < 2) { cerrarLista(); return; }
     timerArt = setTimeout(function () {
-      fetch(form.getAttribute('data-url-articulo') + '?q=' + encodeURIComponent(inp.value.trim()), { credentials: 'same-origin' })
+      var n = ++pedido;
+      fetch(urlArt + '?q=' + encodeURIComponent(inp.value.trim()), { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
-        .then(function (arr) {
-          dl.innerHTML = '';
-          arr.forEach(function (a) { var o = document.createElement('option'); o.value = a.codigo; o.label = a.descripcion; dl.appendChild(o); });
-        });
-    }, 250);
+        .then(function (arr) { if (n === pedido && document.activeElement === inp) mostrar(inp, arr); });
+    }, 200);
   });
-  cuerpo.addEventListener('change', function (ev) {
+  cuerpo.addEventListener('keydown', function (ev) {
     var inp = ev.target.closest('[data-articulo]');
-    if (!inp || inp.value.trim() === '') return;
-    fetch(form.getAttribute('data-url-articulo') + '?exacto=1&q=' + encodeURIComponent(inp.value.trim()), { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (arr) {
-        if (!arr.length) return;
-        var a = arr[0], tr = inp.closest('[data-renglon]');
-        inp.value = a.codigo;
-        tr.querySelector('[data-descripcion]').value = a.descripcion;
-        if (a.precio) tr.querySelector('[data-precio]').value = a.precio;
-        var cant = tr.querySelector('[data-cantidad]');
-        if (cant.value.trim() === '') cant.value = '1';
-        var sel = tr.querySelector('[data-alicuota]');
-        for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === a.alicuota) sel.selectedIndex = i;
-        recalcular();
-      });
+    if (!inp) return;
+    if (ev.key === 'ArrowDown') { if (!listaArt.hidden) { ev.preventDefault(); marcar(marcada + 1); } }
+    else if (ev.key === 'ArrowUp') { if (!listaArt.hidden) { ev.preventDefault(); marcar(marcada - 1); } }
+    else if (ev.key === 'Escape') { cerrarLista(); }
+    else if (ev.key === 'Enter') {
+      ev.preventDefault(); // Enter en el buscador (o la pistola de códigos) no envía el formulario
+      clearTimeout(timerArt); pedido++;
+      if (!listaArt.hidden && opciones.length && marcada >= 0) elegir(marcada);
+      else if (!listaArt.hidden && opciones.length === 1) elegir(0);
+      else { cerrarLista(); buscarExacto(inp, function () { var c = inp.closest('[data-renglon]').querySelector('[data-cantidad]'); c.focus(); c.select(); }); }
+    }
   });
+  cuerpo.addEventListener('focusout', function (ev) {
+    var inp = ev.target.closest('[data-articulo]');
+    if (!inp) return;
+    setTimeout(function () { // sin elegir de la listaArt: se intenta resolver lo escrito como código exacto
+      cerrarLista();
+      var tr = inp.closest('[data-renglon]');
+      if (tr && inp.value.trim() !== '' && tr.querySelector('[data-descripcion]').value.trim() === '') buscarExacto(inp);
+    }, 150);
+  });
+  window.addEventListener('scroll', cerrarLista, true);
 
   // concepto: con servicios se pide el período y el vencimiento del pago
   var concepto = form.querySelector('[data-concepto]');
