@@ -273,3 +273,15 @@ if (!function_exists('estado_comprobante')) {
         };
     }
 }
+
+if (!function_exists('icono_lista')) {
+    /** Botón de ícono (lupa con renglones) para abrir la ventana «ver lista» de un buscador. $que = 'artículos' o 'clientes'. */
+    function icono_lista(string $atributo, string $que): string
+    {
+        $t = e('Buscar en la lista de ' . $que);
+        return '<button type="button" class="btn-icono" ' . $atributo . ' title="' . $t . '" aria-label="' . $t . '">'
+            . '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            . '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.9-4.9"/></svg></button>';
+    }
+}
+

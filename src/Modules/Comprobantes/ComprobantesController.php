@@ -149,15 +149,27 @@ final class ComprobantesController
 
     public static function buscarCliente(Request $req, array $params): Response
     {
-        $svc = new ComprobantesService();
-        $emisor = $svc->emisor();
         $q = trim((string) ($req->query['q'] ?? ''));
+        if (isset($req->query['listar'])) {
+            // Ventana «ver lista»: clientes activos por razón social, de a 20, con filtro opcional (nombre, código o CUIT).
+            $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
+            $r = (new ClientesService())->listar(['q' => $q, 'estado' => 'activos'], $pagina, 20);
+            return Response::json(['items' => self::clientesParaElegir($r['filas']), 'hay_mas' => $pagina * 20 < (int) $r['total']]);
+        }
         if (ctype_digit($q) && isset($req->query['exacto'])) {
-            $lista = (new ClientesService())->obtener((int) $q);
-            $filas = $lista !== null && (int) $lista['activo'] === 1 ? [$lista] : [];
+            $c = (new ClientesService())->obtener((int) $q);
+            $filas = $c !== null && (int) $c['activo'] === 1 ? [$c] : [];
         } else {
             $filas = $q === '' ? [] : (new ClientesService())->listar(['q' => $q, 'estado' => 'activos'], 1, 15)['filas'];
         }
+        return Response::json(self::clientesParaElegir($filas));
+    }
+
+    /** @param array<int,array<string,mixed>> $filas @return array<int,array<string,mixed>> */
+    private static function clientesParaElegir(array $filas): array
+    {
+        $svc = new ComprobantesService();
+        $emisor = $svc->emisor();
         $out = [];
         foreach ($filas as $f) {
             $c = (new ClientesService())->obtener((int) $f['codigo']);
@@ -171,7 +183,7 @@ final class ComprobantesController
                 'equivalencia' => $cond !== null,
             ];
         }
-        return Response::json($out);
+        return $out;
     }
 
     /** Buscador de artículos del renglón: ver Articulos\BuscadorArticulos (lo usan también las pantallas de stock). */
