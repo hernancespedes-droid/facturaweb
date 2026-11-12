@@ -54,6 +54,13 @@ $limpiar();
 if (($argv[1] ?? '') === '--limpiar') {
     exit(0);
 }
+// Base vacía (sin datos de OYS): el recorrido necesita una sucursal con punto de venta 0004.
+if ((int) $pdo->query('SELECT COUNT(*) FROM sucursales')->fetchColumn() === 0) {
+    $pdo->exec("INSERT INTO sucursales (codigo, descripcion, prefijo) VALUES (1, 'CASA CENTRAL', 4)");
+}
+if ((int) $pdo->query('SELECT COUNT(*) FROM forma_de_pagos WHERE tipo = 1')->fetchColumn() === 0) {
+    $pdo->exec("INSERT IGNORE INTO forma_de_pagos (codigo, descripcion, tipo) VALUES ('01', 'EFECTIVO', 1)");
+}
 $guardar = $pdo->query('SELECT empresa, cuit, iva FROM parametros WHERE id = 1')->fetch();
 $guardar['sucursales'] = [];
 $guardar['fac'] = $pdo->query('SELECT codigo, fac_electronica FROM sucursales')->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -64,6 +71,8 @@ foreach ($pdo->query('SELECT codigo, ultima_factura_a, ultima_factura_b, ultima_
 }
 file_put_contents($copia, json_encode($guardar));
 $clave = (string) ($argv[1] ?? '');
+// El recorrido busca un artículo del maestro por su descripción: se siembra uno propio (se borra con los E2E%).
+$pdo->exec("INSERT IGNORE INTO articulos (codigo, descripcion, alicuota, precio_de_venta_1) VALUES ('E2E-ABONO', 'ABONO POR MANTENIMIENTO E2E', '21', 1000)");
 $ins = $pdo->prepare('INSERT INTO usuarios (usuario, nombre, password_hash, rol_id) SELECT ?, ?, ?, id FROM roles WHERE codigo = ?');
 $ins->execute(['e2e_admin', 'Admin E2E', password_hash($clave, PASSWORD_DEFAULT), 'admin']);
 $ins->execute(['e2e_operador', 'Operador E2E', password_hash($clave, PASSWORD_DEFAULT), 'operador']);
