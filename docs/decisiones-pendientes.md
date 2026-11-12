@@ -21,6 +21,7 @@ Cada una está marcada en el código con `DECISIÓN D-xx (Claude, a confirmar po
 | D-13 | Si ARCA no contesta no se reintenta sola ni se pide otro CAE: queda "pendiente" y se revisa en Sistema → ARCA. | `ComprobantesService::emitirConArca` | Agregar una consulta a `FECompConsultar` para resolver sola las pendientes |
 | D-14 | El ARCA simulado rechaza todo total que termina en ,13 (para poder probar un rechazo). | `ArcaSimulador::rechazaPorTotal` | Cambiar o sacar esa función |
 | D-17 | Al leer el DUN-14 de un bulto, la cantidad del renglón se completa con las «unidades por bulto» del artículo (el precio sigue siendo por unidad). | `ComprobantesController::buscarArticulo`, `comprobante.js` (`aplicar`) | Sacar el campo `cantidad` de la respuesta |
+| D-18 | El subdiario de IVA ventas lista solo comprobantes vigentes y no de prueba; un tilde incluye los de prueba. | `Listados/IvaVentas` | Cambiar el filtro por omisión |
 | D-15 | (reservado) | | |
 | D-16 | **Decisión de Hernán:** un receptor monotributista lleva factura A. | `Tipos` | — |
 
