@@ -36,7 +36,7 @@ description: Contexto, decisiones y estado del proyecto FacturaWeb (facturador w
 | 2 | Facturación FC/NC/ND A, B, C (E si exportan), ítems, IVA por alícuota, numeración, impresión, mail | **Hecha: versión 0.3.0** (nota `docs/entregas/0.3.0-etapa2.md`), **sin CAE**; falta la prueba de Hernán |
 | 3 | Factura electrónica con `lib/afip_fe` (A, B, C, M, FCE); WSFEX (E) en otra etapa | **Hecha: versión 0.4.0** (nota `docs/entregas/0.4.0-etapa3.md`) con ARCA **simulado** probado; falta que Hernán haga certificado/PV (`docs/ARCA-PUESTA-EN-MARCHA.md`) y confirme las decisiones (`docs/decisiones-pendientes.md`) |
 | 4 | Cta. cte. y cheques (recibos, imputación, ajustes, cartera) | Pendiente |
-| 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | Pendiente |
+| 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | **En curso**: subdiario de IVA ventas hecho (0.4.2); faltan los demás |
 | 6 | Pase a producción OYS: histórico completo, control de saldos contra VFP, capacitación | Pendiente |
 | 7 | Producto: alta de instalaciones, licencia de suscripción, actualización masiva | Pendiente |
 
@@ -81,6 +81,23 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 - Artículos: `Articulos\BuscadorArticulos::buscar()` (lo usan el renglón de la factura y las pantallas de stock; ruta propia por permiso) +
   `public/assets/buscador.js` (`<input data-buscador-url="…">`). Clientes: `Comprobantes → buscarCliente`. **Al crear una pantalla nueva con estos
   datos hay que reutilizar estos buscadores, no hacer otro campo.** El servidor igual vuelve a validar lo que llega.
+
+## Estado actual (12/11/2026, versión 0.6.1) y cómo se trabaja
+
+- **Ya facturando en ARCA producción** (Hernán emitió factura y nota de crédito): alias OYS (CUIT 20-11499319-1), certificado propio de la web, **punto de venta 7**
+  (el 4 es del VFP: no se toca). Config de ARCA fuera de `public_html` (`afip_oys/` en el hosting). Modo en `config/local.php` (`afip.modo`).
+- **Hosting de prueba**: DonWeb (Ferozo) con GIT, **sin SSH**; repo en `public_html/facturador_web/`, subdominio `facturador.oesteparts.site`
+  apuntando a `public/`. Se actualiza con GIT → botón `>_` y luego **Sistema → Aplicar cambios**. No activar el webhook de auto-despliegue.
+- **Rama `main` + pull requests** (igual que oesteparts): cada cambio en una rama `claude/…`, PR a `main` y fusión. Versión en `VERSION` (0.4.0 etapa 3, 0.4.1
+  códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock).
+- **Hecho más allá de las etapas**: artículos con EAN-13/DUN-14/SKU/unidades por bulto; buscador de artículos en renglones y stock; texto adicional por renglón;
+  Listados → Subdiario IVA ventas (pantalla y Excel); **Stock** (movimientos + saldos en la misma transacción, varios depósitos, bultos, se factura sin stock,
+  `stock.controlar` apagado por omisión); **Agente** (`agente-windows/`, PowerShell, sube comprobantes del VFP a la web; API con claves en Sistema → Agente).
+- **Decisiones de Claude a confirmar**: `docs/decisiones-pendientes.md` (D-01…D-20; D-01, D-02, D-11 son interruptores de Configuración).
+- **Pendiente**: Libro IVA Digital de ARCA y PDF del subdiario; carga masiva del stock inicial; sincronizar clientes/artículos y sentido web→VFP del agente;
+  etapas 4 (cta. cte./cheques), 6 y 7; pantalla de equivalencias de condición de IVA; probar el agente en la PC con Windows.
+- **Cuidados del contenedor**: MySQL local se cae al reiniciar el contenedor (`bash bin/setup-dev.sh`; si no arranca, borrar `/var/run/mysqld/*.lock` y `/var/lib/mysql/vm.pid`).
+  Las claves, certificados y datos reales de clientes nunca van al repo ni al chat.
 
 ## Datos de OYS (copia 11/11/2026, en Drive, nunca al repo)
 
