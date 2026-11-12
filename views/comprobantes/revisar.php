@@ -36,7 +36,7 @@ $disc = $c['letra'] === 'A';
         <thead><tr><th>Descripción</th><th>Cantidad</th><th><?= $disc ? 'Precio neto' : 'Precio' ?></th><th>IVA</th><th>Importe</th></tr></thead>
         <tbody>
         <?php foreach ($k['items'] as $it): ?>
-            <tr><td data-label="Descripción"><?= e($it['descripcion']) ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
+            <tr><td data-label="Descripción"><?= e($it['descripcion']) ?><?= ($it['texto'] ?? '') !== '' ? '<div class="small muted pre-linea">' . e($it['texto']) . '</div>' : '' ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
                 <td data-label="Cantidad"><?= e(numero($it['cantidad'], 3)) ?></td>
                 <td data-label="Precio" class="nw"><?= e(numero($it['precio'], 4)) ?></td>
                 <td data-label="IVA"><?= $c['letra'] === 'C' ? '—' : ($it['exento'] ? 'Exento' : e(numero($it['alicuota']) . ' %')) ?></td>

@@ -26,7 +26,11 @@ final class ArticulosService
             'rubro' => ['label' => 'Rubro', 'tipo' => 'ref', 'ref' => 'rubros'],
             'subrubro' => ['label' => 'Subrubro (código)', 'tipo' => 'texto', 'largo' => 3, 'ayuda' => 'Código de subrubro del rubro elegido.'],
             'unidad_venta' => ['label' => 'Unidad de venta', 'tipo' => 'ref', 'ref' => 'unidad_venta'],
-            'codigo_de_barras' => ['label' => 'Código de barras', 'tipo' => 'texto', 'largo' => 20],
+            'ean13' => ['label' => 'Código de barras EAN-13', 'tipo' => 'texto', 'largo' => 13, 'digitos' => 13, 'gs1' => true, 'ayuda' => 'Los 13 dígitos del código de barras de la unidad.'],
+            'dun14' => ['label' => 'Código DUN-14 (bulto)', 'tipo' => 'texto', 'largo' => 14, 'digitos' => 14, 'gs1' => true, 'ayuda' => 'Los 14 dígitos del código del bulto o caja.'],
+            'sku' => ['label' => 'SKU', 'tipo' => 'texto', 'largo' => 40],
+            'unidades_por_bulto' => ['label' => 'Unidades por bulto', 'tipo' => 'entero', 'min' => 0, 'max' => 99999999],
+            'codigo_de_barras' => ['label' => 'Código de barras (anterior del VFP)', 'tipo' => 'texto', 'largo' => 20],
             'codigo_asociado' => ['label' => 'Código asociado', 'tipo' => 'texto', 'largo' => 15],
             'estado' => ['label' => 'Estado', 'tipo' => 'opciones', 'opciones' => self::ESTADOS, 'requerido' => true],
             'alicuota' => ['label' => 'Alícuota de IVA', 'tipo' => 'ref', 'ref' => 'tasas_iva', 'requerido' => true, 'grupo' => 'Precios'],
@@ -71,8 +75,8 @@ final class ArticulosService
         $q = trim((string) ($f['q'] ?? ''));
         if ($q !== '') {
             $like = '%' . addcslashes($q, '%_\\') . '%';
-            $where[] = '(a.codigo LIKE ? OR a.descripcion LIKE ? OR a.codigo_de_barras = ? OR a.codigo_asociado LIKE ?)';
-            array_push($params, $like, $like, $q, $like);
+            $where[] = '(a.codigo LIKE ? OR a.descripcion LIKE ? OR a.codigo_de_barras = ? OR a.ean13 = ? OR a.dun14 = ? OR a.sku LIKE ? OR a.codigo_asociado LIKE ?)';
+            array_push($params, $like, $like, $q, $q, $q, $like, $like);
         }
         if (($f['rubro'] ?? '') !== '') {
             $where[] = 'a.rubro = ?';

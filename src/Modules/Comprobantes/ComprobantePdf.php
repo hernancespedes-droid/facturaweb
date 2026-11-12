@@ -20,7 +20,13 @@ final class ComprobantePdf
         $y = self::tablaTitulos($pdf, $y);
         $gris = 0.92;
         foreach ($d['items'] as $i => $it) {
-            $lineas = $pdf->partir($it['descripcion'], 100, 8.5);
+            $lineas = [];
+            foreach ($pdf->partir($it['descripcion'], 100, 8.5) as $l) {
+                $lineas[] = [$l, 8.5];
+            }
+            foreach (($it['texto'] ?? '') !== '' ? $pdf->partir($it['texto'], 100, 7.5) : [] as $l) { // texto adicional del renglón, más chico
+                $lineas[] = [$l, 7.5];
+            }
             $alto = max(1, count($lineas)) * 4.0 + 1.5;
             if ($y + $alto > self::PIE - 45) { // no entra: sigue en otra página
                 self::pie($pdf, $d, false);
@@ -30,8 +36,8 @@ final class ComprobantePdf
             if ($i % 2 === 1) {
                 $pdf->rect(self::M, $y, self::ANCHO, $alto, 0, $gris);
             }
-            foreach ($lineas as $k => $l) {
-                $pdf->texto(self::M + 1.5, $y + 3.6 + $k * 4.0, $l, 8.5);
+            foreach ($lineas as $k => [$l, $tam]) {
+                $pdf->texto(self::M + 1.5, $y + 3.6 + $k * 4.0, $l, $tam);
             }
             $pdf->texto(self::M + 105, $y + 3.6, self::num($it['cantidad'], 3), 8.5, false, 'R', 22);
             $pdf->texto(self::M + 128, $y + 3.6, self::num($it['precio'], 2), 8.5, false, 'R', 30);

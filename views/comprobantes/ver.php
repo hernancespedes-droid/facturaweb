@@ -57,7 +57,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
         <thead><tr><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>IVA</th><th>Importe</th></tr></thead>
         <tbody>
         <?php foreach ($h['items'] as $it): ?>
-            <tr><td data-label="Descripción" class="pre-linea"><?= e($it['observaciones']) ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
+            <tr><td data-label="Descripción" class="pre-linea"><?= e($it['observaciones']) ?><?= trim((string) ($it['texto_impresion'] ?? '')) !== '' ? '<div class="small muted pre-linea">' . e($it['texto_impresion']) . '</div>' : '' ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
                 <td data-label="Cantidad"><?= e(numero($it['unidades'], 3)) ?></td>
                 <td data-label="Precio" class="nw"><?= e(numero($it['precio'], 4)) ?></td>
                 <td data-label="IVA"><?= $h['letra'] === 'C' ? '—' : ((float) $it['por_iva'] > 0 ? e(numero($it['por_iva']) . ' %') : 'Exento') ?></td>

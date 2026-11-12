@@ -127,8 +127,9 @@ $hoyIso = date('Y-m-d');
             <tbody data-renglones-cuerpo>
             <?php foreach ($items as $i => $it): ?>
                 <tr data-renglon>
-                    <td data-label="Artículo"><input name="items[<?= $i ?>][articulo]" value="<?= e($it['articulo'] ?? '') ?>" maxlength="15" list="articulos-lista" data-articulo autocomplete="off"></td>
-                    <td data-label="Descripción"><input name="items[<?= $i ?>][descripcion]" value="<?= e($it['descripcion'] ?? '') ?>" maxlength="255" data-descripcion></td>
+                    <td data-label="Artículo"><input name="items[<?= $i ?>][articulo]" value="<?= e($it['articulo'] ?? '') ?>" maxlength="60" placeholder="Código, barras, SKU o descripción" data-articulo autocomplete="off" role="combobox" aria-autocomplete="list"></td>
+                    <td data-label="Descripción"><input name="items[<?= $i ?>][descripcion]" value="<?= e($it['descripcion'] ?? '') ?>" maxlength="255" data-descripcion>
+                        <textarea name="items[<?= $i ?>][texto]" rows="1" maxlength="2000" placeholder="Texto adicional que se imprime en la factura (opcional)" data-texto><?= e($it['texto'] ?? '') ?></textarea></td>
                     <td data-label="Cantidad"><input name="items[<?= $i ?>][cantidad]" value="<?= e($it['cantidad'] ?? '') ?>" inputmode="decimal" data-decimales="3" data-cantidad></td>
                     <td data-label="Precio"><input name="items[<?= $i ?>][precio]" value="<?= e($it['precio'] ?? '') ?>" inputmode="decimal" data-decimales="4" data-precio></td>
                     <td data-label="IVA"><select name="items[<?= $i ?>][alicuota]" data-alicuota>
@@ -142,7 +143,7 @@ $hoyIso = date('Y-m-d');
             </tbody>
         </table>
     </div>
-    <datalist id="articulos-lista"></datalist>
+    <ul class="sugerencias" id="articulos-sugerencias" role="listbox" hidden></ul>
     <p><button type="button" class="btn btn-ghost btn-sm" data-agregar>+ Agregar renglón</button></p>
 
     <div class="totales card-interno" data-totales aria-live="polite">
@@ -198,8 +199,9 @@ $hoyIso = date('Y-m-d');
 
 <template id="renglon-plantilla">
     <tr data-renglon>
-        <td data-label="Artículo"><input name="items[__I__][articulo]" maxlength="15" list="articulos-lista" data-articulo autocomplete="off"></td>
-        <td data-label="Descripción"><input name="items[__I__][descripcion]" maxlength="255" data-descripcion></td>
+        <td data-label="Artículo"><input name="items[__I__][articulo]" maxlength="60" placeholder="Código, barras, SKU o descripción" data-articulo autocomplete="off" role="combobox" aria-autocomplete="list"></td>
+        <td data-label="Descripción"><input name="items[__I__][descripcion]" maxlength="255" data-descripcion>
+            <textarea name="items[__I__][texto]" rows="1" maxlength="2000" placeholder="Texto adicional que se imprime en la factura (opcional)" data-texto></textarea></td>
         <td data-label="Cantidad"><input name="items[__I__][cantidad]" inputmode="decimal" data-decimales="3" data-cantidad></td>
         <td data-label="Precio"><input name="items[__I__][precio]" inputmode="decimal" data-decimales="4" data-precio></td>
         <td data-label="IVA"><select name="items[__I__][alicuota]" data-alicuota>

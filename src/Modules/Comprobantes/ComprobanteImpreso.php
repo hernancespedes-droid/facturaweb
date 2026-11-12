@@ -47,7 +47,7 @@ final class ComprobanteImpreso
 
         $items = [];
         foreach ($h['items'] as $it) {
-            $items[] = ['descripcion' => (string) $it['observaciones'], 'cantidad' => (float) $it['unidades'], 'precio' => (float) $it['precio'], 'importe' => (float) $it['total_item'],
+            $items[] = ['descripcion' => (string) $it['observaciones'], 'texto' => trim((string) ($it['texto_impresion'] ?? '')), 'cantidad' => (float) $it['unidades'], 'precio' => (float) $it['precio'], 'importe' => (float) $it['total_item'],
                 'exento' => $letra !== 'C' && (float) $it['por_iva'] <= 0];
         }
 

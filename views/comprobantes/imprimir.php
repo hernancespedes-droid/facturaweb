@@ -43,6 +43,7 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
         .totales .t { font-size: 15px; font-weight: 700; border-top: 1px solid #000; margin-top: 1mm; padding-top: 1.5mm; }
         .leyenda { font-size: 10px; }
         .estado { margin-top: 6mm; border: 2px solid #000; padding: 4mm; text-align: center; }
+        .texto-renglon { font-size: 0.9em; margin-top: 1mm; color: #333; }
         .estado.con-qr { display: flex; align-items: center; gap: 5mm; text-align: left; }
         .estado .qr svg { width: 30mm; height: 30mm; display: block; }
         .estado .prueba { margin-top: 2mm; font-weight: 700; color: #b00020; }
@@ -85,7 +86,7 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
         <thead><tr><th>Descripción</th><th style="width:24mm">Cantidad</th><th style="width:30mm">Precio</th><th style="width:30mm">Importe</th></tr></thead>
         <tbody>
         <?php foreach ($d['items'] as $it): ?>
-            <tr><td><?= e($it['descripcion']) ?></td><td><?= e($f($it['cantidad'], 3)) ?></td><td><?= e($f($it['precio'])) ?></td><td><?= e($f($it['importe'])) ?></td></tr>
+            <tr><td><?= e($it['descripcion']) ?><?php if (($it['texto'] ?? '') !== ''): ?><div class="texto-renglon"><?= nl2br(e($it['texto'])) ?></div><?php endif; ?></td><td><?= e($f($it['cantidad'], 3)) ?></td><td><?= e($f($it['precio'])) ?></td><td><?= e($f($it['importe'])) ?></td></tr>
         <?php endforeach; ?>
         <?php if ($d['items'] === []): ?><tr><td colspan="4">(sin detalle)</td></tr><?php endif; ?>
         </tbody>
