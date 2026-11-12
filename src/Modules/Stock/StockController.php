@@ -23,6 +23,12 @@ final class StockController
             'pagina' => $pagina, 'porPagina' => $por, 'depositos' => $svc->depositos(), 'activo' => StockService::activo(), 'puedeMover' => Auth::puede('stock.mover')]));
     }
 
+    /** Buscador de artículos de las pantallas de stock (mismo buscador que el renglón de la factura). */
+    public static function buscarArticulo(Request $req, array $params): Response
+    {
+        return Response::json(\App\Modules\Articulos\BuscadorArticulos::buscar(trim((string) ($req->query['q'] ?? '')), isset($req->query['exacto'])));
+    }
+
     public static function kardex(Request $req, array $params): Response
     {
         $svc = new StockService();

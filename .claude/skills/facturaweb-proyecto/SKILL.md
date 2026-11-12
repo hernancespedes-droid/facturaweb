@@ -71,6 +71,17 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   un solo medio de pago por comprobante (el mixto y los cheques de terceros van con la etapa 4); sin anulación (se corrige con NC).
 - Etapa 3 (hecha en 0.4.0): modos `interno|simulado|homologacion|produccion` en `config/local.php` (`afip`); `Modules/Arca` (Arca, ArcaSimulador, ArcaController); `afip_operaciones` registra cada pedido antes de hablar con ARCA y permite recuperar lo aprobado y no grabado; `es_prueba` marca lo no fiscal; Sistema → ARCA. Decisiones de Claude marcadas `D-xx` en el código y listadas en `docs/decisiones-pendientes.md`. Pendiente: pantalla de equivalencias de condición de IVA. Diseño original: el comprobante nace con el número de ARCA; arma el `Comprobante` de `lib/afip_fe` desde lo calculado; punto de venta y certificado propios de la web.
 
+## Regla de interfaz: buscar y cargar artículos y clientes (decisión de Hernán, 12/11/2026)
+
+**Siempre que una pantalla pida un artículo o un cliente, el campo es un buscador**, no un texto libre ni un desplegable con todo:
+- Se puede escribir (o leer con pistola) el código, el código de barras (EAN-13 / DUN-14), el SKU, el CUIT o el nombre.
+- Si se escribe texto, **debajo del campo se muestran las coincidencias** (código · descripción · SKU/EAN/precio) y **el usuario siempre elige una**;
+  nunca se adivina ni se toma la primera. Ni Enter ni salir del campo envían el formulario ni eligen solos si hay dudas.
+- Un código exacto (pistola) se resuelve directo. Un código repetido en dos artículos no se elige solo: se muestran las opciones.
+- Artículos: `Articulos\BuscadorArticulos::buscar()` (lo usan el renglón de la factura y las pantallas de stock; ruta propia por permiso) +
+  `public/assets/buscador.js` (`<input data-buscador-url="…">`). Clientes: `Comprobantes → buscarCliente`. **Al crear una pantalla nueva con estos
+  datos hay que reutilizar estos buscadores, no hacer otro campo.** El servidor igual vuelve a validar lo que llega.
+
 ## Datos de OYS (copia 11/11/2026, en Drive, nunca al repo)
 
 `datos_facturador_web20261111122233.rar` (RAR5, se abre con `unrar`). 3.371 comprobantes (2010–2025, PV 0004, casi todo FC A),
