@@ -127,7 +127,8 @@ $hoyIso = date('Y-m-d');
             <tbody data-renglones-cuerpo>
             <?php foreach ($items as $i => $it): ?>
                 <tr data-renglon>
-                    <td data-label="Artículo"><input name="items[<?= $i ?>][articulo]" value="<?= e($it['articulo'] ?? '') ?>" maxlength="60" placeholder="Código, barras, SKU o descripción" data-articulo autocomplete="off" role="combobox" aria-autocomplete="list"></td>
+                    <td data-label="Artículo"><input name="items[<?= $i ?>][articulo]" value="<?= e($it['articulo'] ?? '') ?>" maxlength="60" placeholder="Código, barras, SKU o descripción" data-articulo autocomplete="off" role="combobox" aria-autocomplete="list">
+                        <button type="button" class="btn btn-sm btn-ghost btn-lista-articulos" data-lista-articulos title="Ver la lista de artículos y elegir uno">Lista</button></td>
                     <td data-label="Descripción"><input name="items[<?= $i ?>][descripcion]" value="<?= e($it['descripcion'] ?? '') ?>" maxlength="255" data-descripcion>
                         <textarea name="items[<?= $i ?>][texto]" rows="1" maxlength="2000" placeholder="Texto adicional que se imprime en la factura (opcional)" data-texto><?= e($it['texto'] ?? '') ?></textarea></td>
                     <td data-label="Cantidad"><input name="items[<?= $i ?>][cantidad]" value="<?= e($it['cantidad'] ?? '') ?>" inputmode="decimal" data-decimales="3" data-cantidad></td>
@@ -199,7 +200,8 @@ $hoyIso = date('Y-m-d');
 
 <template id="renglon-plantilla">
     <tr data-renglon>
-        <td data-label="Artículo"><input name="items[__I__][articulo]" maxlength="60" placeholder="Código, barras, SKU o descripción" data-articulo autocomplete="off" role="combobox" aria-autocomplete="list"></td>
+        <td data-label="Artículo"><input name="items[__I__][articulo]" maxlength="60" placeholder="Código, barras, SKU o descripción" data-articulo autocomplete="off" role="combobox" aria-autocomplete="list">
+                        <button type="button" class="btn btn-sm btn-ghost btn-lista-articulos" data-lista-articulos title="Ver la lista de artículos y elegir uno">Lista</button></td>
         <td data-label="Descripción"><input name="items[__I__][descripcion]" maxlength="255" data-descripcion>
             <textarea name="items[__I__][texto]" rows="1" maxlength="2000" placeholder="Texto adicional que se imprime en la factura (opcional)" data-texto></textarea></td>
         <td data-label="Cantidad"><input name="items[__I__][cantidad]" inputmode="decimal" data-decimales="3" data-cantidad></td>
@@ -210,4 +212,5 @@ $hoyIso = date('Y-m-d');
         <td><button type="button" class="btn btn-ghost btn-sm" data-quitar aria-label="Quitar renglón" title="Quitar renglón">✕</button></td>
     </tr>
 </template>
+<script src="<?= e(asset('assets/ventana-articulos.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/comprobante.js')) ?>" defer></script>

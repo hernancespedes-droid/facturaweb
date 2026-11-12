@@ -243,6 +243,13 @@
       .then(function (r) { return r.json(); })
       .then(function (arr) { if (arr.length) { aplicar(inp.closest('[data-renglon]'), arr[0]); if (alResolver) alResolver(); } });
   }
+  // «Lista»: ventana con los artículos para buscar y elegir uno
+  cuerpo.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-lista-articulos]');
+    if (!b || !window.VentanaArticulos) return;
+    var tr = b.closest('[data-renglon]');
+    window.VentanaArticulos.abrir(urlArt, function (a) { aplicar(tr, a); var c = tr.querySelector('[data-cantidad]'); c.focus(); c.select(); });
+  });
   cuerpo.addEventListener('input', function (ev) {
     var inp = ev.target.closest('[data-articulo]');
     if (!inp) return;

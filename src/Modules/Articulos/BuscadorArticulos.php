@@ -18,7 +18,6 @@ final class BuscadorArticulos
     /** @return array<int,array<string,mixed>> */
     public static function buscar(string $q, bool $exacto): array
     {
-        $svc = new \App\Modules\Comprobantes\ComprobantesService();
         $pdo = Db::pdo();
         $porBulto = null;
         if ($exacto) {
@@ -50,7 +49,33 @@ final class BuscadorArticulos
             $st->execute([...$par, mb_strtoupper($q), $q, $q, $q, $prefijo, $prefijo]);
             $filas = $st->fetchAll();
         }
-        $cot = $svc->cotizacionDolar(date('Y-m-d'));
+        return self::formatear($filas, $porBulto);
+    }
+
+    /** Listado para la ventana de búsqueda: artículos activos por descripción (filtrados por palabras si se escribe algo), de a 20. @return array{items:array<int,array<string,mixed>>,hay_mas:bool} */
+    public static function listar(string $q, int $pagina): array
+    {
+        $porPagina = 20;
+        $cond = ["estado = 'AC'"];
+        $par = [];
+        foreach (array_slice(preg_split('/\s+/u', $q) ?: [], 0, 6) as $p) {
+            if ($p !== '') {
+                $like = '%' . addcslashes($p, '%_\\') . '%';
+                $cond[] = '(descripcion LIKE ? OR codigo LIKE ? OR sku LIKE ? OR ean13 = ? OR dun14 = ? OR codigo_de_barras = ?)';
+                array_push($par, $like, $like, $like, $p, $p, $p);
+            }
+        }
+        $st = Db::pdo()->prepare('SELECT * FROM articulos WHERE ' . implode(' AND ', $cond) . ' ORDER BY descripcion, codigo LIMIT ' . ($porPagina + 1) . ' OFFSET ' . (max(1, $pagina) - 1) * $porPagina);
+        $st->execute($par);
+        $filas = $st->fetchAll();
+        $hayMas = count($filas) > $porPagina;
+        return ['items' => self::formatear(array_slice($filas, 0, $porPagina), null), 'hay_mas' => $hayMas];
+    }
+
+    /** @param array<int,array<string,mixed>> $filas @return array<int,array<string,mixed>> */
+    private static function formatear(array $filas, ?int $porBulto): array
+    {
+        $cot = (new \App\Modules\Comprobantes\ComprobantesService())->cotizacionDolar(date('Y-m-d'));
         $out = [];
         foreach ($filas as $a) {
             $precio = (float) $a['precio_unitario'] > 0 ? (float) $a['precio_unitario'] : (float) $a['precio_de_venta_1'];

@@ -130,6 +130,17 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await enviar(page);
     ok((await page.textContent('.alerta')).includes('creado'), 'cliente consumidor final creado');
 
+    // Ventana de búsqueda: «Lista» muestra los artículos, se filtra y el usuario elige
+    await page.goto(BASE + '/comprobantes/nuevo?tipo=FC');
+    await page.locator('[data-renglon]').nth(0).locator('[data-lista-articulos]').click();
+    await page.waitForSelector('dialog.ventana-articulos[open] .va-fila');
+    await page.fill('.va-buscar', 'abono por mant');
+    await page.waitForFunction(() => document.querySelectorAll('.va-fila').length >= 1 && [...document.querySelectorAll('.va-fila')].every((f) => f.textContent.toUpperCase().includes('MANTENIMIENTO')));
+    await page.screenshot({ path: path.join(CAPTURAS, 'ventana-articulos.png') });
+    await page.locator('.va-fila').first().click();
+    ok(await page.locator('dialog.ventana-articulos').evaluate((d) => !d.open), 'al elegir se cierra la ventana');
+    ok((await page.locator('[data-renglon]').nth(0).locator('[data-descripcion]').inputValue()).includes('ABONO'), 'la ventana carga el artículo elegido en el renglón');
+
     await page.goto(BASE + '/comprobantes/nuevo?tipo=FC');
     ok((await page.textContent('h1')).includes('Factura'), 'abre el formulario de factura');
     await page.fill('#cliente-q', 'CLIENTE E2E SRL');

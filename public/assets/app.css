@@ -1048,3 +1048,16 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .tabla-iva { font-size: .85rem; }
 .tabla-iva th, .tabla-iva td { padding: 6px 8px; }
 .tabla-iva .num { text-align: right; white-space: nowrap; }
+
+/* Ventana de búsqueda de artículos */
+.ventana-articulos { width: min(920px, 96vw); max-height: 90vh; padding: 16px; border: 1px solid var(--border, #d6dbe6); border-radius: 12px; background: var(--panel, #fff); color: inherit; }
+.ventana-articulos::backdrop { background: rgba(0, 0, 0, .45); }
+.ventana-articulos .va-cab { display: flex; justify-content: space-between; align-items: center; margin: 0 0 10px; }
+.ventana-articulos .va-cab h2 { margin: 0; font-size: 1.15rem; }
+.ventana-articulos .va-buscar { width: 100%; margin-bottom: 10px; }
+.ventana-articulos .va-tabla { max-height: 55vh; overflow: auto; }
+.ventana-articulos .va-fila { cursor: pointer; }
+.ventana-articulos .va-fila:hover, .ventana-articulos .va-fila:focus { background: var(--panel-2, #eef2fb); outline: none; }
+.ventana-articulos .va-pie { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.btn-lista-articulos { margin-top: 4px; }
+@media (max-width: 720px) { .ventana-articulos .va-tabla th:nth-child(3), .ventana-articulos .va-tabla td:nth-child(3) { display: none; } }

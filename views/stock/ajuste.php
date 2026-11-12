@@ -14,4 +14,5 @@ $dep = (int) ($datos['deposito'] ?? $principal);
     <label class="field"><span>Motivo</span><input name="motivo" value="<?= $v('motivo') ?>" maxlength="255" placeholder="Stock inicial, rotura, conteo…"></label>
     <div class="acciones"><button class="btn" type="submit">Registrar</button><a class="btn btn-ghost" href="<?= e(url('/stock')) ?>">Cancelar</a></div>
 </form>
+<script src="<?= e(asset('assets/ventana-articulos.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/buscador.js')) ?>" defer></script>
