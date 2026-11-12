@@ -6,7 +6,7 @@ Options -Indexes
     RewriteEngine On
 
     # Nada de código, configuración ni datos accesible desde la web.
-    RewriteRule ^(src|config|database|storage|tests|vendor|views|bin|docs|e2e|lib|vfp|agente)(/|$) - [F,L]
+    RewriteRule ^(src|config|database|storage|tests|vendor|views|bin|docs|e2e|lib|vfp|agente-windows)(/|$) - [F,L]
     RewriteRule ^(composer\.(json|lock)|VERSION|README\.md|CLAUDE\.md)$ - [F,L]
     RewriteRule (^|/)\.(?!well-known) - [F,L]
 

@@ -4,7 +4,7 @@
 <div class="page-head"><div><p class="eyebrow">Sistema</p><h1>Agente de sincronización</h1></div></div>
 <p class="small muted">El agente es un programa chico que corre en la PC del sistema VFP (Windows 10). Cada tanto manda a la web los comprobantes nuevos del VFP, para que
     el subdiario de IVA y el stock de la web los incluyan. Se conecta él a la web (por HTTPS) con una clave; no hace falta abrir nada en la red del cliente.
-    Guía de instalación: <code>agente/LEEME.md</code>.</p>
+    Guía de instalación: <code>agente-windows/LEEME.md</code>.</p>
 
 <?php if ($nueva): ?>
 <section class="card">
