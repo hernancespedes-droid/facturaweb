@@ -25,6 +25,10 @@ Cada una está marcada en el código con `DECISIÓN D-xx (Claude, a confirmar po
 | D-19 | Stock: siempre se puede facturar sin stock (avisa); las facturas descuentan del depósito principal; la nota de crédito repone (solo renglones con artículo); la nota de débito no mueve. | `Stock/StockService`, `ComprobantesService::grabar` | `StockService::porComprobante` y `advertencias` |
 | D-20 | La sincronización del agente es solo VFP → web y solo de comprobantes (con IVA, renglones, caja y cuenta corriente); no actualiza comprobantes ya cargados. | `MigradorVfp::sumarComprobantes`, `Agente/ApiController` | Ampliar el modo incremental a clientes y artículos |
 | D-21 | **Pedido de Hernán (12/11):** el agente también sube clientes y artículos del VFP. Mientras convivan, el VFP manda: el cliente/artículo nuevo se suma y el existente se **actualiza por código** con las columnas que trae el VFP; lo que agrega la web (cliente desactivado, EAN, SKU, bultos, control de stock) no se pisa y nada se borra. Riesgo: un código creado en la web que el VFP use después para otra cosa se pisaría. | `MigradorVfp::sumarMaestros`, `POST /api/v1/vfp/maestros` | Quitar el envío de maestros del agente |
+| D-22 | Web → VFP: solo viajan al VFP los comprobantes emitidos en la web con validez fiscal (no los de prueba). | `Agente/ExportadorVfp::PENDIENTE` | Cambiar la condición |
+| D-23 | Web → VFP: los números internos del VFP (FE_CLAVE, número de movimiento de stock) los asigna el VFP al grabar; viajan tal cual el número de comprobante y el CAE. | `vfp-importador/IMPORTAR_WEB.PRG` | — |
+| D-24 | Web → VFP, stock: un movimiento de stock del VFP por comprobante (BS = baja para facturas, AS = alta para notas de crédito) y uno por cada movimiento suelto; la sucursal del VFP sale del depósito (`depositos.sucursal_vfp`). | `IMPORTAR_WEB.PRG`, `ExportadorVfp` | Cambiar los tipos en el PRG |
+| D-25 | Web → VFP: los comprobantes de la web (PV 7) no mueven los numeradores del VFP (PV 4). | `IMPORTAR_WEB.PRG` | — |
 | D-15 | (reservado) | | |
 | D-16 | **Decisión de Hernán:** un receptor monotributista lleva factura A. | `Tipos` | — |
 

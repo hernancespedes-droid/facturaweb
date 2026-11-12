@@ -48,3 +48,24 @@
     </table></div>
     <?php endif; ?>
 </section>
+
+<section class="card">
+    <h2>Web → VFP (lo emitido en la web)</h2>
+    <p class="muted">El agente baja a la PC del VFP los comprobantes emitidos en la web con validez fiscal (con su IVA, renglones, caja y cuenta corriente) y los movimientos de stock.
+        Un programa dentro del VFP (<code>IMPORTAR_WEB</code>) los graba y el agente le avisa a la web cuáles quedaron grabados.</p>
+    <p><b><?= (int) $vfp['pendientes'] ?></b> comprobante(s) y <b><?= (int) $vfp['movimientos'] ?></b> movimiento(s) de stock sueltos esperan ir al VFP.
+        <?php if ((int) $vfp['con_error'] > 0): ?><b class="text-danger"><?= (int) $vfp['con_error'] ?> rechazado(s) por el VFP</b>.<?php endif; ?></p>
+    <?php if ((int) $vfp['pendientes'] + (int) $vfp['movimientos'] > 0): ?>
+        <p><a class="btn btn-ghost btn-sm" href="<?= e(url('/agente/vfp/lote')) ?>">Descargar el próximo lote</a> <span class="muted">(para probar <code>IMPORTAR_WEB</code> a mano; no marca nada como enviado)</span></p>
+    <?php endif; ?>
+    <?php if ($vfp['errores'] !== []): ?>
+        <table class="table"><thead><tr><th>Comprobante</th><th>Fecha</th><th>Por qué lo rechazó el VFP</th></tr></thead><tbody>
+        <?php foreach ($vfp['errores'] as $f): ?>
+            <tr><td><a href="<?= e(url('/comprobantes/' . (int) $f['fe_clave'])) ?>"><?= e($f['tipo'] . ' ' . $f['letra'] . ' ' . str_pad((string) $f['prefijo'], 4, '0', STR_PAD_LEFT) . '-' . str_pad((string) $f['comprobante'], 8, '0', STR_PAD_LEFT)) ?></a></td>
+                <td><?= e(fecha($f['fecha'])) ?></td><td><?= e($f['vfp_error']) ?></td></tr>
+        <?php endforeach; ?>
+        </tbody></table>
+        <form method="post" action="<?= e(url('/agente/vfp/reintentar')) ?>"><?= csrf_field() ?>
+            <button class="btn" type="submit">Reintentar los rechazados</button> <span class="muted">(después de arreglar el motivo en el VFP)</span></form>
+    <?php endif; ?>
+</section>

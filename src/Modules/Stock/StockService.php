@@ -53,12 +53,15 @@ final class StockService
     }
 
     /** @return array{ok:bool,error:?string} */
-    public function guardarDeposito(?int $id, string $codigo, string $nombre, bool $principal, bool $activo): array
+    public function guardarDeposito(?int $id, string $codigo, string $nombre, bool $principal, bool $activo, int $sucursalVfp = 1): array
     {
         $codigo = mb_strtoupper(trim($codigo));
         $nombre = trim($nombre);
         if (preg_match('/^[A-Z0-9_-]{1,10}$/', $codigo) !== 1 || $nombre === '' || mb_strlen($nombre) > 60) {
             return ['ok' => false, 'error' => 'Código de hasta 10 letras o números y un nombre de hasta 60 letras.'];
+        }
+        if ($sucursalVfp < 1 || $sucursalVfp > 99) {
+            return ['ok' => false, 'error' => 'La sucursal del VFP es un número de 1 a 99.'];
         }
         $dup = $this->pdo->prepare('SELECT id FROM depositos WHERE codigo = ? AND id <> ?');
         $dup->execute([$codigo, $id ?? 0]);
@@ -74,10 +77,10 @@ final class StockService
                 $this->pdo->exec('UPDATE depositos SET principal = 0');
             }
             if ($id === null) {
-                $this->pdo->prepare('INSERT INTO depositos (codigo, nombre, principal, activo) VALUES (?, ?, ?, 1)')->execute([$codigo, $nombre, $principal ? 1 : 0]);
+                $this->pdo->prepare('INSERT INTO depositos (codigo, nombre, principal, activo, sucursal_vfp) VALUES (?, ?, ?, 1, ?)')->execute([$codigo, $nombre, $principal ? 1 : 0, $sucursalVfp]);
             } else {
-                $this->pdo->prepare('UPDATE depositos SET codigo = ?, nombre = ?, principal = IF(? = 1, 1, principal), activo = ? WHERE id = ?')
-                    ->execute([$codigo, $nombre, $principal ? 1 : 0, $activo ? 1 : 0, $id]);
+                $this->pdo->prepare('UPDATE depositos SET codigo = ?, nombre = ?, principal = IF(? = 1, 1, principal), activo = ?, sucursal_vfp = ? WHERE id = ?')
+                    ->execute([$codigo, $nombre, $principal ? 1 : 0, $activo ? 1 : 0, $sucursalVfp, $id]);
             }
             $this->pdo->commit();
         } catch (\Throwable $e) {

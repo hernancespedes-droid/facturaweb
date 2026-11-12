@@ -16,7 +16,7 @@ final class AgenteController
     public static function index(Request $req, array $params): Response
     {
         $envios = Db::pdo()->query("SELECT * FROM migracion_vfp WHERE origen LIKE 'agente:%' ORDER BY id DESC LIMIT 20")->fetchAll();
-        return Response::html(View::render('agente/index', ['title' => 'Agente de sincronización', 'nav' => 'agente', 'claves' => ApiClaves::listar(), 'envios' => $envios,
+        return Response::html(View::render('agente/index', ['title' => 'Agente de sincronización', 'nav' => 'agente', 'claves' => ApiClaves::listar(), 'envios' => $envios, 'vfp' => ExportadorVfp::estado(),
             'nueva' => Session::get('_clave_nueva')]));
     }
 
@@ -28,6 +28,24 @@ final class AgenteController
             return Response::redirect(url('/agente'));
         }
         Session::set('_clave_nueva', ['nombre' => $nombre, 'clave' => ApiClaves::crear($nombre, Auth::id())]);
+        return Response::redirect(url('/agente'));
+    }
+
+    /** Baja el próximo lote para el VFP como archivo, para probar IMPORTAR_WEB a mano. No marca nada: lo pendiente sigue pendiente. */
+    public static function descargarLote(Request $req, array $params): Response
+    {
+        $p = ExportadorVfp::pendientes(50);
+        if ($p['comprobantes'] + $p['movimientos'] === 0) {
+            Session::flash('info', 'No hay nada pendiente para el VFP.');
+            return Response::redirect(url('/agente'));
+        }
+        return new Response(200, $p['texto'], ['Content-Type' => 'text/plain; charset=utf-8', 'Content-Disposition' => 'attachment; filename="lote_' . $p['lote'] . '.txt"']);
+    }
+
+    public static function reintentarVfp(Request $req, array $params): Response
+    {
+        $n = ExportadorVfp::reintentar();
+        Session::flash('ok', $n > 0 ? "{$n} comprobante(s) vuelven a la cola para el VFP." : 'No había comprobantes rechazados.');
         return Response::redirect(url('/agente'));
     }
 

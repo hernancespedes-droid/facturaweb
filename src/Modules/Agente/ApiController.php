@@ -13,6 +13,8 @@ use App\Modules\Migracion\MigradorVfp;
  * API para el agente (sin sesión ni CSRF: se autentica con la clave en Authorization: Bearer fwk_…, siempre por HTTPS).
  *   GET  /api/v1/ping                  comprueba la conexión y la clave
  *   POST /api/v1/vfp/comprobantes      un .zip con subdiario, iva, estadistica, caja y ctact (+ datos.dbc): suma los comprobantes nuevos
+ *   GET  /api/v1/vfp/pendientes        lo emitido en la web que el VFP todavía no tiene (archivo de intercambio en texto)
+ *   POST /api/v1/vfp/confirmar         el resultado que devolvió el VFP (OK|S|id, ERR|S|id|motivo…)
  *   POST /api/v1/vfp/maestros          un .zip con clientes y/o articulos (+ datos.dbc): suma los nuevos y actualiza los que ya estaban (por código)
  * Los comprobantes que la web ya tiene se saltean (la sincronización se puede repetir sin duplicar nada).
  */
@@ -55,6 +57,35 @@ final class ApiController
             return ['ok' => true, 'nuevos' => $resumen['subdiario']['grabadas'] ?? 0, 'leidos' => $resumen['subdiario']['leidas'] ?? 0,
                 'detalle' => self::detalle($resumen)];
         });
+    }
+
+    public static function pendientes(Request $req, array $params): Response
+    {
+        $c = self::autenticar($req);
+        if ($c instanceof Response) {
+            return $c;
+        }
+        try {
+            $p = ExportadorVfp::pendientes((int) ($req->query['limite'] ?? 50));
+            return self::json(['ok' => true, 'lote' => $p['lote'], 'comprobantes' => $p['comprobantes'], 'movimientos' => $p['movimientos'],
+                'archivo' => $p['comprobantes'] + $p['movimientos'] > 0 ? $p['texto'] : '']);
+        } catch (\Throwable $e) {
+            App::registrar($e);
+            return self::json(['ok' => false, 'error' => 'No se pudo armar el archivo: ' . mb_substr($e->getMessage(), 0, 300)], 500);
+        }
+    }
+
+    public static function confirmar(Request $req, array $params): Response
+    {
+        $c = self::autenticar($req);
+        if ($c instanceof Response) {
+            return $c;
+        }
+        $texto = (string) ($req->post['resultado'] ?? file_get_contents('php://input'));
+        if (strlen($texto) > 2 * 1024 * 1024) {
+            return self::json(['ok' => false, 'error' => 'El resultado es demasiado grande.'], 413);
+        }
+        return self::json(['ok' => true] + ExportadorVfp::confirmar($texto));
     }
 
     public static function maestros(Request $req, array $params): Response

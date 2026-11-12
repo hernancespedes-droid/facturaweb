@@ -106,7 +106,7 @@ final class StockController
         $p = $req->post;
         $id = ctype_digit((string) ($p['id'] ?? '')) && (int) $p['id'] > 0 ? (int) $p['id'] : null;
         $svc = new StockService();
-        $r = $svc->guardarDeposito($id, (string) ($p['codigo'] ?? ''), (string) ($p['nombre'] ?? ''), ($p['principal'] ?? '') === '1', ($p['activo'] ?? '1') === '1');
+        $r = $svc->guardarDeposito($id, (string) ($p['codigo'] ?? ''), (string) ($p['nombre'] ?? ''), ($p['principal'] ?? '') === '1', ($p['activo'] ?? '1') === '1', ctype_digit((string) ($p['sucursal_vfp'] ?? '')) ? (int) $p['sucursal_vfp'] : 1);
         if (!$r['ok']) {
             return Response::html(View::render('stock/depositos', ['title' => 'Depósitos', 'nav' => 'stock_depositos', 'depositos' => $svc->depositos(false), 'error' => $r['error']]), 422);
         }
