@@ -42,6 +42,16 @@ final class MigradorVfp
     /** @var array<string,array<string,int>> columna => código faltante => cuántos lo usan (tabla en curso) */
     private array $faltantes = [];
 
+    /** Modo incremental (agente de sincronización): suma solo los comprobantes que la web todavía no tiene. */
+    private bool $incremental = false;
+    private string $origen = '';
+    /** @var array<string,bool> comprobantes ya cargados (clave tipo|letra|sucursal|número|fecha) */
+    private array $existentes = [];
+    /** @var array<string,bool> comprobantes nuevos de esta pasada */
+    private array $nuevos = [];
+    /** @var array<string,bool> lo mismo sin fecha (el IVA del VFP no la tiene) */
+    private array $nuevosSinFecha = [];
+
     private ?Dbc $dbc = null;
     /** @var resource|null */
     private $sql = null;
@@ -64,6 +74,19 @@ final class MigradorVfp
      * @param string[]|null $tablas null = todas las de TABLAS
      * @return array<string,array{leidas:int,grabadas:int,avisos:string[]}>
      */
+    /**
+     * Sincronización incremental de comprobantes desde el VFP: no borra nada ni toca los maestros; agrega los comprobantes (con su IVA, renglones, caja y
+     * cuenta corriente) que todavía no están, por la clave tipo + letra + sucursal + número + fecha. Los que ya estaban se saltean.
+     *
+     * @return array<string,array{leidas:int,grabadas:int,avisos:string[]}>
+     */
+    public function sumarComprobantes(string $origen): array
+    {
+        $this->incremental = true;
+        $this->origen = $origen;
+        return $this->migrar(['subdiario', 'iva', 'estadistica', 'caja', 'ctact'], true);
+    }
+
     public function migrar(?array $tablas = null, bool $reemplazar = false, bool $simular = false, ?string $archivoSql = null): array
     {
         $tablas ??= array_keys(self::TABLAS);
@@ -117,7 +140,7 @@ final class MigradorVfp
                 $this->pdo->rollBack();
             } else {
                 $this->pdo->prepare('INSERT INTO migracion_vfp (origen, tablas, resumen) VALUES (?, ?, ?)')
-                    ->execute([mb_substr($this->carpeta, 0, 255), implode(', ', $tablas), json_encode($this->resumen, JSON_UNESCAPED_UNICODE)]);
+                    ->execute([mb_substr($this->origen !== '' ? $this->origen : $this->carpeta, 0, 255), implode(', ', $tablas), json_encode($this->resumen, JSON_UNESCAPED_UNICODE)]);
                 $this->pdo->commit();
             }
         } catch (\Throwable $e) {
@@ -218,8 +241,13 @@ final class MigradorVfp
             // el número interno de estas tablas se repite en el VFP: acá lo asigna MySQL (el vínculo con el comprobante es subdiario_id)
             $usar = array_values(array_diff($usar, ['fe_clave']));
         }
-        if (!in_array($tabla, self::SUMAR, true)) {
+        if (!in_array($tabla, self::SUMAR, true) && !$this->incremental) {
             $this->ejecutar("DELETE FROM `{$tabla}`", []);
+        }
+        if ($this->incremental && $tabla === 'subdiario') {
+            foreach ($this->pdo->query("SELECT CONCAT_WS('|', tipo, letra, sucursal, comprobante, fecha) FROM subdiario")->fetchAll(PDO::FETCH_COLUMN) as $k) {
+                $this->existentes[(string) $k] = true;
+            }
         }
 
         $cortos = $dbf->nombres();
@@ -234,6 +262,9 @@ final class MigradorVfp
                 $valores[] = $this->convertir($columnas[$col], $porNombre[$col], $tabla, $col, $r);
             }
             $fila = array_combine($usar, $valores);
+            if ($this->incremental && !$this->esNuevo($tabla, $fila)) {
+                continue; // ya está en la web (o su comprobante ya estaba)
+            }
             $this->revisar($tabla, $fila, $refs, $r);
             try {
                 $this->ejecutar($ins, $valores);
@@ -248,6 +279,27 @@ final class MigradorVfp
             }
         }
         $this->completarFaltantes($tabla, $r);
+    }
+
+    /** Modo incremental: ¿esta fila hay que cargarla? El comprobante se carga si no estaba; sus hijas solo si el comprobante es nuevo. @param array<string,mixed> $fila */
+    private function esNuevo(string $tabla, array $fila): bool
+    {
+        $k = static fn (array $f, string $num, bool $fecha = true) => implode('|', [$f['tipo'] ?? '', $f['letra'] ?? '', $f['sucursal'] ?? '', $f[$num] ?? '', $fecha ? ($f['fecha'] ?? '') : '']);
+        if ($tabla === 'subdiario') {
+            $clave = $k($fila, 'comprobante');
+            if (isset($this->existentes[$clave])) {
+                return false;
+            }
+            $this->nuevos[$clave] = true;
+            $this->nuevosSinFecha[$k($fila, 'comprobante', false)] = true;
+            return true;
+        }
+        return match ($tabla) {
+            'estadistica', 'caja' => isset($this->nuevos[$k($fila, 'comprobante')]),
+            'ctact' => isset($this->nuevos[$k($fila, 'numero')]),
+            'iva' => isset($this->nuevosSinFecha[$k($fila, 'comprobante', false)]),
+            default => true,
+        };
     }
 
     /** Códigos usados que no están en su tabla: se agregan (los catálogos simples) o se avisa. */

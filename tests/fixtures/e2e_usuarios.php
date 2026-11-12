@@ -42,6 +42,7 @@ $limpiar = static function () use ($pdo, $copia): void {
         $pdo->prepare('DELETE FROM subdiario WHERE fe_clave = ?')->execute([$clave]);
     }
     $pdo->exec("DELETE FROM afip_operaciones WHERE entorno = 'S'");
+    $pdo->exec("DELETE FROM api_claves WHERE nombre LIKE 'T e2e%'");
     $pdo->exec("DELETE FROM clientes WHERE razon_social LIKE '%E2E%'");
     $pdo->exec("DELETE FROM stock_movimientos WHERE articulo LIKE 'E2E%'");
     $pdo->exec("DELETE FROM stock_saldos WHERE articulo LIKE 'E2E%'");

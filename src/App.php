@@ -77,7 +77,8 @@ final class App
         \App\Modules\Configuracion\Configuracion::reset();
         \App\Core\Validador::olvidar();
         try {
-            if ($req->method === 'POST' && $req->post === [] && (int) ($req->server['CONTENT_LENGTH'] ?? 0) > 0) {
+            $esApi = str_starts_with($req->path, '/api/'); // API del agente: sin formulario, sin sesión y sin CSRF (usa clave en el encabezado)
+            if (!$esApi && $req->method === 'POST' && $req->post === [] && (int) ($req->server['CONTENT_LENGTH'] ?? 0) > 0) {
                 // PHP descarta todo el formulario cuando supera post_max_size (típico al subir un Excel grande).
                 return $this->withSecurityHeaders($this->errorPage(
                     413,
@@ -85,7 +86,7 @@ final class App
                     . 'Pedí al hosting que suba el límite.'
                 ));
             }
-            if ($req->method === 'POST' && !Csrf::valid($req)) {
+            if (!$esApi && $req->method === 'POST' && !Csrf::valid($req)) {
                 // Todo formulario que cambia datos lleva el token (csrf_field()).
                 return $this->withSecurityHeaders($this->errorPage(
                     403,

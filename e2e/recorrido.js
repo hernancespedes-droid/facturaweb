@@ -217,6 +217,14 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.goto(BASE + '/stock?q=e2e');
     ok((await page.content()).includes('E2E-001'), 'saldos de stock: aparece el artículo con saldo');
     await page.screenshot({ path: path.join(CAPTURAS, 'stock-saldos.png'), fullPage: true });
+    // agente de sincronización: crear una clave y verla una sola vez
+    await page.goto(BASE + '/agente');
+    await page.fill('input[name=nombre]', 'T e2e agente');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Crear clave")')]);
+    ok(/fwk_[a-f0-9]{48}/.test(await page.textContent('.alerta-clave')), 'el agente: se muestra la clave nueva');
+    await page.goto(BASE + '/agente');
+    ok(!/fwk_[a-f0-9]{48}/.test(await page.textContent('body')), 'la clave no se vuelve a mostrar');
+    await page.screenshot({ path: path.join(CAPTURAS, 'agente.png'), fullPage: true });
     // subdiario de IVA ventas (los comprobantes internos son de prueba: hay que tildar incluirlos)
     await page.goto(BASE + '/listados/iva-ventas?pruebas=1');
     ok((await page.textContent('h1')).includes('Subdiario de IVA ventas'), 'abre el subdiario de IVA ventas');

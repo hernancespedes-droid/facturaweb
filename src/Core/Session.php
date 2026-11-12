@@ -20,6 +20,9 @@ final class Session
         if (session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
+        if (str_contains((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/api/v1/')) {
+            return; // la API del agente no usa sesión
+        }
         $minutos = (int) Config::get('auth.inactividad_minutos', 240);
         // Por defecto en la base (tabla sesiones); 'archivos' usa storage/sessions.
         // /instalar corre con la base vacía (todavía no existe la tabla sesiones): ahí las sesiones van en archivos.

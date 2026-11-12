@@ -40,6 +40,7 @@ final class RolesService
         'usuarios' => ['usuarios.administrar', []],
         'configuracion' => ['configuracion.administrar', []],
         'arca' => ['arca.administrar', []],
+        'agente' => ['agente.administrar', []],
     ];
     /** Qué más habilita cada opción en el menú (para que se entienda al tildar). */
     public const INCLUYE = [

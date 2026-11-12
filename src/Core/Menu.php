@@ -34,6 +34,7 @@ final class Menu
         $o['usuarios'] = ['texto' => 'Usuarios', 'ruta' => '/usuarios', 'permiso' => 'usuarios.administrar', 'grupo' => 'Sistema'];
         $o['roles'] = ['texto' => 'Roles', 'ruta' => '/roles', 'permiso' => 'usuarios.administrar', 'grupo' => 'Sistema'];
         $o['configuracion'] = ['texto' => 'Configuración', 'ruta' => '/configuracion', 'permiso' => 'configuracion.administrar', 'grupo' => 'Sistema'];
+        $o['agente'] = ['texto' => 'Agente de sincronización', 'ruta' => '/agente', 'permiso' => 'agente.administrar', 'grupo' => 'Sistema'];
         $o['arca'] = ['texto' => 'ARCA', 'ruta' => '/arca', 'permiso' => 'arca.administrar', 'grupo' => 'Sistema'];
         $o['sistema'] = ['texto' => 'Sistema', 'ruta' => '/sistema', 'permiso' => null, 'grupo' => 'Sistema'];
         return $o;
