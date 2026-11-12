@@ -23,6 +23,7 @@ Cada una está marcada en el código con `DECISIÓN D-xx (Claude, a confirmar po
 | D-17 | Al leer el DUN-14 de un bulto, la cantidad del renglón se completa con las «unidades por bulto» del artículo (el precio sigue siendo por unidad). | `ComprobantesController::buscarArticulo`, `comprobante.js` (`aplicar`) | Sacar el campo `cantidad` de la respuesta |
 | D-18 | El subdiario de IVA ventas lista solo comprobantes vigentes y no de prueba; un tilde incluye los de prueba. | `Listados/IvaVentas` | Cambiar el filtro por omisión |
 | D-19 | Stock: siempre se puede facturar sin stock (avisa); las facturas descuentan del depósito principal; la nota de crédito repone (solo renglones con artículo); la nota de débito no mueve. | `Stock/StockService`, `ComprobantesService::grabar` | `StockService::porComprobante` y `advertencias` |
+| D-20 | La sincronización del agente es solo VFP → web y solo de comprobantes (con IVA, renglones, caja y cuenta corriente); no actualiza comprobantes ya cargados. | `MigradorVfp::sumarComprobantes`, `Agente/ApiController` | Ampliar el modo incremental a clientes y artículos |
 | D-15 | (reservado) | | |
 | D-16 | **Decisión de Hernán:** un receptor monotributista lleva factura A. | `Tipos` | — |
 

@@ -2,6 +2,8 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # El encabezado Authorization (clave del agente) llega a PHP aunque el hosting lo filtre.
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
     # Archivos y carpetas que existen (css, js, imágenes): se sirven tal cual.
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
