@@ -1045,3 +1045,6 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .sugerencias small { opacity: .7; }
 .renglones textarea[data-texto] { width: 100%; min-width: 0; margin-top: 4px; resize: vertical; font-size: .85em; }
 @media (max-width: 720px) { .sugerencias { left: 8px !important; right: 8px; min-width: 0 !important; } }
+.tabla-iva { font-size: .85rem; }
+.tabla-iva th, .tabla-iva td { padding: 6px 8px; }
+.tabla-iva .num { text-align: right; white-space: nowrap; }

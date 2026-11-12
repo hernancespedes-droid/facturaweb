@@ -207,6 +207,12 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.goto(BASE + '/comprobantes?cliente=E2E');
     ok((await page.locator('tbody tr').count()) === 3, 'el listado muestra las tres (A, NC y B)');
     await page.screenshot({ path: path.join(CAPTURAS, 'comprobantes-lista.png'), fullPage: true });
+    // subdiario de IVA ventas (los comprobantes internos son de prueba: hay que tildar incluirlos)
+    await page.goto(BASE + '/listados/iva-ventas?pruebas=1');
+    ok((await page.textContent('h1')).includes('Subdiario de IVA ventas'), 'abre el subdiario de IVA ventas');
+    ok((await page.locator('tbody tr').count()) >= 3, 'el subdiario lista los comprobantes emitidos');
+    ok((await page.textContent('tfoot')).includes('Totales'), 'el subdiario muestra los totales del período');
+    await page.screenshot({ path: path.join(CAPTURAS, 'iva-ventas.png'), fullPage: true });
     // sin mail configurado el envío está deshabilitado
     await page.goto(urlFactura);
     ok(await page.isDisabled('#mail button[type=submit]'), 'sin SMTP configurado el botón Enviar está deshabilitado');
