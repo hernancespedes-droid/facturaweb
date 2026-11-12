@@ -82,20 +82,20 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   `public/assets/buscador.js` (`<input data-buscador-url="…">`). Clientes: `Comprobantes → buscarCliente`. Además hay una ventana «Lista» (`public/assets/ventana-articulos.js`, `BuscadorArticulos::listar`) para recorrer y elegir. **Al crear una pantalla nueva con estos
   datos hay que reutilizar estos buscadores, no hacer otro campo.** El servidor igual vuelve a validar lo que llega.
 
-## Estado actual (12/11/2026, versión 0.7.1) y cómo se trabaja
+## Estado actual (12/11/2026, versión 0.8.0) y cómo se trabaja
 
 - **Ya facturando en ARCA producción** (Hernán emitió factura y nota de crédito): alias OYS (CUIT 20-11499319-1), certificado propio de la web, **punto de venta 7**
   (el 4 es del VFP: no se toca). Config de ARCA fuera de `public_html` (`afip_oys/` en el hosting). Modo en `config/local.php` (`afip.modo`).
 - **Hosting de prueba**: DonWeb (Ferozo) con GIT, **sin SSH**; repo en `public_html/facturador_web/`, subdominio `facturador.oesteparts.site`
   apuntando a `public/`. Se actualiza con GIT → botón `>_` y luego **Sistema → Aplicar cambios**. No activar el webhook de auto-despliegue.
 - **Rama `main` + pull requests** (igual que oesteparts): cada cambio en una rama `claude/…`, PR a `main` y fusión. Versión en `VERSION` (0.4.0 etapa 3, 0.4.1
-  códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos).
+  códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos, 0.8.0 web→VFP).
 - **Hecho más allá de las etapas**: artículos con EAN-13/DUN-14/SKU/unidades por bulto; buscador de artículos en renglones y stock; texto adicional por renglón;
   Listados → Subdiario IVA ventas (pantalla y Excel); **Stock** (movimientos + saldos en la misma transacción, varios depósitos, bultos, se factura sin stock,
   `stock.controlar` apagado por omisión); **Agente** (`agente-windows/`, PowerShell, sube comprobantes del VFP a la web; API con claves en Sistema → Agente).
 - **Decisiones de Claude a confirmar**: `docs/decisiones-pendientes.md` (D-01…D-20; D-01, D-02, D-11 son interruptores de Configuración).
-- **Pedido de Hernán (12/11)**: lo emitido en la web debe grabarse en el VFP (subdiario, iva, estadística, caja, cta. cte., stock). Decidido: el agente baja los pendientes a una carpeta de intercambio y un `.prg` dentro del VFP los importa (no escribir DBF a mano: se rompen los .cdx). Sin hacer todavía.
-- **Pendiente**: Libro IVA Digital de ARCA y PDF del subdiario; carga masiva del stock inicial; sentido web→VFP del agente (arriba);
+- **Web → VFP (0.8.0, hecho pero sin probar en el VFP real)**: lo emitido en la web con validez fiscal + el stock quedan en cola (`subdiario.vfp_enviado/vfp_error`); el agente baja un lote a `intercambio\entrada` (`GET /api/v1/vfp/pendientes`), el programa `vfp-importador/IMPORTAR_WEB.PRG` lo graba dentro del VFP (SUBDIARIO, IVA, ESTADISTICA, CAJA, CTACT, STOCK, MVSTK_*) y deja `salida\resultado_*.txt` que el agente devuelve (`POST /api/v1/vfp/confirmar`). Formato en `Agente/ExportadorVfp`. El VFP de OYS tiene las tablas de stock (hoy vacías) y los tipos BS/AS. Decisiones D-22…D-25. **Pendiente: que Hernán pruebe el `.prg` en una copia de los datos (con `DO IMPORTAR_WEB WITH .T.`) y ajustarlo.** Los datos reales de OYS se abren en el scratchpad (RAR de Drive por `download_file_content`, que guarda el resultado en un archivo; `unrar`/`unrar-free` hay que instalarlo con apt).
+- **Pendiente**: Libro IVA Digital de ARCA y PDF del subdiario; carga masiva del stock inicial; probar y afinar web→VFP;
   etapas 4 (cta. cte./cheques), 6 y 7; pantalla de equivalencias de condición de IVA; probar el agente en la PC con Windows.
 - **Cuidados del contenedor**: MySQL local se cae al reiniciar el contenedor (`bash bin/setup-dev.sh`; si no arranca, borrar `/var/run/mysqld/*.lock` y `/var/lib/mysql/vm.pid`).
   Las claves, certificados y datos reales de clientes nunca van al repo ni al chat.

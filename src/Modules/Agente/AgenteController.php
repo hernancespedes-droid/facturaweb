@@ -16,7 +16,7 @@ final class AgenteController
     public static function index(Request $req, array $params): Response
     {
         $envios = Db::pdo()->query("SELECT * FROM migracion_vfp WHERE origen LIKE 'agente:%' ORDER BY id DESC LIMIT 20")->fetchAll();
-        return Response::html(View::render('agente/index', ['title' => 'Agente de sincronización', 'nav' => 'agente', 'claves' => ApiClaves::listar(), 'envios' => $envios,
+        return Response::html(View::render('agente/index', ['title' => 'Agente de sincronización', 'nav' => 'agente', 'claves' => ApiClaves::listar(), 'envios' => $envios, 'vfp' => ExportadorVfp::estado(),
             'nueva' => Session::get('_clave_nueva')]));
     }
 
@@ -28,6 +28,13 @@ final class AgenteController
             return Response::redirect(url('/agente'));
         }
         Session::set('_clave_nueva', ['nombre' => $nombre, 'clave' => ApiClaves::crear($nombre, Auth::id())]);
+        return Response::redirect(url('/agente'));
+    }
+
+    public static function reintentarVfp(Request $req, array $params): Response
+    {
+        $n = ExportadorVfp::reintentar();
+        Session::flash('ok', $n > 0 ? "{$n} comprobante(s) vuelven a la cola para el VFP." : 'No había comprobantes rechazados.');
         return Response::redirect(url('/agente'));
     }
 

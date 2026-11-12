@@ -1,6 +1,6 @@
 <#
- Agente de sincronización FacturaWeb: manda a la web los comprobantes, clientes y artículos del VFP. Ver LEEME.md.
- Windows PowerShell 5.1 (viene con Windows 10). Solo LEE los DBF del VFP.
+ Agente de sincronización FacturaWeb: manda a la web los comprobantes, clientes y artículos del VFP y baja lo emitido en la web para que el VFP lo importe. Ver LEEME.md.
+ Windows PowerShell 5.1 (viene con Windows 10). Solo LEE los DBF del VFP (lo de la web lo graba el programa IMPORTAR_WEB dentro del VFP).
    .\FacturaWebAgente.ps1 -Probar   comprueba la conexión y la clave, sin enviar nada
    .\FacturaWebAgente.ps1 -Forzar   envía aunque nada haya cambiado
 #>
@@ -85,6 +85,37 @@ try {
     # 3) Clientes y artículos (suma los nuevos y actualiza los que cambiaron en el VFP; lo que cargó la web aparte no se pisa)
     Enviar 'Clientes y artículos' @('clientes.dbf', 'clientes.fpt', 'articulos.dbf', 'articulos.fpt', 'datos.dbc', 'datos.dct') '/api/v1/vfp/maestros' 'ultimo_envio_maestros.txt' {
         param($r) "listo: clientes $($r.detalle.clientes.grabadas) nuevo(s) y $($r.detalle.clientes.actualizadas) actualizado(s); artículos $($r.detalle.articulos.grabadas) nuevo(s) y $($r.detalle.articulos.actualizadas) actualizado(s)."
+    }
+
+    # 4) Web -> VFP. Carpeta de intercambio (por omisión "intercambio" al lado del agente): "entrada" es lo que baja de la web para que el VFP lo
+    #    importe (vfp-importador\IMPORTAR_WEB.PRG); "salida" es lo que el VFP contesta y el agente le devuelve a la web.
+    $inter = if ($cfg.carpeta_intercambio) { [string]$cfg.carpeta_intercambio } else { Join-Path $aqui 'intercambio' }
+    $entrada = Join-Path $inter 'entrada'
+    $salida = Join-Path $inter 'salida'
+    foreach ($d in @($entrada, $salida, (Join-Path $entrada 'procesados'), (Join-Path $salida 'procesados'))) { if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d | Out-Null } }
+
+    # 4a) Lo que contestó el VFP (resultado_*.txt) se le devuelve a la web: así sabe qué comprobantes ya están grabados o por qué se rechazaron.
+    foreach ($f in (Get-ChildItem $salida -Filter 'resultado_*.txt' -File)) {
+        $texto = Get-Content $f.FullName -Raw -Encoding UTF8
+        $c = Invoke-RestMethod -Uri "$url/api/v1/vfp/confirmar" -Headers $cabeceras -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($texto)) -ContentType 'text/plain; charset=utf-8' -TimeoutSec 120
+        if (-not $c.ok) { throw "La web no aceptó el resultado $($f.Name): $($c.error)" }
+        Move-Item $f.FullName (Join-Path (Join-Path $salida 'procesados') $f.Name) -Force
+        Escribir "VFP -> web: $($f.Name): $($c.confirmados) grabado(s) en el VFP, $($c.errores) rechazado(s)."
+    }
+
+    # 4b) Lo nuevo de la web para el VFP. Si todavía hay un lote sin importar, no se baja otro (el VFP importa de a un lote por vez).
+    if (@(Get-ChildItem $entrada -Filter 'lote_*.txt' -File).Count -gt 0) {
+        Escribir 'Web -> VFP: hay un lote esperando que lo importen en el VFP (Importar de la web); no se baja otro.'
+    } else {
+        $w = Invoke-RestMethod -Uri "$url/api/v1/vfp/pendientes?limite=50" -Headers $cabeceras -Method Get -TimeoutSec 120
+        if (-not $w.ok) { throw "La web no pudo armar los pendientes: $($w.error)" }
+        if ([int]$w.comprobantes + [int]$w.movimientos -eq 0) {
+            Escribir 'Web -> VFP: no hay nada nuevo para el VFP.'
+        } else {
+            $archivo = Join-Path $entrada ("lote_{0}.txt" -f $w.lote)
+            [IO.File]::WriteAllText($archivo, [string]$w.archivo, (New-Object Text.UTF8Encoding($false)))
+            Escribir "Web -> VFP: bajé el lote $($w.lote) ($($w.comprobantes) comprobante(s), $($w.movimientos) movimiento(s) de stock). Falta importarlo en el VFP."
+        }
     }
 } catch {
     Escribir "ERROR: $($_.Exception.Message)"
