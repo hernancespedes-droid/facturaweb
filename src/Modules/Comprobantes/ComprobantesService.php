@@ -478,6 +478,7 @@ final class ComprobantesService
         if ($previo !== null) {
             return $previo + ['repetido' => true];
         }
+        \App\Modules\Licencia\Licencia::exigirParaEmitir(); // suscripción vigente (solo si la instalación la exige)
         if (!empty($cbte['electronica'])) {
             return $this->emitirConArca($cbte, $operacion, $usuarioId);
         }

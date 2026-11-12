@@ -28,7 +28,7 @@ foreach ($alicuotas as $a) {
 $formaPago = $v('forma_pago', '2');
 $fpagoElegida = $v('fpago');
 $sinSucursal = $sucursales === [];
-$errorGeneral = array_intersect_key($errores, array_flip(['arca', 'tipo', 'emisor', 'sucursal', 'forma_pago', 'credito']));
+$errorGeneral = array_intersect_key($errores, array_flip(['arca', 'licencia', 'tipo', 'emisor', 'sucursal', 'forma_pago', 'credito']));
 $concepto = $v('concepto', (string) $conceptoDefecto);
 $hoyIso = date('Y-m-d');
 ?>
