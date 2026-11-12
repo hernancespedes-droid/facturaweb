@@ -61,6 +61,19 @@
       .then(function (arr) { return n === pedido ? arr : null; });
   }
 
+  // Botón «Lista» junto a cada buscador de artículos (si está cargada la ventana de búsqueda)
+  function agregarBotones() {
+    if (!window.VentanaArticulos) return;
+    document.querySelectorAll('[data-buscador-url]:not([data-con-lista])').forEach(function (inp) {
+      inp.setAttribute('data-con-lista', '');
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn btn-sm btn-ghost btn-lista-articulos'; b.textContent = 'Ver lista de artículos';
+      b.addEventListener('click', function () { window.VentanaArticulos.abrir(inp.getAttribute('data-buscador-url'), function (a) { elegir(inp, a); }); });
+      inp.insertAdjacentElement('afterend', b);
+    });
+  }
+  window.addEventListener('load', agregarBotones);
+
   document.addEventListener('input', function (ev) {
     var inp = ev.target.closest && ev.target.closest('[data-buscador-url]');
     if (!inp) return;

@@ -29,6 +29,18 @@ final class CodigosArticulosTest extends ComprobantesTestCase
         return json_decode($r->body, true);
     }
 
+    public function testListadoParaLaVentanaDeBusqueda(): void
+    {
+        $d = $this->buscar(['listar' => '1']);
+        $this->assertTrue(isset($d['items']));
+        $this->assertTrue(isset($d['hay_mas']));
+        $this->assertContains('T-ART', array_column($d['items'], 'codigo'), 'sin filtro lista los artículos activos');
+        $f = $this->buscar(['listar' => '1', 'q' => 'tornillo hexag']);
+        $this->assertSame(['T-ART'], array_column($f['items'], 'codigo'), 'filtra por palabras de la descripción');
+        $this->assertSame([], $this->buscar(['listar' => '1', 'q' => 'zzzinexistente'])['items']);
+        $this->assertFalse($this->buscar(['listar' => '1', 'pagina' => '999'])['hay_mas']);
+    }
+
     public function testCamposDeCodigosSeValidanYSeGuardan(): void
     {
         $campos = ArticulosService::campos();

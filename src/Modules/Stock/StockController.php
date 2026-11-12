@@ -26,6 +26,9 @@ final class StockController
     /** Buscador de artículos de las pantallas de stock (mismo buscador que el renglón de la factura). */
     public static function buscarArticulo(Request $req, array $params): Response
     {
+        if (isset($req->query['listar'])) {
+            return Response::json(\App\Modules\Articulos\BuscadorArticulos::listar(trim((string) ($req->query['q'] ?? '')), (int) ($req->query['pagina'] ?? 1)));
+        }
         return Response::json(\App\Modules\Articulos\BuscadorArticulos::buscar(trim((string) ($req->query['q'] ?? '')), isset($req->query['exacto'])));
     }
 

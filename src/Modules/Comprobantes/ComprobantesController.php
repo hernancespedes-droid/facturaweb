@@ -177,6 +177,9 @@ final class ComprobantesController
     /** Buscador de artículos del renglón: ver Articulos\BuscadorArticulos (lo usan también las pantallas de stock). */
     public static function buscarArticulo(Request $req, array $params): Response
     {
+        if (isset($req->query['listar'])) {
+            return Response::json(\App\Modules\Articulos\BuscadorArticulos::listar(trim((string) ($req->query['q'] ?? '')), (int) ($req->query['pagina'] ?? 1)));
+        }
         return Response::json(\App\Modules\Articulos\BuscadorArticulos::buscar(trim((string) ($req->query['q'] ?? '')), isset($req->query['exacto'])));
     }
 
