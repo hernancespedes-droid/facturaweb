@@ -54,7 +54,7 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
 
 Siempre que una pantalla pida un artículo o un cliente, el campo es un **buscador** (código, código de barras, SKU, CUIT o nombre) que muestra las coincidencias
 debajo y **el usuario elige siempre**; nunca se toma la primera. Reutilizar `Articulos\BuscadorArticulos` + `public/assets/buscador.js` (artículos) y
-`Comprobantes → buscarCliente` (clientes). Detalle en el skill `facturaweb-proyecto`.
+`Comprobantes → buscarCliente` (clientes). Cada buscador lleva además la lupa (`icono_lista()` + `public/assets/ventana-lista.js`) que abre la lista para elegir. Detalle en el skill `facturaweb-proyecto`.
 
 ## Seguridad
 

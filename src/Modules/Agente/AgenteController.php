@@ -31,6 +31,17 @@ final class AgenteController
         return Response::redirect(url('/agente'));
     }
 
+    /** Baja el próximo lote para el VFP como archivo, para probar IMPORTAR_WEB a mano. No marca nada: lo pendiente sigue pendiente. */
+    public static function descargarLote(Request $req, array $params): Response
+    {
+        $p = ExportadorVfp::pendientes(50);
+        if ($p['comprobantes'] + $p['movimientos'] === 0) {
+            Session::flash('info', 'No hay nada pendiente para el VFP.');
+            return Response::redirect(url('/agente'));
+        }
+        return new Response(200, $p['texto'], ['Content-Type' => 'text/plain; charset=utf-8', 'Content-Disposition' => 'attachment; filename="lote_' . $p['lote'] . '.txt"']);
+    }
+
     public static function reintentarVfp(Request $req, array $params): Response
     {
         $n = ExportadorVfp::reintentar();

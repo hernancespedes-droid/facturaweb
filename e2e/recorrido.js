@@ -140,6 +140,18 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.locator('.va-fila').first().click();
     ok(await page.locator('dialog.ventana-articulos').evaluate((d) => !d.open), 'al elegir se cierra la ventana');
     ok((await page.locator('[data-renglon]').nth(0).locator('[data-descripcion]').inputValue()).includes('ABONO'), 'la ventana carga el artículo elegido en el renglón');
+    // Lupa del cliente: ventana con la lista de clientes
+    await page.locator('[data-lista-clientes]').click();
+    await page.waitForSelector('dialog.ventana-lista[open] .va-fila');
+    await page.fill('.va-buscar', 'cliente e2e srl');
+    await page.waitForFunction(() => document.querySelectorAll('.va-fila').length >= 1 && [...document.querySelectorAll('.va-fila')].every((f) => f.textContent.toUpperCase().includes('CLIENTE E2E SRL')));
+    await page.screenshot({ path: path.join(CAPTURAS, 'ventana-clientes.png') });
+    await page.locator('.va-fila').first().click();
+    ok(await page.locator('dialog.ventana-lista').evaluate((d) => !d.open), 'al elegir el cliente se cierra la ventana');
+    ok((await page.textContent('[data-cliente-info]')).includes('Inscripto'), 'la ventana carga el cliente elegido con su condición');
+    ok((await page.textContent('[data-letra-titulo]')).trim() === 'A', 'el cliente elegido de la lista define la letra');
+    await page.screenshot({ path: path.join(CAPTURAS, 'cliente-lupa.png') });
+
 
     await page.goto(BASE + '/comprobantes/nuevo?tipo=FC');
     ok((await page.textContent('h1')).includes('Factura'), 'abre el formulario de factura');

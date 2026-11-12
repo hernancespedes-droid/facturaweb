@@ -15,8 +15,9 @@
 
   function cerrar() { lista.hidden = true; lista.innerHTML = ''; opciones = []; marcada = -1; }
   function etiqueta(inp) {
-    var e = inp.parentNode.querySelector('[data-buscador-etiqueta]');
-    if (!e) { e = document.createElement('small'); e.setAttribute('data-buscador-etiqueta', ''); e.className = 'muted'; inp.insertAdjacentElement('afterend', e); }
+    var host = inp.closest('.campo-con-boton') || inp;
+    var e = host.parentNode.querySelector('[data-buscador-etiqueta]');
+    if (!e) { e = document.createElement('small'); e.setAttribute('data-buscador-etiqueta', ''); e.className = 'muted'; host.insertAdjacentElement('afterend', e); }
     return e;
   }
   function elegir(inp, a) {
@@ -61,15 +62,19 @@
       .then(function (arr) { return n === pedido ? arr : null; });
   }
 
-  // Botón «Lista» junto a cada buscador de artículos (si está cargada la ventana de búsqueda)
+  // Ícono de lupa junto a cada buscador de artículos (si está cargada la ventana «ver lista»)
+  var LUPA = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.9-4.9"/></svg>';
   function agregarBotones() {
-    if (!window.VentanaArticulos) return;
+    if (!window.VentanaLista) return;
     document.querySelectorAll('[data-buscador-url]:not([data-con-lista])').forEach(function (inp) {
       inp.setAttribute('data-con-lista', '');
+      var envoltorio = document.createElement('div'); envoltorio.className = 'campo-con-boton';
+      inp.parentNode.insertBefore(envoltorio, inp); envoltorio.appendChild(inp);
       var b = document.createElement('button');
-      b.type = 'button'; b.className = 'btn btn-sm btn-ghost btn-lista-articulos'; b.textContent = 'Ver lista de artículos';
-      b.addEventListener('click', function () { window.VentanaArticulos.abrir(inp.getAttribute('data-buscador-url'), function (a) { elegir(inp, a); }); });
-      inp.insertAdjacentElement('afterend', b);
+      b.type = 'button'; b.className = 'btn-icono'; b.innerHTML = LUPA;
+      b.title = 'Buscar en la lista de artículos'; b.setAttribute('aria-label', 'Buscar en la lista de artículos');
+      b.addEventListener('click', function () { window.VentanaLista.articulos(inp.getAttribute('data-buscador-url'), function (a) { elegir(inp, a); }); });
+      envoltorio.appendChild(b);
     });
   }
   window.addEventListener('load', agregarBotones);

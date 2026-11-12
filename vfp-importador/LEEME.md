@@ -11,6 +11,16 @@ Lo graba el propio VFP (no se escriben los DBF a mano) para que los índices `.c
 3. El programa deja `<intercambio>\salida\resultado_….txt` (OK o ERR con el motivo) y mueve el lote a `entrada\procesados`.
 4. En la próxima corrida del agente, el resultado vuelve a la web: los grabados dejan de estar pendientes; los rechazados aparecen en **Sistema → Agente → Web → VFP** con el motivo (hay un botón para reintentar).
 
+## Probarlo sin emitir nada (recomendado, en una COPIA de los datos)
+1. Copiá `ejemplo/lote_ejemplo.txt` a `<intercambio>\entrada\` (con ese nombre: `lote_*.txt`).
+   Trae un comprobante inventado (FC A, sucursal 1, punto de venta 4, número 9999999, cliente 1) con IVA, renglón, caja, cuenta corriente y stock.
+2. `DO IMPORTAR_WEB WITH .T.` (simula) y después `DO IMPORTAR_WEB`. Tiene que decir «Grabados: 2» (el comprobante y el ingreso de stock).
+3. Revisá en el VFP el comprobante 9999999, el movimiento de stock y `STOCK` del artículo `EJEMPLO-ART`; y en `salida\` el `resultado_EJEMPLO.txt` (`OK|S|900001`, `OK|M|900002`).
+4. Repetí el paso 2: tiene que decir «Ya estaban: 1» (no se duplica). Para deshacer la prueba, borrá esos registros de la copia.
+5. Para probar el rechazo: cambiá `sucursal=1` por una sucursal que no exista y volvé a correrlo: tiene que dar el error y no grabar nada.
+
+También se puede bajar un lote real desde **Sistema → Agente → Web → VFP → Descargar el próximo lote** (no marca nada como enviado).
+
 ## Instalación
 1. Copiá `IMPORTAR_WEB.PRG` a la carpeta del sistema VFP e incluilo en el proyecto (o dejalo suelto en el `SET PATH`).
 2. Si querés, agregalo al menú del sistema como «Importar de la web» (`DO IMPORTAR_WEB`).
