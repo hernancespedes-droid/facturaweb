@@ -22,7 +22,9 @@ final class Session
         }
         $minutos = (int) Config::get('auth.inactividad_minutos', 240);
         // Por defecto en la base (tabla sesiones); 'archivos' usa storage/sessions.
-        if (Config::get('auth.sesiones', 'base') === 'archivos') {
+        // /instalar corre con la base vacía (todavía no existe la tabla sesiones): ahí las sesiones van en archivos.
+        $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+        if (Config::get('auth.sesiones', 'base') === 'archivos' || str_ends_with(rtrim($path, '/'), '/instalar')) {
             $dir = App::root() . '/storage/sessions';
             if (is_dir($dir) && is_writable($dir)) {
                 session_save_path($dir);
