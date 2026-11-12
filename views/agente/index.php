@@ -55,6 +55,9 @@
         Un programa dentro del VFP (<code>IMPORTAR_WEB</code>) los graba y el agente le avisa a la web cuáles quedaron grabados.</p>
     <p><b><?= (int) $vfp['pendientes'] ?></b> comprobante(s) y <b><?= (int) $vfp['movimientos'] ?></b> movimiento(s) de stock sueltos esperan ir al VFP.
         <?php if ((int) $vfp['con_error'] > 0): ?><b class="text-danger"><?= (int) $vfp['con_error'] ?> rechazado(s) por el VFP</b>.<?php endif; ?></p>
+    <?php if ((int) $vfp['pendientes'] + (int) $vfp['movimientos'] > 0): ?>
+        <p><a class="btn btn-ghost btn-sm" href="<?= e(url('/agente/vfp/lote')) ?>">Descargar el próximo lote</a> <span class="muted">(para probar <code>IMPORTAR_WEB</code> a mano; no marca nada como enviado)</span></p>
+    <?php endif; ?>
     <?php if ($vfp['errores'] !== []): ?>
         <table class="table"><thead><tr><th>Comprobante</th><th>Fecha</th><th>Por qué lo rechazó el VFP</th></tr></thead><tbody>
         <?php foreach ($vfp['errores'] as $f): ?>

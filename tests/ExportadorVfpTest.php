@@ -143,6 +143,19 @@ final class ExportadorVfpTest extends ComprobantesTestCase
         $this->assertSame(403, $this->post('/agente/vfp/reintentar', [])->status, 'el operador no reintenta');
     }
 
+    public function testDescargarElLoteNoMarcaNada(): void
+    {
+        $id = $this->facturaReal();
+        $this->loginComo($this->crearUsuario('t_op_vfp', 'operador'));
+        $this->assertSame(403, $this->get('/agente/vfp/lote')->status, 'el operador no baja lotes');
+        $this->loginComo($this->crearUsuario('t_adm_vfp', 'admin'));
+        $r = $this->get('/agente/vfp/lote');
+        $this->assertSame(200, $r->status);
+        $this->assertStringContainsString('attachment', $r->headers['Content-Disposition']);
+        $this->assertStringContainsString("S|{$id}|", $r->body);
+        $this->assertSame(1, ExportadorVfp::estado()['pendientes'], 'sigue pendiente');
+    }
+
     public function testApiPendientesYConfirmarPorHttp(): void
     {
         $id = $this->facturaReal();

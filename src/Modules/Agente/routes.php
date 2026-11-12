@@ -16,6 +16,7 @@ return function (Router $r): void {
     // Administración de claves
     $r->get('/agente', Guard::permiso('agente.administrar', [A::class, 'index']));
     $r->post('/agente', Guard::permiso('agente.administrar', [A::class, 'crear']));
+    $r->get('/agente/vfp/lote', Guard::permiso('agente.administrar', [A::class, 'descargarLote']));
     $r->post('/agente/vfp/reintentar', Guard::permiso('agente.administrar', [A::class, 'reintentarVfp']));
     $r->post('/agente/{id}/revocar', Guard::permiso('agente.administrar', [A::class, 'revocar']));
 };

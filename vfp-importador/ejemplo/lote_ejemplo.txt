@@ -1,0 +1,8 @@
+#FACTURAWEB|1|EJEMPLO|2026-11-12 10:00:00
+S|900001|fecha=2026-11-12|tipo=FC|letra=A|sucursal=1|prefijo=4|comprobante=9999999|cliente=1|bruto=200.00|neto_grabado=200.00|neto_exento=0.00|iva_1=42.00|iva_2=0.00|liberado=0.00|bonificacion=0.00|neto=242.00|porcentaje_descuento=0.00|estado=|observaciones=Comprobante de EJEMPLO|canal=W|terminal=1|iva_cliente=1|cuit_cliente=30708805587|recargo_f_pago=0.00|impuesto=0.00|recibo=0|forma_pago=2|fe_nrocbte=0|fe_ccae=|fe_limprimio=0|fe_lrechazado=0|fe_ntipoafip=0|nrointerno=1|electronica=0|tipoafipoys=1|fe_tipocbte_asoc=|fe_nrocbte_asoc=0
+I|900001|tipo=FC|letra=A|sucursal=1|comprobante=9999999|alicuota=21.00|monto=200.00|importe=42.00
+E|900001|fecha=2026-11-12|tipo=FC|letra=A|sucursal=1|prefijo=4|comprobante=9999999|pedido=0|articulo=EJEMPLO-ART|bultos=0|unidades=2.000|lista=E|precio=100.0000|precio_siniva=100.0000|porcentaje_descuento=0.00|total_item=200.00|total_siniva=200.00|cliente=1|grabado=1|por_iva=21.00|costo=0.0000|observaciones=ARTICULO DE PRUEBA|merma=0.000|unidades_ori=2.000
+J|900001|fecha=2026-11-12|tipo=FC|letra=A|canal=W|terminal=1|sucursal=1|prefijo=4|comprobante=9999999|cliente=1|p_fpago=CC|p_cuotas=0|p_fecvto=2026-11-12|p_banco=0|p_cotiz=0.0000|p_importe=242.00|a_pagar=242.00
+T|900001|cliente=1|fecha=2026-11-12|tipo=FC|tico=1|letra=A|sucursal=1|prefijo=4|numero=9999999|neto=242.00|descuento=0.00|saldo=242.00|vencimiento=2026-11-12|valor_dolar=1.0000
+M|900001|subdiario_id=900001|sucursal=1|articulo=EJEMPLO-ART|fecha=2026-11-12 16:40:30|cantidad=-2.000|origen=FC
+M|900002|subdiario_id=0|sucursal=1|articulo=EJEMPLO-ART|fecha=2026-11-12 16:40:30|cantidad=10.000|origen=INGRESO|motivo=ingreso de ejemplo
