@@ -348,6 +348,7 @@ final class ComprobantesService
             'email' => $mails, 'asociado' => is_array($asoc) ? $asoc : null, 'calculo' => $calc, 'excede_credito' => $excede,
             'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
             'concepto' => $concepto, 'serv_desde' => $servDesde, 'serv_hasta' => $servHasta, 'vto_pago' => $vtoPago,
+            'advertencias' => (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
         ]];
     }
 
@@ -665,6 +666,9 @@ final class ComprobantesService
                     'por_iva' => $it['alicuota'], 'actualizacion' => $ahora,
                 ]);
             }
+
+            // Stock (si está activado): la factura descuenta y la nota de crédito repone, en esta misma transacción (D-19)
+            (new \App\Modules\Stock\StockService($this->pdo))->porComprobante($tipo, $id, $c['items'], $usuarioId > 0 ? $usuarioId : null);
 
             // Cómo se paga: la nota de crédito no mueve caja (como el VFP)
             if ($tipo !== 'NC') {

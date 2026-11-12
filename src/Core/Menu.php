@@ -27,6 +27,10 @@ final class Menu
         foreach (Definiciones::todas() as $t => $d) {
             $o[$t] = ['texto' => $d['titulo'], 'ruta' => '/tablas/' . $t, 'permiso' => 'tablas.' . $t, 'grupo' => 'Tablas'];
         }
+        $o['stock'] = ['texto' => 'Saldos de stock', 'ruta' => '/stock', 'permiso' => 'stock.ver', 'grupo' => 'Stock'];
+        $o['stock_ajuste'] = ['texto' => 'Ingreso, egreso o ajuste', 'ruta' => '/stock/ajuste', 'permiso' => 'stock.mover', 'grupo' => 'Stock'];
+        $o['stock_transferir'] = ['texto' => 'Transferencia entre depósitos', 'ruta' => '/stock/transferir', 'permiso' => 'stock.mover', 'grupo' => 'Stock'];
+        $o['stock_depositos'] = ['texto' => 'Depósitos', 'ruta' => '/stock/depositos', 'permiso' => 'stock.administrar', 'grupo' => 'Stock'];
         $o['usuarios'] = ['texto' => 'Usuarios', 'ruta' => '/usuarios', 'permiso' => 'usuarios.administrar', 'grupo' => 'Sistema'];
         $o['roles'] = ['texto' => 'Roles', 'ruta' => '/roles', 'permiso' => 'usuarios.administrar', 'grupo' => 'Sistema'];
         $o['configuracion'] = ['texto' => 'Configuración', 'ruta' => '/configuracion', 'permiso' => 'configuracion.administrar', 'grupo' => 'Sistema'];

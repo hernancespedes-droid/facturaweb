@@ -15,6 +15,9 @@ $disc = $c['letra'] === 'A';
     </div>
 </div>
 
+<?php if (!empty($c['advertencias'])): ?>
+<div class="alerta alerta-info" role="status"><b>Stock:</b> <?= e(implode(' · ', $c['advertencias'])) ?></div>
+<?php endif; ?>
 <section class="card">
     <dl class="datos datos-col">
         <div><dt>Cliente</dt><dd><?= e($cli['razon_social']) ?> <span class="muted">(<?= e($cli['codigo']) ?>)</span></dd></div>

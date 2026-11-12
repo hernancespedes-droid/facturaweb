@@ -29,6 +29,7 @@ final class ArticulosService
             'ean13' => ['label' => 'Código de barras EAN-13', 'tipo' => 'texto', 'largo' => 13, 'digitos' => 13, 'gs1' => true, 'ayuda' => 'Los 13 dígitos del código de barras de la unidad.'],
             'dun14' => ['label' => 'Código DUN-14 (bulto)', 'tipo' => 'texto', 'largo' => 14, 'digitos' => 14, 'gs1' => true, 'ayuda' => 'Los 14 dígitos del código del bulto o caja.'],
             'sku' => ['label' => 'SKU', 'tipo' => 'texto', 'largo' => 40],
+            'controla_stock' => ['label' => 'Controla stock (destildar para servicios)', 'tipo' => 'si_no'],
             'unidades_por_bulto' => ['label' => 'Unidades por bulto', 'tipo' => 'entero', 'min' => 0, 'max' => 99999999],
             'codigo_de_barras' => ['label' => 'Código de barras (anterior del VFP)', 'tipo' => 'texto', 'largo' => 20],
             'codigo_asociado' => ['label' => 'Código asociado', 'tipo' => 'texto', 'largo' => 15],
