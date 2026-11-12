@@ -79,7 +79,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   nunca se adivina ni se toma la primera. Ni Enter ni salir del campo envían el formulario ni eligen solos si hay dudas.
 - Un código exacto (pistola) se resuelve directo. Un código repetido en dos artículos no se elige solo: se muestran las opciones.
 - Artículos: `Articulos\BuscadorArticulos::buscar()` (lo usan el renglón de la factura y las pantallas de stock; ruta propia por permiso) +
-  `public/assets/buscador.js` (`<input data-buscador-url="…">`). Clientes: `Comprobantes → buscarCliente`. Además hay una ventana «Lista» (`public/assets/ventana-articulos.js`, `BuscadorArticulos::listar`) para recorrer y elegir. **Al crear una pantalla nueva con estos
+  `public/assets/buscador.js` (`<input data-buscador-url="…">`). Clientes: `Comprobantes → buscarCliente`. Además cada buscador lleva un ícono de lupa que abre la ventana «ver lista» (`public/assets/ventana-lista.js`: `VentanaLista.articulos/clientes`; servidor `?listar=1`, `BuscadorArticulos::listar`, `buscarCliente`) para recorrer y elegir: **toda pantalla nueva con artículos o clientes lleva buscador + lupa** (`icono_lista()`). **Al crear una pantalla nueva con estos
   datos hay que reutilizar estos buscadores, no hacer otro campo.** El servidor igual vuelve a validar lo que llega.
 
 ## Estado actual (12/11/2026, versión 0.7.1) y cómo se trabaja
@@ -89,7 +89,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 - **Hosting de prueba**: DonWeb (Ferozo) con GIT, **sin SSH**; repo en `public_html/facturador_web/`, subdominio `facturador.oesteparts.site`
   apuntando a `public/`. Se actualiza con GIT → botón `>_` y luego **Sistema → Aplicar cambios**. No activar el webhook de auto-despliegue.
 - **Rama `main` + pull requests** (igual que oesteparts): cada cambio en una rama `claude/…`, PR a `main` y fusión. Versión en `VERSION` (0.4.0 etapa 3, 0.4.1
-  códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos).
+  códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos, 0.7.2 lupa y lista de clientes).
 - **Hecho más allá de las etapas**: artículos con EAN-13/DUN-14/SKU/unidades por bulto; buscador de artículos en renglones y stock; texto adicional por renglón;
   Listados → Subdiario IVA ventas (pantalla y Excel); **Stock** (movimientos + saldos en la misma transacción, varios depósitos, bultos, se factura sin stock,
   `stock.controlar` apagado por omisión); **Agente** (`agente-windows/`, PowerShell, sube comprobantes del VFP a la web; API con claves en Sistema → Agente).

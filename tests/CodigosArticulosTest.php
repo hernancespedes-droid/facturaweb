@@ -41,6 +41,22 @@ final class CodigosArticulosTest extends ComprobantesTestCase
         $this->assertFalse($this->buscar(['listar' => '1', 'pagina' => '999'])['hay_mas']);
     }
 
+    public function testListadoDeClientesParaLaVentanaDeBusqueda(): void
+    {
+        $this->usuario ??= $this->crearUsuario('t_op', 'operador');
+        $this->loginComo($this->usuario);
+        $r = $this->get('/comprobantes/buscar-cliente', ['listar' => '1']);
+        $this->assertSame(200, $r->status);
+        $d = json_decode($r->body, true);
+        $this->assertTrue(isset($d['items']) && isset($d['hay_mas']));
+        $this->assertTrue(in_array('T CLIENTE RI SA', array_column($d['items'], 'razon_social'), true), 'sin filtro lista los clientes activos');
+        $f = json_decode($this->get('/comprobantes/buscar-cliente', ['listar' => '1', 'q' => 'monotrib'])->body, true);
+        $this->assertSame(['T MONOTRIBUTISTA'], array_column($f['items'], 'razon_social'), 'filtra por nombre');
+        $this->assertTrue(isset($f['items'][0]['iva_texto'], $f['items'][0]['letra']), 'trae lo mismo que el buscador');
+        $this->assertSame([], json_decode($this->get('/comprobantes/buscar-cliente', ['listar' => '1', 'q' => 'zzzinexistente'])->body, true)['items']);
+        $this->assertFalse(json_decode($this->get('/comprobantes/buscar-cliente', ['listar' => '1', 'pagina' => '999'])->body, true)['hay_mas']);
+    }
+
     public function testCamposDeCodigosSeValidanYSeGuardan(): void
     {
         $campos = ArticulosService::campos();

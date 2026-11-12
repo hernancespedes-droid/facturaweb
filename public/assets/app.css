@@ -1059,5 +1059,23 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .ventana-articulos .va-fila { cursor: pointer; }
 .ventana-articulos .va-fila:hover, .ventana-articulos .va-fila:focus { background: var(--panel-2, #eef2fb); outline: none; }
 .ventana-articulos .va-pie { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-.btn-lista-articulos { margin-top: 4px; }
-@media (max-width: 720px) { .ventana-articulos .va-tabla th:nth-child(3), .ventana-articulos .va-tabla td:nth-child(3) { display: none; } }
+
+/* Campo con botón de ícono (lupa) para abrir la ventana «ver lista» */
+.campo-con-boton { position: relative; display: flex; align-items: stretch; gap: 6px; }
+.campo-con-boton > input { flex: 1 1 auto; min-width: 0; }
+.btn-icono { flex: 0 0 auto; display: inline-grid; place-items: center; width: 42px; min-height: 42px; padding: 0; border: 1px solid var(--border, #d6dbe6);
+  border-radius: 8px; background: var(--panel, #fff); color: var(--brand, #2563eb); cursor: pointer; transition: background .15s, color .15s, border-color .15s, transform .05s; }
+.btn-icono:hover { background: var(--brand, #2563eb); border-color: var(--brand, #2563eb); color: #fff; }
+.btn-icono:active { transform: scale(.96); }
+.btn-icono:focus-visible { outline: 2px solid var(--brand, #2563eb); outline-offset: 2px; }
+.btn-icono svg { display: block; }
+.ventana-lista .va-tabla td[data-chica], .ventana-lista .va-tabla th[data-chica] { white-space: nowrap; }
+@media (max-width: 720px) { .ventana-lista .va-tabla [data-chica] { display: none; } }
+@media (max-width: 720px) {
+  .ventana-lista { padding: 12px; }
+  .ventana-lista .va-tabla th:last-child, .ventana-lista .va-tabla td:last-child { display: none; } /* en el celular se elige tocando la fila */
+  .ventana-lista .va-tabla td, .ventana-lista .va-tabla th { padding: 10px 8px; }
+  .ventana-lista .va-pie { gap: 6px; }
+  .ventana-lista .va-pie .btn { white-space: nowrap; padding: 6px 10px; min-height: 40px; font-size: .85rem; }
+  .ventana-lista .va-info { white-space: nowrap; }
+}

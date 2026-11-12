@@ -121,6 +121,11 @@
     else cargarAsociables(c.codigo);
     recalcular();
   }
+  // Ícono de lupa junto al buscador: ventana con la lista de clientes para elegir uno
+  var btnListaCli = form.querySelector('[data-lista-clientes]');
+  if (btnListaCli) btnListaCli.addEventListener('click', function () {
+    if (window.VentanaLista) window.VentanaLista.clientes(form.getAttribute('data-url-cliente'), function (c) { elegirCliente(c); });
+  });
   function cargarAsociables(cliente) {
     var sel = form.querySelector('[data-asociado]');
     fetch(form.getAttribute('data-url-asociables') + '?cliente=' + encodeURIComponent(cliente), { credentials: 'same-origin' })
@@ -246,9 +251,9 @@
   // «Lista»: ventana con los artículos para buscar y elegir uno
   cuerpo.addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-lista-articulos]');
-    if (!b || !window.VentanaArticulos) return;
+    if (!b || !window.VentanaLista) return;
     var tr = b.closest('[data-renglon]');
-    window.VentanaArticulos.abrir(urlArt, function (a) { aplicar(tr, a); var c = tr.querySelector('[data-cantidad]'); c.focus(); c.select(); });
+    window.VentanaLista.articulos(urlArt, function (a) { aplicar(tr, a); var c = tr.querySelector('[data-cantidad]'); c.focus(); c.select(); });
   });
   cuerpo.addEventListener('input', function (ev) {
     var inp = ev.target.closest('[data-articulo]');
