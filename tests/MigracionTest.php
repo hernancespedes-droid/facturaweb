@@ -30,7 +30,7 @@ final class MigracionTest extends DbTestCase
         $pdo->exec("DELETE FROM articulos WHERE codigo LIKE 'M-%'");
         $pdo->exec("DELETE FROM vendedores WHERE descripcion LIKE '%(DEL VFP)'");
         $pdo->exec('DELETE FROM migracion_vfp');
-        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact', 'cobra', 'imputaciones'] as $t) {
+        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact', 'cobra', 'imputaciones', 'cobra_retenciones'] as $t) {
             $pdo->exec("DELETE FROM `{$t}`");
         }
     }

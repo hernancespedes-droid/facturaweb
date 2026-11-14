@@ -21,7 +21,7 @@ $anulado = $c['estado'] === 'A';
     <div><dt>CUIT</dt><dd><?= e(cuit_texto($cli['cuit']) ?: 'sin CUIT') ?></dd></div>
     <div><dt>Se cancela</dt><dd><?= e(plata_dec($c['bruto'])) ?></dd></div>
     <?php if ($c['descuento'] > 0): ?><div><dt>Descuento</dt><dd>− <?= e(plata_dec($c['descuento'])) ?></dd></div><?php endif; ?>
-    <?php foreach ($c['retenciones'] as $nombre => $imp): ?><div><dt>Retención <?= e($nombre) ?></dt><dd>− <?= e(plata_dec($imp)) ?></dd></div><?php endforeach; ?>
+    <?php foreach ($c['retenciones'] as $x): ?><div><dt>Retención <?= e($x['descripcion']) ?></dt><dd>− <?= e(plata_dec($x['importe'])) ?><?= $x['certificado'] !== '' ? ' <small class="muted">cert. ' . e($x['certificado']) . '</small>' : '' ?></dd></div><?php endforeach; ?>
     <div><dt>Cobrado</dt><dd><b><?= e(plata_dec($c['neto'])) ?></b></dd></div>
     <?php if ($c['anticipo'] > 0 && !$anulado): ?><div><dt>Saldo a favor (a cuenta)</dt><dd><?= e(plata_dec($c['anticipo'])) ?></dd></div><?php endif; ?>
     <?php if ($c['observaciones']): ?><div><dt>Observaciones</dt><dd><?= e($c['observaciones']) ?></dd></div><?php endif; ?>

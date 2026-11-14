@@ -64,15 +64,19 @@ final class CuentaCorrienteTest extends ComprobantesTestCase
     {
         $f = $this->factura();
         $r = $this->cc->armarRecibo(['cliente' => '990001', 'fecha' => date('d/m/Y'), 'sucursal' => '99', 'imputar' => [$f['ctact'] => '242'],
-            'descuento' => '12', 'ret' => [1 => '20', 3 => '10'], 'pagos' => [['fpago' => 'EF', 'importe' => '200']]]);
+            'descuento' => '12', 'ret' => [['codigo' => '1', 'importe' => '20', 'certificado' => 'C-1'], ['codigo' => '3', 'importe' => '10']], 'pagos' => [['fpago' => 'EF', 'importe' => '200']]]);
         $this->assertSame([], $r['errores']);
         $this->assertSame([242.0, 200.0, 30.0], [$r['recibo']['bruto'], $r['recibo']['neto'], $r['recibo']['total_retenciones']]);
         $this->cc->emitirRecibo($r['recibo'], bin2hex(random_bytes(16)), 0);
         $this->assertSame(0.0, $this->saldo($f['ctact']), 'se cancela la factura completa');
         $rc = $this->fila("SELECT neto, descuento FROM ctact WHERE tipo = 'RC'");
         $this->assertSame([200.0, 42.0], [(float) $rc['neto'], (float) $rc['descuento']], 'descuento de ctact = bruto − neto');
-        $co = $this->fila('SELECT bruto, neto, imp_rt1, imp_rt3, dto_bruto, dto_iva FROM cobra');
-        $this->assertSame([242.0, 200.0, 20.0, 10.0], [(float) $co['bruto'], (float) $co['neto'], (float) $co['imp_rt1'], (float) $co['imp_rt3']]);
+        $co = $this->fila('SELECT bruto, neto FROM cobra');
+        $this->assertSame([242.0, 200.0], [(float) $co['bruto'], (float) $co['neto']]);
+        $rt = Db::pdo()->query('SELECT retencion, importe, certificado FROM cobra_retenciones ORDER BY id')->fetchAll();
+        $this->assertSame([[1, 20.0, 'C-1'], [3, 10.0, null]], array_map(static fn ($x) => [(int) $x['retencion'], (float) $x['importe'], $x['certificado']], $rt));
+        $verRec = $this->cc->recibo((int) $this->fila('SELECT id FROM cobra')['id']);
+        $this->assertSame(['Ganancias', 'Ingresos Brutos'], array_column($verRec['retenciones'], 'descripcion'));
     }
 
     public function testValidaciones(): void
@@ -225,5 +229,34 @@ final class CuentaCorrienteTest extends ComprobantesTestCase
         $this->assertSame([384.0, 0.0, 384.0], [(float) $d['filas'][0]['deuda'], (float) $d['filas'][0]['a_favor'], (float) $d['filas'][0]['saldo']]);
         $p = $this->cc->pendientes(990001);
         $this->assertSame([2, 0], [count($p['debitos']), count($p['creditos'])]);
+    }
+
+    public function testRetencionesPorProvinciaDeLaTablaYLasDelVfp(): void
+    {
+        $pdo = Db::pdo();
+        $pdo->exec("INSERT IGNORE INTO provincias (codigo, descripcion) VALUES ('ZZ', 'PROVINCIA PRUEBA')");
+        $pdo->exec("INSERT INTO retenciones (codigo, descripcion, impuesto, provincia) VALUES (901, 'IIBB Prueba', 3, 'ZZ')");
+        try {
+            $f = $this->factura();
+            $base = ['cliente' => '990001', 'fecha' => date('d/m/Y'), 'sucursal' => '99', 'imputar' => [$f['ctact'] => '242'], 'pagos' => [['fpago' => 'EF', 'importe' => '232']]];
+            $this->assertTrue(isset($this->cc->armarRecibo($base + ['ret' => [['codigo' => '777', 'importe' => '10']]])['errores']['ret']), 'una retención que no está en la tabla');
+            $this->assertTrue(isset($this->cc->armarRecibo($base + ['ret' => [['codigo' => '901', 'importe' => '0']]])['errores']['ret']), 'el importe tiene que ser mayor que cero');
+            $this->assertFalse(isset($this->cc->armarRecibo($base + ['ret' => [['codigo' => '', 'importe' => '']]])['errores']['ret']), 'un renglón vacío se ignora');
+            $r = $this->cc->armarRecibo($base + ['ret' => [['codigo' => '901', 'importe' => '10', 'certificado' => '0001-55']]]);
+            $this->assertSame([], $r['errores']);
+            $e = $this->cc->emitirRecibo($r['recibo'], bin2hex(random_bytes(16)), 0);
+            $ver = $this->cc->recibo($e['id']);
+            $this->assertSame('IIBB Prueba — PROVINCIA PRUEBA', $ver['retenciones'][0]['descripcion']);
+            $this->assertSame('0001-55', $ver['retenciones'][0]['certificado']);
+            $this->assertTrue($this->cc->anularRecibo($e['id'], 0)['ok']);
+            $this->assertSame(0, (int) $this->fila('SELECT COUNT(*) n FROM cobra_retenciones')['n'], 'al anular se borran sus retenciones');
+            // un recibo del VFP trae sus retenciones en cod_rt/imp_rt
+            $pdo->exec("INSERT INTO cobra (cliente, fecha, sucursal, prefijo, recibo, bruto, neto, cod_rt2, imp_rt2) VALUES (990001, CURDATE(), 99, 9, 77, 100, 95, 2, 5)");
+            $vfp = $this->cc->recibo((int) $pdo->query('SELECT id FROM cobra WHERE recibo = 77')->fetchColumn());
+            $this->assertSame([['IVA', 5.0]], array_map(static fn ($x) => [$x['descripcion'], $x['importe']], $vfp['retenciones']));
+        } finally {
+            $pdo->exec('DELETE FROM retenciones WHERE codigo = 901');
+            $pdo->exec("DELETE FROM provincias WHERE codigo = 'ZZ'");
+        }
     }
 }

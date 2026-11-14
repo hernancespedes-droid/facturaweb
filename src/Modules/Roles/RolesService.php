@@ -32,6 +32,7 @@ final class RolesService
         'provincias' => ['tablas.provincias', []],
         'parametros' => ['tablas.parametros', []],
         'bancos' => ['tablas.bancos', []],
+        'retenciones' => ['tablas.retenciones', []],
         'cotizacion_dolar' => ['tablas.cotizacion_dolar', []],
         'vendedores' => ['tablas.vendedores', []],
         'tasas_iva' => ['tablas.tasas_iva', []],

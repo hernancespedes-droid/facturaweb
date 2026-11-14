@@ -29,8 +29,6 @@ final class CuentaCorrienteService
     public const LETRA_RECIBO = 'X';
     private const CANAL = 'W';
     public const TIPOS = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'ND' => 'Nota de débito', 'RC' => 'Recibo', 'AD' => 'Ajuste de débito', 'AC' => 'Ajuste de crédito'];
-    /** DECISIÓN D-31: nombres de las 5 retenciones del VFP (cobra.cod_rt1..5, sin tabla de nombres): a confirmar con OYS. */
-    public const RETENCIONES = [1 => 'Ganancias', 2 => 'IVA', 3 => 'Ingresos Brutos', 4 => 'SUSS', 5 => 'Otras'];
     public const AJUSTES = ['AD' => ['Ajuste de débito (aumenta la deuda)', 3], 'AC' => ['Ajuste de crédito (la disminuye)', 9]];
     public const ESTADOS_CHEQUE = ['' => 'En cartera', 'D' => 'Depositado', 'E' => 'Entregado a un tercero', 'R' => 'Rechazado'];
 
@@ -141,6 +139,41 @@ final class CuentaCorrienteService
         return $st->fetchAll();
     }
 
+    /** Tabla de retenciones por código, con la etiqueta «descripción — provincia». @return array<int,array<string,mixed>> */
+    public function retenciones(): array
+    {
+        $out = [];
+        $st = $this->pdo->query('SELECT r.codigo, r.descripcion, r.impuesto, r.provincia, p.descripcion AS provincia_nombre FROM retenciones r LEFT JOIN provincias p ON p.codigo = r.provincia
+            ORDER BY r.impuesto, p.descripcion, r.descripcion');
+        foreach ($st->fetchAll() as $f) {
+            $f['etiqueta'] = $f['descripcion'] . ($f['provincia_nombre'] ? ' — ' . $f['provincia_nombre'] : '');
+            $out[(int) $f['codigo']] = $f;
+        }
+        return $out;
+    }
+
+    /**
+     * Retenciones de un recibo: las de la tabla nueva y, si es un recibo del VFP (cod_rt1..5 / imp_rt1..5), esas.
+     * @param array<string,mixed> $cobra @return array<int,array{descripcion:string,importe:float,certificado:string}>
+     */
+    private function retencionesDe(int $id, array $cobra): array
+    {
+        $cat = $this->retenciones();
+        $st = $this->pdo->prepare('SELECT retencion, importe, certificado FROM cobra_retenciones WHERE cobra_id = ? ORDER BY id');
+        $st->execute([$id]);
+        $out = [];
+        foreach ($st->fetchAll() as $x) {
+            $out[] = ['descripcion' => $cat[(int) $x['retencion']]['etiqueta'] ?? 'Retención ' . (int) $x['retencion'], 'importe' => (float) $x['importe'], 'certificado' => (string) $x['certificado']];
+        }
+        for ($i = 1; $i <= 5; $i++) {
+            if ((float) $cobra["imp_rt{$i}"] > 0) {
+                $cod = (int) $cobra["cod_rt{$i}"];
+                $out[] = ['descripcion' => $cat[$cod]['etiqueta'] ?? 'Retención ' . $cod, 'importe' => (float) $cobra["imp_rt{$i}"], 'certificado' => ''];
+            }
+        }
+        return $out;
+    }
+
     /** @return array<int,array<string,mixed>> formas de pago que se pueden usar en un recibo (no cta. cte. ni nota de crédito) */
     public function formasDePago(): array
     {
@@ -224,17 +257,33 @@ final class CuentaCorrienteService
             $dto = 0.0;
         }
         $dto = self::redondear($dto);
+        // Retenciones: renglones libres, cada una de la tabla de retenciones, con su importe y el número de certificado
         $ret = [];
         $totalRet = 0.0;
-        foreach (self::RETENCIONES as $cod => $nombre) {
-            $t = trim((string) (((array) ($in['ret'] ?? []))[$cod] ?? ''));
-            $v = $t === '' ? 0.0 : Valida::decimal($t);
-            if ($v === null || $v < 0) {
-                $err['ret'] = "La retención «{$nombre}» no es válida.";
-                $v = 0.0;
+        $catalogo = $this->retenciones();
+        foreach ((array) ($in['ret'] ?? []) as $x) {
+            $x = (array) $x;
+            $cod = (int) ($x['codigo'] ?? 0);
+            $txt = trim((string) ($x['importe'] ?? ''));
+            if ($cod === 0 && $txt === '') {
+                continue;
             }
-            $ret[$cod] = self::redondear($v);
-            $totalRet += $ret[$cod];
+            $v = $txt === '' ? null : Valida::decimal($txt);
+            if (!isset($catalogo[$cod])) {
+                $err['ret'] = 'Elegí la retención de cada renglón (se cargan en Tablas → Retenciones).';
+                continue;
+            }
+            if ($v === null || self::redondear($v) <= 0) {
+                $err['ret'] = 'El importe de «' . $catalogo[$cod]['descripcion'] . '» tiene que ser mayor que cero.';
+                continue;
+            }
+            $cert = trim((string) ($x['certificado'] ?? ''));
+            if (mb_strlen($cert) > 30) {
+                $err['ret'] = 'El número de certificado es demasiado largo (hasta 30).';
+                continue;
+            }
+            $ret[] = ['codigo' => $cod, 'descripcion' => $catalogo[$cod]['etiqueta'], 'importe' => self::redondear($v), 'certificado' => $cert];
+            $totalRet += self::redondear($v);
         }
         $totalRet = self::redondear($totalRet);
         $neto = self::redondear($bruto - $dto - $totalRet);
@@ -357,12 +406,15 @@ final class CuentaCorrienteService
                 }
             }
 
-            $rt = $r['retenciones'];
-            $this->pdo->prepare('INSERT INTO cobra (cliente, fecha, sucursal, prefijo, recibo, bruto, neto, dto_bruto, dto_iva, cod_rt1, imp_rt1, cod_rt2, imp_rt2, cod_rt3, imp_rt3, cod_rt4, imp_rt4, cod_rt5, imp_rt5,
-                    observaciones, usuario_id, operacion, actualizacion) VALUES (?,?,?,?,?,?,?,?,?,1,?,2,?,3,?,4,?,5,?,?,?,?,?)')
+            $this->pdo->prepare('INSERT INTO cobra (cliente, fecha, sucursal, prefijo, recibo, bruto, neto, dto_bruto, dto_iva, observaciones, usuario_id, operacion, actualizacion)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
                 ->execute([$cli['codigo'], $r['fecha'], $r['sucursal'], $r['prefijo'], $numero, $r['bruto'], $r['neto'], self::redondear($r['descuento'] - $r['dto_iva']), $r['dto_iva'],
-                    $rt[1], $rt[2], $rt[3], $rt[4], $rt[5], $r['observaciones'] !== '' ? $r['observaciones'] : null, $usuarioId > 0 ? $usuarioId : null, $operacion, $ahora]);
+                    $r['observaciones'] !== '' ? $r['observaciones'] : null, $usuarioId > 0 ? $usuarioId : null, $operacion, $ahora]);
             $cobraId = (int) $this->pdo->lastInsertId();
+            foreach ($r['retenciones'] as $x) {
+                $this->pdo->prepare('INSERT INTO cobra_retenciones (cobra_id, retencion, importe, certificado) VALUES (?,?,?,?)')
+                    ->execute([$cobraId, $x['codigo'], $x['importe'], $x['certificado'] !== '' ? $x['certificado'] : null]);
+            }
 
             // El recibo en la cuenta corriente: su saldo es el anticipo (lo que no se aplicó a deuda)
             $this->pdo->prepare('INSERT INTO ctact (cobra_id, cliente, fecha, tipo, tico, letra, sucursal, prefijo, numero, neto, descuento, saldo, vencimiento, valor_dolar, actualizacion, observaciones)
@@ -630,6 +682,7 @@ final class CuentaCorrienteService
             }
             $this->pdo->prepare('DELETE FROM imputaciones WHERE cobra_id = ?')->execute([$cobraId]);
             $this->pdo->prepare('DELETE FROM caja WHERE cobra_id = ?')->execute([$cobraId]);
+            $this->pdo->prepare('DELETE FROM cobra_retenciones WHERE cobra_id = ?')->execute([$cobraId]);
             $this->pdo->prepare("UPDATE ctact SET neto = 0, descuento = 0, saldo = 0, observaciones = 'ANULADO', actualizacion = ? WHERE fe_clave = ?")->execute([$ahora, $rc['fe_clave']]);
             $this->pdo->prepare("UPDATE cobra SET estado = 'A', actualizacion = ? WHERE id = ?")->execute([$ahora, $cobraId]);
             $this->pdo->commit();
@@ -668,12 +721,7 @@ final class CuentaCorrienteService
         $rc = $st->fetch();
         $c['anticipo'] = $rc ? (float) $rc['saldo'] : 0.0;
         $c['ctact_id'] = $rc ? (int) $rc['fe_clave'] : null;
-        $c['retenciones'] = [];
-        foreach (self::RETENCIONES as $cod => $nombre) {
-            if ((float) $c["imp_rt{$cod}"] > 0) {
-                $c['retenciones'][$nombre] = (float) $c["imp_rt{$cod}"];
-            }
-        }
+        $c['retenciones'] = $this->retencionesDe($id, $c);
         $c['descuento'] = self::redondear((float) $c['dto_bruto'] + (float) $c['dto_iva']);
         return $c;
     }

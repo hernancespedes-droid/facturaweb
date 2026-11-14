@@ -36,6 +36,7 @@ final class CuentaCorrienteHttpTest extends ComprobantesTestCase
         $id = (int) $this->fila('SELECT id FROM cobra')['id'];
         $this->assertRedirect('/recibos/' . $id, $r);
         $this->assertSame(403, $this->post('/recibos/' . $id . '/anular')->status, 'el operador no anula');
+        $this->assertSame(403, $this->get('/tablas/retenciones')->status, 'el operador no edita la tabla de retenciones');
         $this->assertSame(403, $this->post('/cheques/1/estado', ['estado' => 'D'])->status, 'ni cambia cheques');
         $this->assertSame('', $this->fila('SELECT estado FROM cobra')['estado']);
     }
@@ -63,7 +64,9 @@ final class CuentaCorrienteHttpTest extends ComprobantesTestCase
         $this->assertStringContainsString('242,00', $this->get('/cuenta-corriente/cliente/990001')->body);
         $this->assertStringContainsString('990001', $this->get('/cuenta-corriente/buscar-cliente', ['q' => 'T CLIENTE'])->body);
         $this->assertRedirect('/cuenta-corriente/cliente/990001', $this->get('/cuenta-corriente/cliente', ['cliente' => '990001']));
+        $this->assertStringContainsString('Ganancias', $this->get('/tablas/retenciones')->body);
         $form = $this->get('/recibos/nuevo', ['cliente' => '990001']);
+        $this->assertStringContainsString('data-agregar-ret', $form->body);
         $this->assertStringContainsString('Qué se cancela', $form->body);
         $this->assertStringContainsString('name="imputar[' . $ct . ']"', $form->body);
 

@@ -69,7 +69,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
 
     // Tablas: alta de un vendedor, edición y borrado.
     await page.goto(BASE + '/tablas');
-    ok(await page.locator('.tile').count() === 12, 'Tablas muestra las 12 tablas');
+    ok(await page.locator('.tile').count() === 13, 'Tablas muestra las 13 tablas (las 12 del VFP y Retenciones)');
     await page.goto(BASE + '/tablas/vendedores/nuevo');
     await page.fill('#f-codigo', 'zz');
     await page.fill('#f-descripcion', 'VENDEDOR E2E');

@@ -84,6 +84,16 @@
     cuerpo.appendChild(fila);
     cheque(fila);
   });
+  var plantillaRet = q('template[data-plantilla-ret]');
+  var agregarRet = q('[data-agregar-ret]');
+  if (agregarRet) agregarRet.addEventListener('click', function () {
+    var div = document.createElement('div');
+    div.innerHTML = plantillaRet.innerHTML.replace(/__N__/g, String(Date.now()));
+    q('[data-rets]').appendChild(div.firstElementChild);
+  });
+  form.addEventListener('click', function (ev) {
+    if (ev.target.matches('[data-quitar-ret]')) { ev.target.closest('[data-ret-fila]').remove(); recalcular(); }
+  });
   form.addEventListener('submit', function (ev) {
     var b = q('[data-confirmar-recibo]');
     if (b && !window.confirm('¿Confirmás el recibo por ' + q('[data-t-neto]').textContent + '?')) ev.preventDefault();

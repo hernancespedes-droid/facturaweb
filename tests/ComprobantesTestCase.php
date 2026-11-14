@@ -51,7 +51,7 @@ abstract class ComprobantesTestCase extends DbTestCase
 
     private function limpiarFacturacion(): void
     {
-        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact', 'cobra', 'imputaciones'] as $t) {
+        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact', 'cobra', 'imputaciones', 'cobra_retenciones'] as $t) {
             Db::pdo()->exec("DELETE FROM `{$t}`");
         }
     }

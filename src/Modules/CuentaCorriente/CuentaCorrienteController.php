@@ -125,7 +125,7 @@ final class CuentaCorrienteController
             'pend' => $cli !== null ? $svc->pendientes((int) $cli['codigo']) : ['debitos' => [], 'creditos' => []],
             'saldo' => $cli !== null ? $svc->saldo((int) $cli['codigo']) : 0.0, 'sucursales' => $sucs, 'formas' => $svc->formasDePago(),
             'bancos' => \App\Core\Db::pdo()->query('SELECT codigo, descripcion FROM bancos ORDER BY descripcion')->fetchAll(),
-            'operacion' => $operacion ?? bin2hex(random_bytes(16)),
+            'retenciones' => $svc->retenciones(), 'operacion' => $operacion ?? bin2hex(random_bytes(16)),
         ]), $status);
     }
 
@@ -143,7 +143,7 @@ final class CuentaCorrienteController
     {
         $p = $req->post;
         $datos = ['cliente' => (string) ($p['cliente'] ?? ''), 'fecha' => (string) ($p['fecha'] ?? ''), 'sucursal' => (string) ($p['sucursal'] ?? ''), 'anticipo' => (string) ($p['anticipo'] ?? ''),
-            'descuento' => (string) ($p['descuento'] ?? ''), 'observaciones' => (string) ($p['observaciones'] ?? ''), 'imputar' => (array) ($p['imputar'] ?? []), 'ret' => (array) ($p['ret'] ?? []),
+            'descuento' => (string) ($p['descuento'] ?? ''), 'observaciones' => (string) ($p['observaciones'] ?? ''), 'imputar' => (array) ($p['imputar'] ?? []), 'ret' => array_values((array) ($p['ret'] ?? [])),
             'pagos' => array_values((array) ($p['pagos'] ?? []))];
         $operacion = (string) ($p['operacion'] ?? '');
         $svc = new CuentaCorrienteService();

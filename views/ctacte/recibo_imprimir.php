@@ -58,7 +58,7 @@ $f = static fn (float $v): string => number_format($v, 2, ',', '.');
     <div class="totales">
         <div><span>Total que se cancela</span><span>$ <?= e($f((float) $c['bruto'])) ?></span></div>
         <?php if ($c['descuento'] > 0): ?><div><span>Descuento</span><span>− $ <?= e($f($c['descuento'])) ?></span></div><?php endif; ?>
-        <?php foreach ($c['retenciones'] as $nombre => $imp): ?><div><span>Retención <?= e($nombre) ?></span><span>− $ <?= e($f($imp)) ?></span></div><?php endforeach; ?>
+        <?php foreach ($c['retenciones'] as $x): ?><div><span>Retención <?= e($x['descripcion']) ?><?= $x['certificado'] !== '' ? ' (cert. ' . e($x['certificado']) . ')' : '' ?></span><span>− $ <?= e($f($x['importe'])) ?></span></div><?php endforeach; ?>
         <div class="total"><span>Total recibido</span><span>$ <?= e($f((float) $c['neto'])) ?></span></div>
     </div>
     <?php if ($c['observaciones']): ?><p class="pie">Observaciones: <?= e($c['observaciones']) ?></p><?php endif; ?>

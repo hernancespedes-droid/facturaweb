@@ -91,6 +91,12 @@ async function factura(page, precio) {
     await Promise.all([page.waitForNavigation(), page.click('[data-cliente-lista] li')]);
     ok((await page.textContent('h1')).includes('CLIENTE E2E CC'), 'el recibo arranca con el cliente elegido');
     ok((await page.locator('[data-marca]').count()) === 2, 'lista las dos facturas pendientes');
+    await page.locator('details summary').click();
+    await page.click('[data-agregar-ret]');
+    ok((await page.locator('[data-ret-fila]').count()) === 1, 'se puede agregar un renglón de retención (de la tabla)');
+    ok((await page.locator('[data-ret-fila] select option').count()) > 4, 'las retenciones salen de la tabla, agrupadas por impuesto');
+    await page.click('[data-quitar-ret]');
+    ok((await page.locator('[data-ret-fila]').count()) === 0, 'se puede quitar el renglón');
     await page.locator('[data-marca]').nth(0).check();
     ok((await page.locator('[data-imputar]').nth(0).inputValue()).startsWith('1.210'), 'al tildar carga el saldo de la factura');
     await page.locator('[data-imputar]').nth(1).fill('105');

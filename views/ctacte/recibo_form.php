@@ -2,7 +2,7 @@
 use App\Modules\CuentaCorriente\CuentaCorrienteService;
 
 /** @var ?array<string,mixed> $cli @var array<string,mixed> $datos @var array<string,string> $errores @var array{debitos:array,creditos:array} $pend @var float $saldo
- *  @var array<int,array<string,mixed>> $sucursales @var array<int,array<string,mixed>> $formas @var array<int,array<string,mixed>> $bancos @var string $operacion */
+ *  @var array<int,array<string,mixed>> $sucursales @var array<int,array<string,mixed>> $formas @var array<int,array<string,mixed>> $bancos @var array<int,array<string,mixed>> $retenciones @var string $operacion */
 if ($cli === null) {
     ?>
     <div class="page-head"><div><p class="eyebrow">Cuenta corriente</p><h1>Nuevo recibo</h1></div></div>
@@ -21,6 +21,24 @@ $imputar = (array) ($datos['imputar'] ?? []);
 $ret = (array) ($datos['ret'] ?? []);
 $unaSucursal = count($sucursales) === 1 ? (int) array_key_first($sucursales) : 0;
 $suc = $v('sucursal', (string) $unaSucursal);
+
+/** Un renglón de retención: la elegida de la tabla (agrupadas por impuesto), el importe y el N.º de certificado. */
+$filaRet = static function (string $n, array $x) use ($retenciones): string {
+    $porImpuesto = [];
+    foreach ($retenciones as $r) {
+        $porImpuesto[(int) $r['impuesto']][] = $r;
+    }
+    ob_start(); ?>
+    <div class="pago-fila form-grid" data-ret-fila>
+        <label class="field"><span>Retención</span><select name="ret[<?= e($n) ?>][codigo]"><option value="">Elegí…</option>
+            <?php foreach ($porImpuesto as $imp => $lista): ?><optgroup label="<?= e(\App\Modules\Tablas\Definiciones::IMPUESTOS_RETENCION[$imp] ?? 'Otra') ?>">
+                <?php foreach ($lista as $r): ?><option value="<?= (int) $r['codigo'] ?>" <?= (string) ($x['codigo'] ?? '') === (string) $r['codigo'] ? 'selected' : '' ?>><?= e($r['etiqueta']) ?></option><?php endforeach; ?></optgroup><?php endforeach; ?></select></label>
+        <label class="field"><span>Importe</span><input name="ret[<?= e($n) ?>][importe]" value="<?= e((string) ($x['importe'] ?? '')) ?>" inputmode="decimal" data-decimales="2" data-ret></label>
+        <label class="field"><span>N.º de certificado</span><input name="ret[<?= e($n) ?>][certificado]" value="<?= e((string) ($x['certificado'] ?? '')) ?>" maxlength="30"></label>
+        <button type="button" class="btn btn-ghost btn-sm" data-quitar-ret aria-label="Quitar esta retención">Quitar</button>
+    </div>
+    <?php return (string) ob_get_clean();
+};
 
 /** Un renglón de medio de pago (el mismo marcado sirve para los que agrega el JS: __N__ es el índice). */
 $filaPago = static function (string $n, array $p) use ($formas, $bancos): string {
@@ -89,14 +107,21 @@ $filaPago = static function (string $n, array $p) use ($formas, $bancos): string
             <input name="anticipo" value="<?= e($v('anticipo')) ?>" inputmode="decimal" data-decimales="2" data-anticipo><?= $err('anticipo') ?></label>
     </section>
 
-    <details class="card"<?= $v('descuento') !== '' || array_filter($ret) !== [] ? ' open' : '' ?>>
+    <details class="card"<?= $v('descuento') !== '' || $ret !== [] ? ' open' : '' ?>>
         <summary><b>Descuento por pronto pago y retenciones</b> <span class="muted small">(si no hay, dejalo cerrado)</span></summary>
         <div class="form-grid">
             <label class="field<?= isset($errores['descuento']) ? ' has-error' : '' ?>"><span>Descuento (con IVA)</span><input name="descuento" value="<?= e($v('descuento')) ?>" inputmode="decimal" data-decimales="2" data-descuento><?= $err('descuento') ?></label>
-            <?php foreach (CuentaCorrienteService::RETENCIONES as $cod => $nombre): ?>
-                <label class="field"><span>Retención <?= e($nombre) ?></span><input name="ret[<?= $cod ?>]" value="<?= e((string) ($ret[$cod] ?? '')) ?>" inputmode="decimal" data-decimales="2" data-ret></label>
-            <?php endforeach; ?>
         </div>
+        <h3>Retenciones</h3>
+        <?php if ($retenciones === []): ?>
+            <p class="muted small">Todavía no hay retenciones cargadas.<?php if (puede('tablas.retenciones')): ?> Cargalas en <a href="<?= e(url('/tablas/retenciones')) ?>">Tablas → Retenciones</a>.<?php endif; ?></p>
+        <?php else: ?>
+            <div data-rets>
+                <?php foreach (array_values($ret) as $i => $x): ?><?= $filaRet((string) $i, (array) $x) ?><?php endforeach; ?>
+            </div>
+            <template data-plantilla-ret><?= $filaRet('__N__', []) ?></template>
+            <button type="button" class="btn btn-ghost btn-sm" data-agregar-ret>+ Agregar retención</button>
+        <?php endif; ?>
         <?= $err('ret') ?>
     </details>
 
