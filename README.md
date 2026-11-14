@@ -27,14 +27,14 @@ bash bin/setup-dev.sh
 ```
 
 ```bash
-bash bin/test.sh
+bash bin/pruebas.sh
 ```
 
 ```bash
 bin/dev-server.sh
 ```
 
-`bin/test.sh --unit` corre solo las pruebas de PHP; sin `--unit` también el recorrido de navegador (`e2e/recorrido.js`, Playwright).
+`bin/pruebas.sh --unit` corre solo las pruebas de PHP; sin `--unit` también el recorrido de navegador (`e2e/recorrido.js`, Playwright).
 El sistema queda en http://127.0.0.1:8080; el primer usuario se crea con `php bin/crear-master.php`.
 
 ## Carpetas

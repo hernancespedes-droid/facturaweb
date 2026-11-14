@@ -3,11 +3,15 @@
 Contexto, decisiones y estado del proyecto: skill `facturaweb-proyecto` (copia en `.claude/skills/facturaweb-proyecto/SKILL.md`)
 y `docs/analisis-migracion.md`. Esto es solo lo técnico del repositorio.
 
+> **No modificar `bin/package.sh`, `bin/test.sh`, `bin/setup-dev.sh`, `bin/dev-server.sh` ni `bin/env.sh`.** El hosting (Ferozo, sin SSH) les cambia los permisos y GIT se niega a
+> sincronizar si una versión nueva los toca («local changes would be overwritten»). Quedaron congelados (`package.sh` y `test.sh` son las versiones viejas); los scripts vivos son
+> `bin/pruebas.sh` (pruebas) y `bin/empaquetar.sh` (paquete). Si hace falta cambiar algo de eso, hacerlo en archivos nuevos.
+
 ## Al empezar una sesión
 
 1. `bash bin/setup-dev.sh`: instala MySQL 8 si falta, crea `facturaweb_dev` y `facturaweb_test` (usuario `facturaweb` / `facturaweb_dev`) y migra. Idempotente.
    Si MySQL no está corriendo (el contenedor se reinició), el mismo script lo levanta.
-2. `bash bin/test.sh` tiene que pasar **antes** de tocar nada (`--unit` solo PHP). El recorrido de navegador usa el Playwright preinstalado.
+2. `bash bin/pruebas.sh` tiene que pasar **antes** de tocar nada (`--unit` solo PHP). El recorrido de navegador usa el Playwright preinstalado.
 3. `bin/dev-server.sh` → http://127.0.0.1:8080. Usuario: `php bin/crear-master.php`.
 4. Datos reales de OYS para probar la migración: en Drive (`datos_facturador_web….rar`), **nunca al repo** (`.gitignore` bloquea `*.dbf`).
    Se descomprimen con `unrar` en el scratchpad y se cargan con `php bin/migrar-dbf.php <carpeta> --reemplazar`.
@@ -75,9 +79,9 @@ Nada de datos reales de clientes en el repo ni en pruebas (las pruebas del migra
 ## Un módulo está terminado cuando
 
 1. Migraciones, código y vistas responsive.
-2. Pruebas de PHP (lógica, permisos por rol, concurrencia si numera) y el flujo en `e2e/recorrido.js` (y `e2e/arca.js`, con ARCA simulado). `bash bin/test.sh` pasa completo.
+2. Pruebas de PHP (lógica, permisos por rol, concurrencia si numera) y el flujo en `e2e/recorrido.js` (y `e2e/arca.js`, con ARCA simulado). `bash bin/pruebas.sh` pasa completo.
 3. Se recorrió de verdad con el navegador (escritorio y celular).
-4. `VERSION` subida (0.2.0 = etapa 1, 0.3.0 = etapa 2, 0.4.0 = etapa 3…; 1.0.0 = pase a producción de OYS), commit y `bin/package.sh` arma `dist/facturaweb-<version>.zip`.
+4. `VERSION` subida (0.2.0 = etapa 1, 0.3.0 = etapa 2, 0.4.0 = etapa 3…; 1.0.0 = pase a producción de OYS), commit y `bin/empaquetar.sh` arma `dist/facturaweb-<version>.zip`.
 5. Nota de entrega `docs/entregas/<version>-<etapa>.md` (qué incluye, qué probar con qué usuario, cómo desplegar y revertir, qué falta del cliente).
 6. Skill `facturaweb-proyecto` actualizado si cambió el estado o una decisión.
 

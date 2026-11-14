@@ -15,7 +15,7 @@ tar \
     --exclude='./.git' --exclude='./dist' \
     --exclude='./e2e' --exclude='./tests' --exclude='./CLAUDE.md' \
     --exclude='./bin/setup-dev.sh' --exclude='./bin/test.sh' \
-    --exclude='./bin/dev-server.sh' --exclude='./bin/package.sh' --exclude='./bin/env.sh' --exclude='./vfp' --exclude='./.claude' --exclude='./lib/afip_fe/tests' --exclude='./bin/demo-usuarios.php' --exclude='./bin/alta-cliente.php' --exclude='./bin/licencia.php' --exclude='./docs/clientes' \
+    --exclude='./bin/dev-server.sh' --exclude='./bin/package.sh' --exclude='./bin/env.sh' --exclude='./vfp' --exclude='./.claude' --exclude='./lib/afip_fe/tests' --exclude='./bin/demo-usuarios.php' \
     --exclude='./config/local.php' \
     --exclude='./storage/afip_simulado' --exclude='./storage/logs/*' --exclude='./storage/uploads/*' --exclude='./storage/sessions/*' \
     -cf - . | tar -xf - -C "$STAGE"
