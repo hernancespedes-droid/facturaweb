@@ -25,7 +25,10 @@ $soloLectura = !$puedeEditar;
                 <?= $c['actualizacion'] ? ' · Modificado: ' . e(date('d/m/Y H:i', (int) strtotime((string) $c['actualizacion']))) : '' ?></p>
         <?php endif; ?>
     </div>
-    <?php if ($c !== null && (int) $c['activo'] !== 1): ?><span class="badge badge-off">Inactivo</span><?php endif; ?>
+    <div class="acciones">
+        <?php if ($c !== null && (int) $c['activo'] !== 1): ?><span class="badge badge-off">Inactivo</span><?php endif; ?>
+        <?php if ($c !== null && puede('ctacte.ver')): ?><a class="btn btn-ghost" href="<?= e(url('/cuenta-corriente/cliente/' . (int) $c['codigo'])) ?>">Cuenta corriente</a><?php endif; ?>
+    </div>
 </div>
 <?php if (isset($errores['general'])): ?><div class="alerta alerta-error"><?= e($errores['general']) ?></div><?php endif; ?>
 

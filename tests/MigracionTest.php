@@ -30,7 +30,7 @@ final class MigracionTest extends DbTestCase
         $pdo->exec("DELETE FROM articulos WHERE codigo LIKE 'M-%'");
         $pdo->exec("DELETE FROM vendedores WHERE descripcion LIKE '%(DEL VFP)'");
         $pdo->exec('DELETE FROM migracion_vfp');
-        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact'] as $t) {
+        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact', 'cobra', 'imputaciones', 'cobra_retenciones'] as $t) {
             $pdo->exec("DELETE FROM `{$t}`");
         }
     }
@@ -219,5 +219,43 @@ final class MigracionTest extends DbTestCase
         $this->assertCount(1, $h['items']);
         $pdf = \App\Modules\Comprobantes\ComprobantePdf::generar(\App\Modules\Comprobantes\ComprobanteImpreso::datos($h, $svc->emisor()));
         $this->assertStringStartsWith('%PDF', $pdf);
+    }
+    public function testRecibosEImputacionesSeVinculanConLaCuentaCorriente(): void
+    {
+        $d = $this->dir;
+        Db::pdo()->exec("INSERT INTO sucursales (codigo, descripcion, prefijo) VALUES (97, 'MIGRACION', 4) ON DUPLICATE KEY UPDATE prefijo = 4");
+        DbfFalso::dbc($d . '/datos.dbc', [
+            'cobra' => ['cliente', 'fecha', 'sucursal', 'recibo', 'bruto', 'neto', 'dto_bruto', 'dto_iva', 'cod_rt1', 'imp_rt1'],
+            'ctact' => ['cliente', 'fecha', 'tipo', 'tico', 'letra', 'sucursal', 'numero', 'neto', 'descuento', 'saldo', 'fe_clave'],
+            'imputaciones' => ['clientes', 'tipodb', 'ticodb', 'nrcodb', 'tipocr', 'ticocr', 'nrcocr', 'importe', 'fecodb', 'fecocr', 'recibo', 'letradb'],
+        ]);
+        DbfFalso::escribir($d . '/cobra.dbf', [['CLIENTE', 'N', 5], ['FECHA', 'D'], ['SUCURSAL', 'N', 2], ['RECIBO', 'N', 7], ['BRUTO', 'N', 16, 2], ['NETO', 'N', 16, 2],
+            ['DTO_BRUTO', 'N', 16, 2], ['DTO_IVA', 'N', 16, 2], ['COD_RT1', 'N', 2], ['IMP_RT1', 'N', 16, 2]], [
+            ['CLIENTE' => 5, 'FECHA' => '2024-05-10', 'SUCURSAL' => 97, 'RECIBO' => 3, 'BRUTO' => 200, 'NETO' => 190, 'DTO_BRUTO' => 0, 'DTO_IVA' => 0, 'COD_RT1' => 1, 'IMP_RT1' => 10],
+        ]);
+        DbfFalso::escribir($d . '/ctact.dbf', [['CLIENTE', 'N', 5], ['FECHA', 'D'], ['TIPO', 'C', 2], ['TICO', 'N', 1], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 2], ['NUMERO', 'N', 8],
+            ['NETO', 'N', 10, 2], ['DESCUENTO', 'N', 10, 2], ['SALDO', 'N', 10, 2], ['FE_CLAVE', 'I']], [
+            ['CLIENTE' => 5, 'FECHA' => '2024-05-01', 'TIPO' => 'FC', 'TICO' => 1, 'LETRA' => 'A', 'SUCURSAL' => 97, 'NUMERO' => 8, 'NETO' => 300, 'DESCUENTO' => 0, 'SALDO' => 100, 'FE_CLAVE' => 1],
+            ['CLIENTE' => 5, 'FECHA' => '2024-05-10', 'TIPO' => 'RC', 'TICO' => 7, 'LETRA' => 'A', 'SUCURSAL' => 97, 'NUMERO' => 3, 'NETO' => 190, 'DESCUENTO' => 10, 'SALDO' => 0, 'FE_CLAVE' => 2],
+        ]);
+        DbfFalso::escribir($d . '/imputaciones.dbf', [['CLIENTES', 'N', 5], ['TIPODB', 'C', 2], ['TICODB', 'N', 1], ['NRCODB', 'N', 7], ['TIPOCR', 'C', 2], ['TICOCR', 'N', 1], ['NRCOCR', 'N', 7],
+            ['IMPORTE', 'N', 16, 2], ['FECODB', 'D'], ['FECOCR', 'D'], ['RECIBO', 'N', 7], ['LETRADB', 'C', 1]], [
+            ['CLIENTES' => 5, 'TIPODB' => 'FC', 'TICODB' => 1, 'NRCODB' => 8, 'TIPOCR' => 'RC', 'TICOCR' => 7, 'NRCOCR' => 3, 'IMPORTE' => 200, 'FECODB' => '2024-05-01', 'FECOCR' => '2024-05-10', 'RECIBO' => 3, 'LETRADB' => 'A'],
+            ['CLIENTES' => 5, 'TIPODB' => 'FC', 'TICODB' => 1, 'NRCODB' => 99, 'TIPOCR' => 'RC', 'TICOCR' => 7, 'NRCOCR' => 3, 'IMPORTE' => 5, 'FECODB' => '2024-01-01', 'FECOCR' => '2024-05-10', 'RECIBO' => 3, 'LETRADB' => 'A'],
+        ]);
+        try {
+            $r = (new MigradorVfp(Db::pdo(), $d))->migrar(['ctact', 'cobra', 'imputaciones'], true);
+            $pdo = Db::pdo();
+            $this->assertSame([1, 2], [$r['cobra']['grabadas'], $r['imputaciones']['grabadas']]);
+            $this->assertSame(4, (int) $pdo->query('SELECT prefijo FROM cobra')->fetchColumn(), 'el punto de venta sale de la sucursal');
+            $cobra = (int) $pdo->query('SELECT id FROM cobra')->fetchColumn();
+            $this->assertSame($cobra, (int) $pdo->query("SELECT cobra_id FROM ctact WHERE tipo = 'RC'")->fetchColumn(), 'el recibo de ctact apunta a su cobra');
+            $ok = $pdo->query('SELECT ctact_db, ctact_cr, cobra_id FROM imputaciones WHERE nrcodb = 8')->fetch();
+            $this->assertSame([true, true, $cobra], [(int) $ok['ctact_db'] > 0, (int) $ok['ctact_cr'] > 0, (int) $ok['cobra_id']]);
+            $this->assertNull($pdo->query('SELECT ctact_db FROM imputaciones WHERE nrcodb = 99')->fetchColumn(), 'la imputación de un comprobante que no existe queda sin vincular');
+            $this->assertStringContainsString('1 imputación', implode(' ', $r['vinculos cuenta corriente']['avisos']));
+        } finally {
+            Db::pdo()->exec('DELETE FROM sucursales WHERE codigo = 97');
+        }
     }
 }

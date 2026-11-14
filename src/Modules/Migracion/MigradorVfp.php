@@ -30,6 +30,8 @@ final class MigradorVfp
         // etapa 2: comprobantes y lo que cuelga de ellos
         'equivalencias_afip' => 'equivalencias_afip', 'subdiario' => 'subdiario', 'iva' => 'iva', 'estadistica' => 'estadistica',
         'caja' => 'caja', 'ctact' => 'ctact',
+        // etapa 4: recibos e imputaciones de la cuenta corriente
+        'cobra' => 'cobra', 'imputaciones' => 'imputaciones',
     ];
     /** Tablas que se completan sin borrar lo que hay (se suman las filas que faltan): las equivalencias aprobadas ya vienen cargadas. */
     private const SUMAR = ['equivalencias_afip'];
@@ -148,6 +150,9 @@ final class MigradorVfp
             if (array_intersect($tablas, ['subdiario', 'iva', 'estadistica', 'caja', 'ctact']) !== []) {
                 $this->vincular();
             }
+            if (array_intersect($tablas, ['caja', 'ctact', 'cobra', 'imputaciones']) !== []) {
+                $this->vincularCuentaCorriente();
+            }
             if (in_array('clientes', $tablas, true)) {
                 // El próximo cliente sigue la numeración del VFP.
                 $this->ejecutar('UPDATE parametros SET ultimo_cliente = GREATEST(ultimo_cliente, (SELECT COALESCE(MAX(codigo), 0) FROM clientes)) WHERE id = 1', []);
@@ -172,6 +177,33 @@ final class MigradorVfp
             }
         }
         return $this->resumen;
+    }
+
+    /**
+     * Cuenta corriente: el punto de venta de cada recibo, la fila de ctact y los medios de pago (caja) de cada recibo (cobra_id) y, en cada
+     * imputación, qué fila de ctact se canceló (ctact_db) y cuál la canceló (ctact_cr). El VFP las relaciona por cliente + tipo + número + fecha;
+     * lo que no se encuentra queda cargado igual, sin vincular, y se avisa.
+     */
+    private function vincularCuentaCorriente(): void
+    {
+        $r = &$this->iniciar('vinculos cuenta corriente');
+        $this->ejecutar('UPDATE cobra c JOIN sucursales s ON s.codigo = c.sucursal SET c.prefijo = s.prefijo WHERE c.prefijo = 0', []);
+        $this->ejecutar("UPDATE ctact x JOIN cobra c ON c.sucursal = x.sucursal AND c.recibo = x.numero AND c.fecha = x.fecha SET x.cobra_id = c.id WHERE x.tipo = 'RC' AND x.cobra_id IS NULL", []);
+        $this->ejecutar("UPDATE caja x JOIN cobra c ON c.sucursal = x.sucursal AND c.recibo = x.comprobante AND c.fecha = x.fecha SET x.cobra_id = c.id WHERE x.tipo = 'RC' AND x.cobra_id IS NULL", []);
+        $cond = 'd.cliente = i.clientes AND d.tipo = i.tipodb AND d.numero = i.nrcodb AND d.fecha = i.fecodb';
+        $this->ejecutar("UPDATE imputaciones i JOIN ctact d ON {$cond} AND d.letra = i.letradb SET i.ctact_db = d.fe_clave WHERE i.ctact_db IS NULL", []);
+        $this->ejecutar("UPDATE imputaciones i JOIN ctact d ON {$cond} SET i.ctact_db = d.fe_clave WHERE i.ctact_db IS NULL", []); // filas viejas sin letra
+        $this->ejecutar('UPDATE imputaciones i JOIN ctact c ON c.cliente = i.clientes AND c.tipo = i.tipocr AND c.numero = i.nrcocr AND c.fecha = i.fecocr SET i.ctact_cr = c.fe_clave WHERE i.ctact_cr IS NULL', []);
+        $this->ejecutar("UPDATE imputaciones i JOIN ctact c ON c.fe_clave = i.ctact_cr SET i.cobra_id = c.cobra_id WHERE i.cobra_id IS NULL AND i.tipocr = 'RC'", []);
+        $r['grabadas'] = (int) $this->pdo->query('SELECT COUNT(*) FROM imputaciones WHERE ctact_db IS NOT NULL AND ctact_cr IS NOT NULL')->fetchColumn();
+        $sin = (int) $this->pdo->query('SELECT COUNT(*) FROM imputaciones WHERE ctact_db IS NULL OR ctact_cr IS NULL')->fetchColumn();
+        if ($sin > 0) {
+            $this->aviso($r, "{$sin} imputación(es) no encontraron su comprobante en la cuenta corriente (ya estaban así en el VFP): quedan cargadas sin vincular.");
+        }
+        $sinCobra = (int) $this->pdo->query("SELECT COUNT(*) FROM ctact WHERE tipo = 'RC' AND cobra_id IS NULL")->fetchColumn();
+        if ($sinCobra > 0) {
+            $this->aviso($r, "{$sinCobra} recibo(s) de la cuenta corriente no tienen su fila en cobra (ya estaban así en el VFP): no se pueden anular desde la web.");
+        }
     }
 
     /**

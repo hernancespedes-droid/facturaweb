@@ -25,7 +25,7 @@ $limpiar = static function () use ($pdo, $copia): void {
         $p = json_decode((string) file_get_contents($copia), true);
         $pdo->prepare('UPDATE parametros SET empresa = ?, cuit = ?, iva = ? WHERE id = 1')->execute([$p['empresa'], $p['cuit'], $p['iva']]);
         foreach ($p['sucursales'] ?? [] as $codigo => $num) {
-            $pdo->prepare('UPDATE sucursales SET ultima_factura_a = ?, ultima_factura_b = ?, ultima_factura_c = ?, ultima_nc_a = ?, ultima_nc_b = ?, ultima_nc_c = ?, ultima_nd_a = ?, ultima_nd_b = ?, ultima_nd_c = ? WHERE codigo = ?')
+            $pdo->prepare('UPDATE sucursales SET ultima_factura_a = ?, ultima_factura_b = ?, ultima_factura_c = ?, ultima_nc_a = ?, ultima_nc_b = ?, ultima_nc_c = ?, ultima_nd_a = ?, ultima_nd_b = ?, ultima_nd_c = ?, ultimo_recibo = ? WHERE codigo = ?')
                 ->execute([...array_values($num), $codigo]);
         }
         foreach ($p['fac'] ?? [] as $codigo => $fac) {
@@ -41,6 +41,14 @@ $limpiar = static function () use ($pdo, $copia): void {
         }
         $pdo->prepare('DELETE FROM subdiario WHERE fe_clave = ?')->execute([$clave]);
     }
+    // Cuenta corriente de los clientes E2E: recibos, imputaciones y lo que quedó suelto
+    foreach ($pdo->query("SELECT codigo FROM clientes WHERE razon_social LIKE '%E2E%'")->fetchAll(PDO::FETCH_COLUMN) as $cli) {
+        foreach (['cobra' => 'cliente', 'imputaciones' => 'clientes', 'ctact' => 'cliente', 'caja' => 'cliente'] as $tabla => $col) {
+            $pdo->prepare("DELETE FROM {$tabla} WHERE {$col} = ?")->execute([$cli]);
+        }
+    }
+    $pdo->exec("DELETE FROM forma_de_pagos WHERE descripcion LIKE '%E2E%'");
+    $pdo->exec("DELETE FROM bancos WHERE descripcion LIKE '%E2E%'");
     $pdo->exec("DELETE FROM afip_operaciones WHERE entorno = 'S'");
     $pdo->exec("DELETE FROM api_claves WHERE nombre LIKE 'T e2e%'");
     $pdo->exec("DELETE FROM clientes WHERE razon_social LIKE '%E2E%'");
@@ -61,10 +69,12 @@ if ((int) $pdo->query('SELECT COUNT(*) FROM sucursales')->fetchColumn() === 0) {
 if ((int) $pdo->query('SELECT COUNT(*) FROM forma_de_pagos WHERE tipo = 1')->fetchColumn() === 0) {
     $pdo->exec("INSERT IGNORE INTO forma_de_pagos (codigo, descripcion, tipo) VALUES ('01', 'EFECTIVO', 1)");
 }
+$pdo->exec("INSERT INTO forma_de_pagos (codigo, descripcion, tipo) VALUES ('E5', 'CHEQUE E2E', 5)");
+$pdo->exec("INSERT INTO bancos (codigo, descripcion) VALUES (998, 'BANCO E2E')");
 $guardar = $pdo->query('SELECT empresa, cuit, iva FROM parametros WHERE id = 1')->fetch();
 $guardar['sucursales'] = [];
 $guardar['fac'] = $pdo->query('SELECT codigo, fac_electronica FROM sucursales')->fetchAll(PDO::FETCH_KEY_PAIR);
-foreach ($pdo->query('SELECT codigo, ultima_factura_a, ultima_factura_b, ultima_factura_c, ultima_nc_a, ultima_nc_b, ultima_nc_c, ultima_nd_a, ultima_nd_b, ultima_nd_c FROM sucursales')->fetchAll() as $suc) {
+foreach ($pdo->query('SELECT codigo, ultima_factura_a, ultima_factura_b, ultima_factura_c, ultima_nc_a, ultima_nc_b, ultima_nc_c, ultima_nd_a, ultima_nd_b, ultima_nd_c, ultimo_recibo FROM sucursales')->fetchAll() as $suc) {
     $codigo = $suc['codigo'];
     unset($suc['codigo']);
     $guardar['sucursales'][$codigo] = $suc;

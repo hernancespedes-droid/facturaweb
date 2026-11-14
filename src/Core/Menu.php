@@ -23,6 +23,12 @@ final class Menu
         $o['comprobantes_nc'] = ['texto' => 'Nueva nota de crédito', 'ruta' => '/comprobantes/nuevo?tipo=NC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes_nd'] = ['texto' => 'Nueva nota de débito', 'ruta' => '/comprobantes/nuevo?tipo=ND', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes'] = ['texto' => 'Comprobantes', 'ruta' => '/comprobantes', 'permiso' => 'comprobantes.ver', 'grupo' => 'Facturación'];
+        $o['ctacte'] = ['texto' => 'Cuenta corriente', 'ruta' => '/cuenta-corriente', 'permiso' => 'ctacte.ver', 'grupo' => 'Cuenta corriente'];
+        $o['recibos_nuevo'] = ['texto' => 'Nuevo recibo', 'ruta' => '/recibos/nuevo', 'permiso' => 'ctacte.cobrar', 'grupo' => 'Cuenta corriente'];
+        $o['recibos'] = ['texto' => 'Recibos', 'ruta' => '/recibos', 'permiso' => 'ctacte.ver', 'grupo' => 'Cuenta corriente'];
+        $o['imputar'] = ['texto' => 'Imputación manual', 'ruta' => '/cuenta-corriente/imputar', 'permiso' => 'ctacte.imputar', 'grupo' => 'Cuenta corriente'];
+        $o['ctacte_ajuste'] = ['texto' => 'Ajuste de cuenta corriente', 'ruta' => '/cuenta-corriente/ajuste', 'permiso' => 'ctacte.ajustar', 'grupo' => 'Cuenta corriente'];
+        $o['cheques'] = ['texto' => 'Cheques en cartera', 'ruta' => '/cheques', 'permiso' => 'ctacte.ver', 'grupo' => 'Cuenta corriente'];
         $o['iva_ventas'] = ['texto' => 'Subdiario IVA ventas', 'ruta' => '/listados/iva-ventas', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         foreach (Definiciones::todas() as $t => $d) {
             $o[$t] = ['texto' => $d['titulo'], 'ruta' => '/tablas/' . $t, 'permiso' => 'tablas.' . $t, 'grupo' => 'Tablas'];

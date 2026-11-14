@@ -104,6 +104,18 @@ final class Definiciones
                 'lista' => ['codigo', 'descripcion'],
                 'orden' => 'codigo',
             ],
+            'retenciones' => [
+                'titulo' => 'Retenciones', 'singular' => 'retención', 'vfp' => '',
+                'campos' => [
+                    'codigo' => $cod(5, 'entero') + ['max' => 999], 'descripcion' => $desc(40),
+                    'impuesto' => ['label' => 'Impuesto', 'tipo' => 'opciones', 'requerido' => true, 'opciones' => self::IMPUESTOS_RETENCION],
+                    'provincia' => ['label' => 'Provincia (Ingresos Brutos)', 'tipo' => 'ref', 'ref' => 'provincias'],
+                ],
+                'lista' => ['codigo', 'descripcion', 'impuesto', 'provincia'],
+                'orden' => 'codigo',
+                'ayuda' => 'Las retenciones que te practican los clientes al pagar. Una por cada impuesto y jurisdicción (por ejemplo, Ingresos Brutos de cada provincia). Se eligen al cargar un recibo.',
+                'usos' => [['cobra_retenciones', ['retencion' => 'codigo'], 'recibos']],
+            ],
             'cotizacion_dolar' => [
                 'titulo' => 'Cotizaciones del dólar', 'singular' => 'cotización', 'vfp' => 'TG',
                 'campos' => [
@@ -166,6 +178,8 @@ final class Definiciones
 
     /** Tipo de forma de pago (combo de forma_de_pagos.scx). */
     public const TIPOS_PAGO = [1 => 'Efectivo', 2 => 'Tickets', 3 => 'Tarjeta', 4 => 'Dólares', 5 => 'Cheques', 6 => 'Cta./Cte.', 7 => 'Ajuste', 8 => 'Nota de crédito', 9 => 'Gastos'];
+
+    public const IMPUESTOS_RETENCION = [1 => 'Ganancias', 2 => 'IVA', 3 => 'Ingresos Brutos', 4 => 'SUSS', 9 => 'Otra'];
 
     /** Condición de IVA del emisor (mismos códigos que el cliente). */
     public const CONDICIONES_EMPRESA = [1 => 'Responsable Inscripto', 7 => 'Monotributo', 4 => 'Exento'];
