@@ -23,6 +23,7 @@ final class RolesService
         'clientes' => ['clientes.ver', ['clientes.editar']],
         'articulos' => ['articulos.ver', ['articulos.editar']],
         'comprobantes' => ['comprobantes.ver', ['comprobantes.emitir', 'comprobantes.credito']],
+        'ctacte' => ['ctacte.ver', ['ctacte.cobrar', 'ctacte.imputar', 'ctacte.ajustar']],
         'iva_ventas' => ['listados.ver', []],
         'stock' => ['stock.ver', ['stock.mover', 'stock.administrar']],
         'sucursales' => ['tablas.sucursales', []],

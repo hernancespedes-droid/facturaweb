@@ -39,6 +39,12 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
   están en `docs/decisiones-pendientes.md`: al decidir algo de negocio sin consultar, marcarla así y sumarla ahí.
 - Los campos de importe usan `data-decimales` (la máscara de `app.js` pone puntos de miles: `Valida::decimal` y `comprobante.js` los leen igual).
 
+## Cuenta corriente y recibos (etapa 4)
+
+- `Modules/CuentaCorriente/CuentaCorrienteService`: recibos (`armarRecibo` valida y calcula; `emitirRecibo` numera con `sucursales.ultimo_recibo` bloqueada, bloquea las filas de `ctact` y revalida el saldo adentro), `imputarManual`, `ajuste` (AD/AC), `anularRecibo`, cheques y deuda.
+- `ctact.tico`: débitos < 7 (FC 1, ND 2, AD 3), créditos ≥ 7 (RC 7, NC 8, AC 9). `ctact.saldo` es lo que falta cancelar; el recibo deja su anticipo como saldo propio. Cada cancelación es una fila de `imputaciones` (`ctact_db` / `ctact_cr`).
+- Pantallas con cliente: `views/ctacte/_picker.php` + `public/assets/cliente-picker.js` (buscador + lupa, el usuario siempre elige).
+
 ## Estructura y convenciones
 
 - Módulos en `src/Modules/<Nombre>/` con `routes.php`; vistas en `views/<modulo>/`. Handlers `function (Request $req, array $params): Response`.
