@@ -109,6 +109,14 @@ async function emitir(page, tipoCliente, precio) {
     await page.screenshot({ path: path.join(CAPTURAS, 'arca-sistema.png'), fullPage: true });
     ok(await page.locator('text=Borrar comprobantes de prueba').count() === 0, 'el Administrador no ve el borrado de pruebas');
 
+    // Libro IVA Digital: los comprobantes de prueba no se informan a ARCA
+    await page.goto(BASE + '/listados/libro-iva-digital');
+    ok((await page.textContent('h1')).includes('Libro IVA Digital'), 'abre Listados → Libro IVA Digital');
+    ok((await page.textContent('body')).includes('de prueba'), 'avisa que los comprobantes de prueba no entran al libro');
+    ok((await page.textContent('body')).includes('No hay comprobantes con CAE'), 'sin comprobantes fiscales en el mes: sin movimiento');
+    const rd = await ctx.request.get(BASE + '/listados/libro-iva-digital/descargar?periodo=2000-01&archivo=cbte');
+    ok(rd.status() === 200 && (rd.headers()['content-disposition'] || '').includes('LIBRO_IVA_DIGITAL_VENTAS_CBTE'), 'se baja el archivo CBTE (vacío si no hay movimiento)');
+
     ok(errores.length === 0, 'sin errores de JavaScript' + (errores.length ? ': ' + errores.join(' | ') : ''));
     await ctx.close();
 
@@ -119,6 +127,8 @@ async function emitir(page, tipoCliente, precio) {
     ok(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: la factura con QR no se desborda');
     await p2.goto(BASE + '/arca');
     ok(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: Sistema → ARCA no se desborda');
+    await p2.goto(BASE + '/listados/libro-iva-digital');
+    ok(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: Libro IVA Digital no se desborda');
     await p2.screenshot({ path: path.join(CAPTURAS, 'celular-arca.png'), fullPage: true });
     await movil.close();
   } finally {

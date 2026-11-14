@@ -30,6 +30,7 @@ final class Menu
         $o['ctacte_ajuste'] = ['texto' => 'Ajuste de cuenta corriente', 'ruta' => '/cuenta-corriente/ajuste', 'permiso' => 'ctacte.ajustar', 'grupo' => 'Cuenta corriente'];
         $o['cheques'] = ['texto' => 'Cheques en cartera', 'ruta' => '/cheques', 'permiso' => 'ctacte.ver', 'grupo' => 'Cuenta corriente'];
         $o['iva_ventas'] = ['texto' => 'Subdiario IVA ventas', 'ruta' => '/listados/iva-ventas', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
+        $o['libro_iva'] = ['texto' => 'Libro IVA Digital (ventas)', 'ruta' => '/listados/libro-iva-digital', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         foreach (Definiciones::todas() as $t => $d) {
             $o[$t] = ['texto' => $d['titulo'], 'ruta' => '/tablas/' . $t, 'permiso' => 'tablas.' . $t, 'grupo' => 'Tablas'];
         }

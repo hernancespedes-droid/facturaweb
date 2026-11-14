@@ -66,4 +66,36 @@ final class ListadosController
         $cols[1][2] = static fn (array $x) => $x['tipo'] === '' ? '' : (Tipos::NOMBRES[$x['tipo']] ?? $x['tipo']) . ' ' . $x['letra'] . ' ' . sprintf('%04d-%08d', $x['prefijo'], $x['numero']);
         return ExcelListado::respuesta('subdiario-iva-ventas', 'IVA ventas', $cols, $filas);
     }
+
+    // ------------------------------------------------------------------ Libro IVA Digital
+
+    public static function libroIva(Request $req, array $params): Response
+    {
+        $periodo = trim((string) ($req->query['periodo'] ?? date('Y-m')));
+        $libro = LibroIvaDigital::generar($periodo);
+        return Response::html(View::render('listados/libro_iva', ['title' => 'Libro IVA Digital (ventas)', 'nav' => 'libro_iva', 'periodo' => $periodo, 'libro' => $libro,
+            'hayZip' => class_exists(\ZipArchive::class)]), $libro === null ? 422 : 200);
+    }
+
+    /** Descarga de un archivo del libro: ?periodo=AAAA-MM&archivo=cbte|alicuotas|zip */
+    public static function libroIvaDescarga(Request $req, array $params): Response
+    {
+        $libro = LibroIvaDigital::generar(trim((string) ($req->query['periodo'] ?? '')));
+        $archivo = (string) ($req->query['archivo'] ?? '');
+        if ($libro === null || !in_array($archivo, ['cbte', 'alicuotas', 'zip'], true)) {
+            return new Response(404);
+        }
+        $sufijo = '-' . str_replace('-', '', $libro['periodo']);
+        if ($archivo === 'zip') {
+            $bin = LibroIvaDigital::zip($libro);
+            if ($bin === null) {
+                return new Response(404);
+            }
+            return new Response(200, $bin, ['Content-Type' => 'application/zip', 'Content-Disposition' => 'attachment; filename="LIBRO_IVA_DIGITAL_VENTAS' . $sufijo . '.zip"', 'Cache-Control' => 'no-store']);
+        }
+        $nombre = $archivo === 'cbte' ? LibroIvaDigital::ARCHIVO_CBTE : LibroIvaDigital::ARCHIVO_ALICUOTAS;
+        return new Response(200, $archivo === 'cbte' ? $libro['cbte'] : $libro['alicuotas'], [
+            'Content-Type' => 'text/plain; charset=ISO-8859-1', 'Content-Disposition' => 'attachment; filename="' . $nombre . $sufijo . '.txt"', 'Cache-Control' => 'no-store',
+        ]);
+    }
 }
