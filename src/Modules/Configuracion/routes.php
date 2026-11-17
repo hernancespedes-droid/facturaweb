@@ -8,4 +8,6 @@ use App\Modules\Configuracion\ConfiguracionController as C;
 return function (Router $r): void {
     $r->get('/configuracion', Guard::permiso('configuracion.administrar', [C::class, 'index']));
     $r->post('/configuracion', Guard::permiso('configuracion.administrar', [C::class, 'guardar']));
+    $r->post('/configuracion/logo', Guard::permiso('configuracion.administrar', [C::class, 'subirLogo']));
+    $r->post('/configuracion/logo/quitar', Guard::permiso('configuracion.administrar', [C::class, 'quitarLogo']));
 };

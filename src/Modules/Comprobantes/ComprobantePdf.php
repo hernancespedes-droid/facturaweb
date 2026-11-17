@@ -66,12 +66,25 @@ final class ComprobantePdf
         $m = self::M;
         $e = $d['emisor'];
         $pdf->rect($m, $m, self::ANCHO, 38, 0.3);
-        // izquierda: emisor
-        $pdf->texto($m + 3, $m + 8, $pdf->ajustar($e['nombre'] ?: 'Empresa sin cargar', 80, 13, true), 13, true);
-        $y = $m + 14;
-        foreach (array_filter([$e['domicilio'], $e['telefono'] !== '' ? 'Tel.: ' . $e['telefono'] : '', $e['mail'], $e['condicion'] !== '' ? $e['condicion'] : '']) as $i => $l) {
-            $pdf->texto($m + 3, $y, $pdf->ajustar($l, 82, 8.5), 8.5, $l === $e['condicion']);
-            $y += 4.5;
+        // izquierda: emisor (con logo, el logo arriba y los datos más compactos debajo)
+        $logo = $d['logo'] ?? null;
+        $lineas = array_filter([$e['domicilio'], $e['telefono'] !== '' ? 'Tel.: ' . $e['telefono'] : '', $e['mail'], $e['condicion'] !== '' ? $e['condicion'] : '']);
+        if ($logo !== null) {
+            $escala = min(80 / $logo['ancho'], 14 / $logo['alto']);
+            $pdf->jpeg($logo['datos'], $m + 3, $m + 2, $logo['ancho'] * $escala, $logo['alto'] * $escala);
+            $pdf->texto($m + 3, $m + 20, $pdf->ajustar($e['nombre'] ?: 'Empresa sin cargar', 82, 10.5, true), 10.5, true);
+            $y = $m + 24.2;
+            $paso = 3.5;
+            $tam = 7.5;
+        } else {
+            $pdf->texto($m + 3, $m + 8, $pdf->ajustar($e['nombre'] ?: 'Empresa sin cargar', 80, 13, true), 13, true);
+            $y = $m + 14;
+            $paso = 4.5;
+            $tam = 8.5;
+        }
+        foreach ($lineas as $l) {
+            $pdf->texto($m + 3, $y, $pdf->ajustar($l, 82, $tam), $tam, $l === $e['condicion']);
+            $y += $paso;
         }
         // centro: letra
         $pdf->rect($m + 86, $m, 18, 20, 0.3);

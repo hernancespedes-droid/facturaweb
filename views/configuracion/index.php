@@ -26,3 +26,31 @@
     <?php endforeach; ?>
     <button class="btn" type="submit">Guardar</button>
 </form>
+
+<?php $logo = \App\Modules\Configuracion\Logo::obtener(); ?>
+<section class="card" id="logo">
+    <h2>Logo de los comprobantes</h2>
+    <p class="small muted">Sale arriba a la izquierda en las facturas, notas de crédito y débito, recibos y en el PDF que se manda por mail.
+        PNG, JPG, GIF o WEBP de hasta 2 MB; conviene horizontal y con fondo blanco o transparente (lo transparente se imprime en blanco).</p>
+    <?php if ($logo !== null): ?>
+        <div class="logo-actual" style="border:1px solid var(--line-2); padding:8px; display:inline-block; background:#fff; margin-bottom:10px">
+            <img src="<?= e((string) \App\Modules\Configuracion\Logo::dataUri()) ?>" alt="Logo actual" style="display:block; max-width:300px; max-height:80px">
+        </div>
+    <?php else: ?>
+        <p class="small">Todavía no hay logo cargado.</p>
+    <?php endif; ?>
+    <form method="post" action="<?= e(url('/configuracion/logo')) ?>" enctype="multipart/form-data">
+        <?= csrf_field() ?>
+        <div class="field">
+            <label for="logo-archivo"><?= $logo !== null ? 'Reemplazar por otra imagen' : 'Imagen del logo' ?></label>
+            <input id="logo-archivo" type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/webp" required>
+        </div>
+        <button class="btn" type="submit">Subir logo</button>
+    </form>
+    <?php if ($logo !== null): ?>
+        <form method="post" action="<?= e(url('/configuracion/logo/quitar')) ?>" style="margin-top:10px" onsubmit="return confirm('¿Quitar el logo de los comprobantes?')">
+            <?= csrf_field() ?>
+            <button class="btn btn-ghost" type="submit">Quitar logo</button>
+        </form>
+    <?php endif; ?>
+</section>

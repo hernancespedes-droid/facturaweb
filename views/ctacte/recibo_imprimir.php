@@ -18,7 +18,7 @@ $f = static fn (float $v): string => number_format($v, 2, ',', '.');
         .acciones button { padding: 8px 16px; border: 0; border-radius: 6px; background: #2f6bff; color: #fff; font-weight: 700; cursor: pointer; }
         .hoja { width: 190mm; margin: 0 auto 20px; background: #fff; padding: 8mm; }
         .cab { display: flex; justify-content: space-between; border: 1.5px solid #000; padding: 4mm; }
-        .cab h1 { margin: 0 0 2mm; font-size: 16px; } .cab .nro { text-align: right; font-size: 15px; font-weight: 700; }
+        .cab h1 { margin: 0 0 2mm; font-size: 16px; } .cab img.logo { display: block; max-width: 80mm; max-height: 14mm; margin-bottom: 1.5mm; } .cab .nro { text-align: right; font-size: 15px; font-weight: 700; }
         .cliente { margin-top: 4mm; border: 1px solid #000; padding: 3mm; }
         table { width: 100%; border-collapse: collapse; margin-top: 4mm; }
         th { background: #d9d9d9; border: 1px solid #000; padding: 1.5mm; text-align: left; font-size: 11px; }
@@ -36,7 +36,7 @@ $f = static fn (float $v): string => number_format($v, 2, ',', '.');
 <div class="acciones"><button type="button" onclick="window.print()">Imprimir</button></div>
 <div class="hoja">
     <div class="cab">
-        <div><h1><?= e($e['empresa'] ?? '') ?></h1><div><?= e(trim(($e['domicilio'] ?? '') . ' ' . ($e['localidad'] ?? ''))) ?></div>
+        <div><?php if (($logo = \App\Modules\Configuracion\Logo::dataUri()) !== null): ?><img class="logo" src="<?= e($logo) ?>" alt=""><?php endif; ?><h1><?= e($e['empresa'] ?? '') ?></h1><div><?= e(trim(($e['domicilio'] ?? '') . ' ' . ($e['localidad'] ?? ''))) ?></div>
             <?php if (!empty($e['cuit'])): ?><div>CUIT <?= e(cuit_texto($e['cuit'])) ?></div><?php endif; ?></div>
         <div class="nro">RECIBO X<br><?= e(numero_cbte($c['prefijo'], $c['recibo'])) ?><br><span style="font-weight:400">Fecha <?= e(fecha($c['fecha'])) ?></span></div>
     </div>
