@@ -51,6 +51,18 @@ final class GrillaExcel
             }
             $filas[] = array_map(static fn ($i) => $celdas[$i] ?? '', $usar);
         }
+        // Columnas de campos para completar (cobrar, aplicar…): en el Excel quedan vacías, se sacan
+        foreach (array_keys($usar) as $k) {
+            if ($filas !== [] && array_filter($filas, static fn ($f) => $f[$k] !== '') === []) {
+                unset($usar[$k]);
+                foreach ($filas as &$f) {
+                    unset($f[$k]);
+                }
+                unset($f);
+            }
+        }
+        $usar = array_values($usar);
+        $filas = array_map('array_values', $filas);
         $anchos = [];
         foreach ($usar as $k => $i) {
             $max = mb_strlen($titulos[$i]);
@@ -66,20 +78,10 @@ final class GrillaExcel
         return $x->contenido();
     }
 
-    /** Las tablas de datos (no las de los formularios, que tienen campos para escribir). */
+    /** Las grillas: toda tabla .table salvo las marcadas data-grilla="no" (las que tienen campos se exportan sin las columnas que quedan vacías). */
     public static function esGrilla(\DOMElement $t): bool
     {
-        if (!str_contains(' ' . $t->getAttribute('class') . ' ', ' table ') || $t->getAttribute('data-grilla') === 'no') {
-            return false;
-        }
-        foreach (['input', 'select', 'textarea'] as $tag) {
-            foreach ($t->getElementsByTagName($tag) as $campo) {
-                if ($campo->getAttribute('type') !== 'hidden') {
-                    return false;
-                }
-            }
-        }
-        return true;
+        return str_contains(' ' . $t->getAttribute('class') . ' ', ' table ') && $t->getAttribute('data-grilla') !== 'no';
     }
 
     private static function texto(\DOMNode $n): string

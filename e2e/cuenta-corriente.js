@@ -91,6 +91,8 @@ async function factura(page, precio) {
     await Promise.all([page.waitForNavigation(), page.click('[data-cliente-lista] li')]);
     ok((await page.textContent('h1')).includes('CLIENTE E2E CC'), 'el recibo arranca con el cliente elegido');
     ok((await page.locator('[data-marca]').count()) === 2, 'lista las dos facturas pendientes');
+    ok((await page.locator('th.th-ordenable').count()) > 0 && (await page.locator('.grilla-barra a').count()) > 0, 'grilla del recibo: orden por columna y Excel');
+    ok(await page.evaluate(() => { const w = document.querySelector('.table-wrap.grilla'); return !!w && w.style.maxHeight !== ''; }), 'grilla del recibo: entra en la pantalla');
     await page.locator('details summary').click();
     await page.click('[data-agregar-ret]');
     ok((await page.locator('[data-ret-fila]').count()) === 1, 'se puede agregar un renglón de retención (de la tabla)');

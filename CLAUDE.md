@@ -73,8 +73,8 @@ debajo y **el usuario elige siempre**; nunca se toma la primera. Reutilizar `Art
 ## Grillas (regla de Hernán)
 
 Toda grilla: **orden por columna** (con páginas, en el servidor con `Core\Orden::sql()` + `th_orden()`; sin páginas lo hace `grilla.js`), **Excel**
-(genérico: `?excel=grilla&tabla=N` → `Core\GrillaExcel`, todo lo filtrado) y **alto de pantalla** con scroll propio (vertical y a la derecha). Una tabla
-que es formulario o no debe tener esto lleva `data-grilla="no"`. Las grillas nuevas con páginas tienen que declarar sus columnas ordenables.
+(genérico: `?excel=grilla&tabla=N` → `Core\GrillaExcel`, todo lo filtrado) y **alto de pantalla** con scroll propio (vertical y a la derecha). Vale también para las grillas con campos para completar
+(cobrar, aplicar…); solo una tabla que no debe tenerlo (los renglones del comprobante, que se agregan y se quitan) lleva `data-grilla="no"`. Las grillas nuevas con páginas tienen que declarar sus columnas ordenables.
 
 ## Seguridad
 

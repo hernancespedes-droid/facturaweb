@@ -28,7 +28,10 @@ final class GrillasTest extends ComprobantesTestCase
             . '<table class="table"><tbody><tr><td><input name="x"></td></tr></tbody></table>';
         $x = GrillaExcel::desdeHtml($html, 0);
         $this->assertNotNull($x);
-        $this->assertNull(GrillaExcel::desdeHtml($html, 1), 'la tabla con campos (formulario) no es grilla');
+        $this->assertNotNull(GrillaExcel::desdeHtml($html, 1), 'las grillas con campos para completar también se exportan');
+        $this->assertNull(GrillaExcel::desdeHtml('<table class="table" data-grilla="no"><tbody><tr><td>x</td></tr></tbody></table>', 0), 'salvo las marcadas data-grilla=no');
+        $conCampos = '<table class="table"><thead><tr><th>Comprobante</th><th>Cobrar</th></tr></thead><tbody><tr><td>FC 1</td><td><input name="c[1]"></td></tr></tbody></table>';
+        $this->assertStringNotContainsString('Cobrar', $this->leerHoja((string) GrillaExcel::desdeHtml($conCampos, 0)), 'la columna de campos vacía no va al Excel');
         $z = $this->leerHoja($x);
         $this->assertStringContainsString('Cod', $z);
         $this->assertStringContainsString('<v>1000.5</v>', $z, 'el importe va como número');
