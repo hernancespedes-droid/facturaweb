@@ -103,6 +103,11 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 - **Cuidados del contenedor**: MySQL local se cae al reiniciar el contenedor (`bash bin/setup-dev.sh`; si no arranca, borrar `/var/run/mysqld/*.lock` y `/var/lib/mysql/vm.pid`).
   Las claves, certificados y datos reales de clientes nunca van al repo ni al chat.
 
+## Portal de clientes (0.13.0)
+
+`/portal`: el cliente entra con un link que le llega al mail (sin contraseña, 30 min, una vez) y baja sus comprobantes y ve su saldo. Se prende en
+Configuración (`portal.activo`) y necesita el mail de salida. Código: `Modules/Portal`, vistas `views/portal` (layout propio, sin el menú del sistema).
+
 ## Datos de OYS (copia 11/11/2026, en Drive, nunca al repo)
 
 `datos_facturador_web20261111122233.rar` (RAR5, se abre con `unrar`). 3.371 comprobantes (2010–2025, PV 0004, casi todo FC A),

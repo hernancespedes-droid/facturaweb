@@ -1079,3 +1079,17 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
   .ventana-lista .va-pie .btn { white-space: nowrap; padding: 6px 10px; min-height: 40px; font-size: .85rem; }
   .ventana-lista .va-info { white-space: nowrap; }
 }
+
+/* Portal de clientes */
+.portal-main { max-width: 760px; padding-top: 24px; padding-bottom: 40px; }
+.portal-card { max-width: 440px; margin: 6vh auto 0; }
+.portal-card form { display: grid; gap: 12px; margin-top: 12px; }
+.btn-ancho { width: 100%; justify-content: center; }
+.portal-ok { font-size: 1.1rem; }
+.portal-resumen .card { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.portal-saldo { font-size: 1.6rem; }
+.portal-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.portal-lista li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; margin: 0; }
+.portal-lista li > div:first-child { display: flex; flex-direction: column; }
+.portal-importe { font-weight: 700; white-space: nowrap; }
+@media (max-width: 560px) { .portal-lista li { grid-template-columns: 1fr auto; } .portal-lista li .acciones { grid-column: 1 / -1; } .portal-lista li .acciones .btn { flex: 1; justify-content: center; } }
