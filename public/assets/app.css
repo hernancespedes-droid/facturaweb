@@ -1093,3 +1093,14 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .portal-lista li > div:first-child { display: flex; flex-direction: column; }
 .portal-importe { font-weight: 700; white-space: nowrap; }
 @media (max-width: 560px) { .portal-lista li { grid-template-columns: 1fr auto; } .portal-lista li .acciones { grid-column: 1 / -1; } .portal-lista li .acciones .btn { flex: 1; justify-content: center; } }
+
+/* Grillas: entran en la pantalla, se desplazan adentro (también a la derecha) con los títulos fijos; orden por columna y Excel (grilla.js) */
+.table-wrap.grilla { overflow: auto; }
+.table-wrap.grilla thead th { position: sticky; top: 0; z-index: 2; }
+.table-wrap.grilla tfoot th, .table-wrap.grilla tfoot td { position: sticky; bottom: 0; background: var(--panel-2); z-index: 1; }
+.th-ordenable { cursor: pointer; user-select: none; }
+.th-ordenable:hover { color: var(--text); }
+.th-ordenable[aria-sort="ascending"]::after { content: ' ▲'; }
+.th-ordenable[aria-sort="descending"]::after { content: ' ▼'; }
+.grilla-barra { display: flex; justify-content: flex-end; margin: 0 0 6px; }
+@media (max-width: 760px) { .table-wrap.grilla { overflow: visible; max-height: none; } .grilla-barra { justify-content: flex-start; } }

@@ -103,6 +103,10 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 - **Cuidados del contenedor**: MySQL local se cae al reiniciar el contenedor (`bash bin/setup-dev.sh`; si no arranca, borrar `/var/run/mysqld/*.lock` y `/var/lib/mysql/vm.pid`).
   Las claves, certificados y datos reales de clientes nunca van al repo ni al chat.
 
+## Regla de grillas (Hernán, 17/11/2026)
+
+Todas las grillas: orden por columna, botón Excel (todo lo filtrado) y que entren en la pantalla con scroll propio vertical y a la derecha (0.14.0).
+
 ## Portal de clientes (0.13.0)
 
 `/portal`: el cliente entra con un link que le llega al mail (sin contraseña, 30 min, una vez) y baja sus comprobantes y ve su saldo. Se prende en

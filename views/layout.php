@@ -20,6 +20,7 @@ $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] =
     <title><?= e(($title ?? '') !== '' ? $title . ' - ' : '') ?><?= e($nombreSistema) ?></title>
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
     <script src="<?= e(asset('assets/app.js')) ?>" defer></script>
+    <script src="<?= e(asset('assets/grilla.js')) ?>" defer></script>
 </head>
 <body class="menu-horizontal">
     <header class="topbar">

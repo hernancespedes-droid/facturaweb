@@ -72,7 +72,7 @@ final class IvaVentas
                 s.neto_grabado * {$sg} AS gravado, s.neto_exento * {$sg} AS exento, s.neto * {$sg} AS total,
                 COALESCE(SUM(i.importe), 0) * {$sg} AS iva_total {$cols}
             FROM subdiario s LEFT JOIN clientes c ON c.codigo = s.cliente LEFT JOIN iva i ON i.subdiario_id = s.fe_clave
-            {$where} GROUP BY s.fe_clave ORDER BY s.fecha, s.prefijo, s.tipo, numero";
+            {$where} GROUP BY s.fe_clave ORDER BY " . \App\Core\Orden::sql(['fecha' => 's.fecha', 'numero' => 's.prefijo, s.tipo, numero', 'cliente' => 'razon_social', 'cuit' => 's.cuit_cliente', 'gravado' => 'gravado', 'exento' => 'exento', 'total' => 'total'], (string) ($f['orden'] ?? ''), 's.fecha, s.prefijo, s.tipo, numero');
         if ($todo) {
             $sql .= ' LIMIT ' . ExcelListado::MAX;
         } else {

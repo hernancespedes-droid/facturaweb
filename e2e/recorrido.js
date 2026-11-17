@@ -244,6 +244,20 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.goto(BASE + '/stock?q=e2e');
     ok((await page.content()).includes('E2E-001'), 'saldos de stock: aparece el artículo con saldo');
     await page.screenshot({ path: path.join(CAPTURAS, 'stock-saldos.png'), fullPage: true });
+    // grillas: orden por columna (servidor con páginas, navegador sin páginas), Excel y alto que entra en la pantalla
+    await page.goto(BASE + '/comprobantes?cliente=E2E');
+    await Promise.all([page.waitForNavigation(), page.click('th a.th-orden:has-text("Total")')]);
+    ok(page.url().includes('orden=total'), 'grillas: el título ordena (en el servidor)');
+    const xls = await ctx.request.get(await page.locator('.grilla-barra a').first().evaluate(a => a.href));
+    ok(xls.status() === 200 && (xls.headers()['content-type'] || '').includes('spreadsheetml'), 'grillas: el botón Excel baja la grilla');
+    ok(await page.evaluate(() => { const w = document.querySelector('.table-wrap.grilla'); return w && w.style.maxHeight !== '' && getComputedStyle(w).overflowX === 'auto'; }),
+      'grillas: la grilla entra en la pantalla y se desplaza adentro');
+    await page.goto(BASE + '/usuarios');
+    const ths = page.locator('th.th-ordenable');
+    ok((await ths.count()) > 0, 'grillas sin páginas: títulos ordenables en el navegador');
+    await ths.first().click();
+    ok((await ths.first().getAttribute('aria-sort')) === 'ascending', 'grillas sin páginas: ordena al tocar el título');
+    await page.screenshot({ path: path.join(CAPTURAS, 'grilla-usuarios.png') });
     // agente de sincronización: crear una clave y verla una sola vez
     await page.goto(BASE + '/agente');
     await page.fill('input[name=nombre]', 'T e2e agente');

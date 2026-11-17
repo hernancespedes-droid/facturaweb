@@ -25,7 +25,7 @@ $n = static fn ($v) => rtrim(rtrim(number_format((float) $v, 3, ',', '.'), '0'),
 <?php else: ?>
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
     <div class="table-wrap"><table class="table table-cards">
-        <thead><tr><th>Código</th><th>Descripción</th><th>SKU</th><th class="num">Stock (unidades)</th><th class="num">Bultos</th><th class="num">Mínimo</th></tr></thead>
+        <?php $u = url('/stock'); ?><thead><tr><?= th_orden('Código', 'codigo', $f, $u) ?><?= th_orden('Descripción', 'descripcion', $f, $u) ?><?= th_orden('SKU', 'sku', $f, $u) ?><?= th_orden('Stock (unidades)', 'saldo', $f, $u, true) ?><th class="num">Bultos</th><?= th_orden('Mínimo', 'minimo', $f, $u) ?></tr></thead>
         <tbody>
         <?php foreach ($filas as $r): $bajo = (float) $r['saldo'] < (float) $r['minimo']; ?>
             <tr><td data-label="Código" class="nw"><a href="<?= e(url('/stock/articulo/' . rawurlencode((string) $r['codigo']))) ?>"><?= e($r['codigo']) ?></a></td>

@@ -15,7 +15,7 @@ final class ListadosController
 {
     private static function filtros(Request $req): array
     {
-        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'pv', 'tipo', 'pruebas'])));
+        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'pv', 'tipo', 'pruebas', 'orden'])));
         if (!array_key_exists('desde', $req->query)) { // por omisión, el mes en curso
             $f['desde'] = date('01/m/Y');
             $f['hasta'] = date('t/m/Y');

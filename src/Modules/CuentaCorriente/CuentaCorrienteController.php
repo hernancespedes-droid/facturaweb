@@ -31,7 +31,7 @@ final class CuentaCorrienteController
 
     public static function resumen(Request $req, array $params): Response
     {
-        $f = self::filtros($req, ['q', 'al', 'solo_deudores']);
+        $f = self::filtros($req, ['q', 'al', 'solo_deudores', 'orden']);
         if (!array_key_exists('q', $req->query)) {
             $f['solo_deudores'] = '1';
         }
@@ -94,7 +94,7 @@ final class CuentaCorrienteController
 
     public static function recibos(Request $req, array $params): Response
     {
-        $f = self::filtros($req, ['desde', 'hasta', 'cliente']);
+        $f = self::filtros($req, ['desde', 'hasta', 'cliente', 'orden']);
         if (!array_key_exists('desde', $req->query)) {
             $f['desde'] = date('01/m/Y');
             $f['hasta'] = date('t/m/Y');
@@ -245,7 +245,7 @@ final class CuentaCorrienteController
 
     public static function cheques(Request $req, array $params): Response
     {
-        $f = self::filtros($req, ['estado', 'desde', 'hasta', 'q', 'diferidos']);
+        $f = self::filtros($req, ['estado', 'desde', 'hasta', 'q', 'diferidos', 'orden']);
         $svc = new CuentaCorrienteService();
         if (ExcelListado::pedido($req)) {
             $r = $svc->cheques($f, 1, 1, true);

@@ -753,7 +753,7 @@ final class CuentaCorrienteService
         $st = $this->pdo->prepare("SELECT COUNT(*) FROM cobra c LEFT JOIN clientes k ON k.codigo = c.cliente WHERE {$w}");
         $st->execute($p);
         $total = (int) $st->fetchColumn();
-        $st = $this->pdo->prepare("SELECT c.*, k.razon_social FROM cobra c LEFT JOIN clientes k ON k.codigo = c.cliente WHERE {$w} ORDER BY c.fecha DESC, c.id DESC LIMIT " . (int) $porPagina . ' OFFSET ' . (($pagina - 1) * $porPagina));
+        $st = $this->pdo->prepare("SELECT c.*, k.razon_social FROM cobra c LEFT JOIN clientes k ON k.codigo = c.cliente WHERE {$w} ORDER BY " . \App\Core\Orden::sql(['fecha' => 'c.fecha', 'recibo' => 'c.recibo', 'cliente' => 'k.razon_social', 'cancela' => 'c.bruto', 'cobrado' => 'c.neto', 'estado' => 'c.estado'], (string) ($f['orden'] ?? ''), 'c.fecha DESC, c.id DESC') . " LIMIT " . (int) $porPagina . ' OFFSET ' . (($pagina - 1) * $porPagina));
         $st->execute($p);
         return ['filas' => $st->fetchAll(), 'total' => $total];
     }
@@ -798,7 +798,7 @@ final class CuentaCorrienteService
         [$total, $suma] = $st->fetch(PDO::FETCH_NUM);
         $lim = $todo ? '' : ' LIMIT ' . (int) $porPagina . ' OFFSET ' . (($pagina - 1) * $porPagina);
         $st = $this->pdo->prepare("SELECT c.fe_clave, c.fecha, c.tipo, c.letra, c.prefijo, c.comprobante, c.cliente, c.p_nro, c.p_fecvto, c.p_banco, c.p_importe, c.cheque_estado, c.cheque_fecha, c.cheque_obs,
-            c.cobra_id, k.razon_social, b.descripcion AS banco {$from} ORDER BY c.p_fecvto, c.fe_clave{$lim}");
+            c.cobra_id, k.razon_social, b.descripcion AS banco {$from} ORDER BY " . \App\Core\Orden::sql(['cobro' => 'c.p_fecvto', 'numero' => 'c.p_nro', 'banco' => 'banco', 'cliente' => 'k.razon_social', 'importe' => 'c.p_importe', 'estado' => 'c.cheque_estado'], (string) ($f['orden'] ?? ''), 'c.p_fecvto, c.fe_clave') . "{$lim}");
         $st->execute($p);
         return ['filas' => $st->fetchAll(), 'total' => (int) $total, 'suma' => self::redondear((float) $suma)];
     }
@@ -852,7 +852,7 @@ final class CuentaCorrienteService
         $st->execute($pp);
         $t = $st->fetch(PDO::FETCH_NUM);
         $lim = $todo ? '' : ' LIMIT ' . (int) $porPagina . ' OFFSET ' . (($pagina - 1) * $porPagina);
-        $st = $this->pdo->prepare("{$base}{$having} ORDER BY saldo DESC, k.razon_social{$lim}");
+        $st = $this->pdo->prepare("{$base}{$having} ORDER BY " . \App\Core\Orden::sql(['cliente' => 'k.razon_social', 'deuda' => 'deuda', 'a_favor' => 'a_favor', 'saldo' => 'saldo', 'vencido' => 'vencido', 'antiguo' => 'primer_vencimiento IS NULL, primer_vencimiento'], (string) ($f['orden'] ?? ''), 'saldo DESC, k.razon_social') . "{$lim}");
         $st->execute($pp);
         return ['filas' => $st->fetchAll(), 'total' => (int) $t[0], 'totales' => ['deuda' => (float) $t[1], 'a_favor' => (float) $t[2], 'saldo' => (float) $t[3], 'vencido' => (float) $t[4]]];
     }

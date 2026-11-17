@@ -23,7 +23,7 @@ $paginas = (int) ceil($total / max(1, $porPagina));
     <div class="resumen-cifras small"><b>Deuda:</b> <?= e(plata_dec($totales['deuda'])) ?> · <b>A favor:</b> <?= e(plata_dec($totales['a_favor'])) ?> · <b>Saldo:</b> <?= e(plata_dec($totales['saldo'])) ?> · <b>Vencido:</b> <span class="texto-error"><?= e(plata_dec($totales['vencido'])) ?></span> · <?= (int) $total ?> cliente(s)</div>
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
     <div class="table-wrap"><table class="table table-cards">
-        <thead><tr><th>Cliente</th><th class="num">Deuda</th><th class="num">A favor</th><th class="num">Saldo</th><th class="num">Vencido</th><th>Más antiguo</th><th></th></tr></thead>
+        <?php $u = url('/cuenta-corriente'); ?><thead><tr><?= th_orden('Cliente', 'cliente', $f, $u) ?><?= th_orden('Deuda', 'deuda', $f, $u, true) ?><?= th_orden('A favor', 'a_favor', $f, $u, true) ?><?= th_orden('Saldo', 'saldo', $f, $u, true) ?><?= th_orden('Vencido', 'vencido', $f, $u, true) ?><?= th_orden('Más antiguo', 'antiguo', $f, $u) ?><th></th></tr></thead>
         <tbody>
         <?php foreach ($filas as $r): ?>
             <tr><td data-label="Cliente"><a href="<?= e(url('/cuenta-corriente/cliente/' . (int) $r['cliente'])) ?>"><?= e($r['razon_social'] ?? '(cliente borrado)') ?></a> <small class="muted">(<?= (int) $r['cliente'] ?>)</small></td>

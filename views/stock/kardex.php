@@ -1,7 +1,9 @@
 <?php
 /** @var array<string,mixed> $art @var array $filas @var int $total @var int $pagina @var int $porPagina @var array $porDeposito @var float $saldo */
 use App\Modules\Stock\StockService;
-$link = static fn (int $p) => url('/stock/articulo/' . rawurlencode((string) $art['codigo'])) . '?pagina=' . $p;
+$f = ['orden' => (string) ($orden ?? '')];
+$uk = url('/stock/articulo/' . rawurlencode((string) $art['codigo']));
+$link = static fn (int $p) => $uk . '?' . http_build_query(['pagina' => $p] + array_filter($f));
 $paginas = (int) ceil($total / max(1, $porPagina));
 $n = static fn ($v) => rtrim(rtrim(number_format((float) $v, 3, ',', '.'), '0'), ',');
 ?>
@@ -18,7 +20,7 @@ $n = static fn ($v) => rtrim(rtrim(number_format((float) $v, 3, ',', '.'), '0'),
 <?php if ($filas === []): ?><p class="muted vacio">Todavía no hay movimientos.</p><?php else: ?>
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
     <div class="table-wrap"><table class="table table-cards">
-        <thead><tr><th>Fecha</th><th>Movimiento</th><th>Depósito</th><th class="num">Cantidad</th><th>Detalle</th><th>Usuario</th></tr></thead>
+        <thead><tr><?= th_orden('Fecha', 'fecha', $f, $uk, true) ?><?= th_orden('Movimiento', 'origen', $f, $uk) ?><?= th_orden('Depósito', 'deposito', $f, $uk) ?><?= th_orden('Cantidad', 'cantidad', $f, $uk) ?><th>Detalle</th><?= th_orden('Usuario', 'usuario', $f, $uk) ?></tr></thead>
         <tbody><?php foreach ($filas as $m): ?>
             <tr><td data-label="Fecha" class="nw"><?= e(date('d/m/Y H:i', (int) strtotime($m['fecha']))) ?></td>
                 <td data-label="Movimiento"><?= e(StockService::ORIGENES[$m['origen']] ?? $m['origen']) ?></td>

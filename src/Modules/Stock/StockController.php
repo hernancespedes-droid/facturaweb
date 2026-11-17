@@ -15,7 +15,7 @@ final class StockController
     public static function index(Request $req, array $params): Response
     {
         $svc = new StockService();
-        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['q', 'deposito', 'bajo', 'todos'])));
+        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['q', 'deposito', 'bajo', 'todos', 'orden'])));
         $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
         $por = Configuracion::porPagina();
         $r = $svc->saldos($f, $pagina, $por);
@@ -41,9 +41,10 @@ final class StockController
         }
         $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
         $por = Configuracion::porPagina();
-        $r = $svc->kardex((string) $art['codigo'], $pagina, $por);
+        $orden = preg_replace('/[^a-z_]/', '', (string) ($req->query['orden'] ?? '')) ?? '';
+        $r = $svc->kardex((string) $art['codigo'], $pagina, $por, $orden);
         return Response::html(View::render('stock/kardex', ['title' => 'Stock de ' . $art['codigo'], 'nav' => 'stock', 'art' => $art, 'filas' => $r['filas'], 'total' => $r['total'],
-            'pagina' => $pagina, 'porPagina' => $por, 'porDeposito' => $svc->porDeposito((string) $art['codigo']), 'saldo' => $svc->saldo((string) $art['codigo'])]));
+            'pagina' => $pagina, 'porPagina' => $por, 'orden' => $orden, 'porDeposito' => $svc->porDeposito((string) $art['codigo']), 'saldo' => $svc->saldo((string) $art['codigo'])]));
     }
 
     private static function formulario(string $vista, string $titulo, array $datos, ?string $error, int $status = 200): Response

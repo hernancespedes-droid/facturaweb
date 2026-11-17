@@ -35,9 +35,9 @@ $nombreAlic = static fn (float $a) => rtrim(rtrim(number_format($a, 2, ',', ''),
 <?php else: ?>
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
     <div class="table-wrap"><table class="table table-cards tabla-iva">
-        <thead><tr><th>Fecha</th><th>Comprobante</th><th>Cliente</th><th>CUIT</th><th class="num">Neto gravado</th><th class="num">Exento</th>
+        <?php $u = url('/listados/iva-ventas'); ?><thead><tr><?= th_orden('Fecha', 'fecha', $f, $u) ?><?= th_orden('Comprobante', 'numero', $f, $u) ?><?= th_orden('Cliente', 'cliente', $f, $u) ?><?= th_orden('CUIT', 'cuit', $f, $u) ?><?= th_orden('Neto gravado', 'gravado', $f, $u, true) ?><?= th_orden('Exento', 'exento', $f, $u, true) ?>
             <?php foreach ($alicuotas as $a): ?><th class="num">IVA <?= e($nombreAlic($a)) ?> %</th><?php endforeach; ?>
-            <th class="num">Otras</th><th class="num">Total</th></tr></thead>
+            <th class="num">Otras</th><?= th_orden('Total', 'total', $f, $u, true) ?></tr></thead>
         <tbody>
         <?php foreach ($filas as $r): ?>
             <tr><td data-label="Fecha" class="nw"><?= e(date('d/m/Y', (int) strtotime($r['fecha']))) ?></td>
