@@ -36,7 +36,7 @@ description: Contexto, decisiones y estado del proyecto FacturaWeb (facturador w
 | 2 | Facturación FC/NC/ND A, B, C (E si exportan), ítems, IVA por alícuota, numeración, impresión, mail | **Hecha: versión 0.3.0** (nota `docs/entregas/0.3.0-etapa2.md`), **sin CAE**; falta la prueba de Hernán |
 | 3 | Factura electrónica con `lib/afip_fe` (A, B, C, M, FCE); WSFEX (E) en otra etapa | **Hecha: versión 0.4.0** (nota `docs/entregas/0.4.0-etapa3.md`) con ARCA **simulado** probado; falta que Hernán haga certificado/PV (`docs/ARCA-PUESTA-EN-MARCHA.md`) y confirme las decisiones (`docs/decisiones-pendientes.md`) |
 | 4 | Cta. cte. y cheques (recibos, imputación, ajustes, cartera) | **Hecha: versión 0.10.0** (nota `docs/entregas/0.10.0-etapa4-cuenta-corriente.md`); falta la prueba de Hernán, confirmar D-28…D-32 y que los recibos viajen al VFP |
-| 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | **En curso**: subdiario de IVA ventas (0.4.2), cobranzas/deuda/cheques (0.10.0) y **Libro IVA Digital ventas (0.11.0)** hechos; falta probar el libro en el Portal IVA y el PDF del subdiario |
+| 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | **Casi hecha**: subdiario de IVA ventas en pantalla/Excel (0.4.2) e **impreso para el libro** (0.15.0), cobranzas/deuda/cheques (0.10.0), **Libro IVA Digital ventas (0.11.0)**; falta probar el libro en el Portal IVA |
 | 6 | Pase a producción OYS: histórico completo, control de saldos contra VFP, capacitación | Pendiente |
 | 7 | Producto: alta de instalaciones, licencia de suscripción, actualización masiva | Pendiente |
 
@@ -82,35 +82,52 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   `public/assets/buscador.js` (`<input data-buscador-url="…">`). Clientes: `Comprobantes → buscarCliente`. Además cada buscador lleva un ícono de lupa que abre la ventana «ver lista» (`public/assets/ventana-lista.js`: `VentanaLista.articulos/clientes`; servidor `?listar=1`, `BuscadorArticulos::listar`, `buscarCliente`) para recorrer y elegir: **toda pantalla nueva con artículos o clientes lleva buscador + lupa** (`icono_lista()`). **Al crear una pantalla nueva con estos
   datos hay que reutilizar estos buscadores, no hacer otro campo.** El servidor igual vuelve a validar lo que llega.
 
-## Estado actual (14/11/2026, versión 0.11.0) y cómo se trabaja
+## Estado actual (17/11/2026, versión 0.15.0) y cómo se trabaja
 
 - **Ya facturando en ARCA producción** (Hernán emitió factura y nota de crédito): alias OYS (CUIT 20-11499319-1), certificado propio de la web, **punto de venta 7**
   (el 4 es del VFP: no se toca). Config de ARCA fuera de `public_html` (`afip_oys/` en el hosting). Modo en `config/local.php` (`afip.modo`).
 - **Hosting de prueba**: DonWeb (Ferozo) con GIT, **sin SSH**; repo en `public_html/facturador_web/`, subdominio `facturador.oesteparts.site`
   apuntando a `public/`. Se actualiza con GIT → botón `>_` y luego **Sistema → Aplicar cambios**. No activar el webhook de auto-despliegue.
 - **Rama `main` + pull requests** (igual que oesteparts): cada cambio en una rama `claude/…`, PR a `main` y fusión. Versión en `VERSION` (0.4.0 etapa 3, 0.4.1
-  códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos, 0.7.2 lupa y lista de clientes, 0.8.0 web→VFP, 0.9.0 alta de clientes y licencia, 0.10.0 cuenta corriente y recibos, 0.11.0 Libro IVA Digital).
+  códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos, 0.7.2 lupa y lista de clientes, 0.8.0 web→VFP, 0.9.0 alta de clientes y licencia, 0.10.0 cuenta corriente y recibos, 0.11.0 Libro IVA Digital, 0.11.1 arreglo de GIT en Ferozo, 0.12.0 logo en los comprobantes,
+  0.12.1 scripts de `bin/` congelados, 0.13.0 portal de clientes, 0.14.0/0.14.1 grillas con orden, Excel y alto de pantalla, 0.15.0 subdiario impreso para el libro).
+- **Scripts congelados**: no tocar `bin/package.sh`, `bin/test.sh`, `bin/setup-dev.sh`, `bin/dev-server.sh` ni `bin/env.sh` (si cambian, el GIT de Ferozo no
+  actualiza). Los vivos son `bin/pruebas.sh` (pruebas) y `bin/empaquetar.sh` (paquete).
 - **Hecho más allá de las etapas**: artículos con EAN-13/DUN-14/SKU/unidades por bulto; buscador de artículos en renglones y stock; texto adicional por renglón;
   Listados → Subdiario IVA ventas (pantalla y Excel); **Stock** (movimientos + saldos en la misma transacción, varios depósitos, bultos, se factura sin stock,
   `stock.controlar` apagado por omisión); **Agente** (`agente-windows/`, PowerShell, sube comprobantes del VFP a la web; API con claves en Sistema → Agente).
-- **Decisiones de Claude a confirmar**: `docs/decisiones-pendientes.md` (D-01…D-20; D-01, D-02, D-11 son interruptores de Configuración).
+- **Decisiones de Claude a confirmar**: `docs/decisiones-pendientes.md` (D-01…D-36; D-01, D-02, D-11 son interruptores de Configuración).
 - **Web → VFP (0.8.0, hecho pero sin probar en el VFP real)**: lo emitido en la web con validez fiscal + el stock quedan en cola (`subdiario.vfp_enviado/vfp_error`); el agente baja un lote a `intercambio\entrada` (`GET /api/v1/vfp/pendientes`), el programa `vfp-importador/IMPORTAR_WEB.PRG` lo graba dentro del VFP (SUBDIARIO, IVA, ESTADISTICA, CAJA, CTACT, STOCK, MVSTK_*) y deja `salida\resultado_*.txt` que el agente devuelve (`POST /api/v1/vfp/confirmar`). Formato en `Agente/ExportadorVfp`. El VFP de OYS tiene las tablas de stock (hoy vacías) y los tipos BS/AS. Decisiones D-22…D-25. **Pendiente: que Hernán pruebe el `.prg` en una copia de los datos (con `DO IMPORTAR_WEB WITH .T.`) y ajustarlo.** Los datos reales de OYS se abren en el scratchpad (RAR de Drive por `download_file_content`, que guarda el resultado en un archivo; `unrar`/`unrar-free` hay que instalarlo con apt).
 - **Altas de clientes nuevos (0.9.0)**: manual `docs/alta-de-cliente.md`, lecciones `docs/lecciones-alta.md` (**leerlas antes de un alta**), instalaciones `docs/instalaciones.md`, plantillas `docs/clientes/`. `bin/alta-cliente.php` prepara `config/local.php` + `PASOS.md` + `ficha.md` (fuera del repo; las fichas con datos del cliente van a Drive). Suscripción mensual: licencia firmada Ed25519 (`bin/licencia.php clave|emitir|verificar`, `Licencia/Licencia`, Sistema → Licencia, `'licencia' => ['exigir' => true]` en `config/local.php`); la clave privada es de Hernán y nunca va al repo ni al chat; falta que genere el par y suba `config/licencia_publica.txt`. **Después de cada alta: completar la ficha y pasar lo generalizable a `docs/lecciones-alta.md`.** Cliente 2: VFP de O&S, 1 CUIT, 1 PV, mismo hosting, mensual.
 - **Cuenta corriente y recibos (0.10.0)**: módulo `Modules/CuentaCorriente` (`CuentaCorrienteService`: recibos, imputación manual, ajustes AD/AC, anulación, cheques, deuda). tico de `ctact`: 1 FC, 2 ND, 3 AD | 7 RC, 8 NC, 9 AC; débito = tico < 7. Tablas `cobra` e `imputaciones` (nombres VFP) + `cobra_id` en `ctact`/`caja`. Permisos `ctacte.ver/cobrar/imputar/ajustar` (Operador: ver y cobrar). Buscador de clientes reutilizable: `public/assets/cliente-picker.js` + `views/ctacte/_picker.php`. El migrador lee `cobra` e `imputaciones`. Retenciones = tabla `retenciones` (Tablas → Retenciones, con provincia) + `cobra_retenciones` por recibo (decisión de Hernán 14/11); NC se aplica con imputación manual y la anulación está aprobada. Decisiones D-28…D-32. **Pendiente: que los recibos viajen al VFP por el agente.**
 - **Libro IVA Digital (0.11.0)**: `Listados/LibroIvaDigital` genera `LIBRO_IVA_DIGITAL_VENTAS_CBTE` (266) y `_ALICUOTAS` (62) por mes, solo comprobantes con CAE y no de prueba; pantalla Listados → Libro IVA Digital (`/listados/libro-iva-digital`), controles previos y ZIP. Probado con los 3.371 de OYS (3.369 informables; 6 con datos viejos malos). D-33…D-35. **Falta la primera importación real en el Portal IVA.** Sin compras ni anulados.
-- **Pendiente**: PDF del subdiario; carga masiva del stock inicial; probar y afinar web→VFP;
-  etapas 4 (cta. cte./cheques), 6 y 7; pantalla de equivalencias de condición de IVA; probar el agente en la PC con Windows.
+- **Pendiente**: carga masiva del stock inicial; probar y afinar web→VFP; recibos al VFP;
+  etapas 6 y 7; en el portal: recibos, resumen de cuenta y aviso por mail de comprobante nuevo; pantalla de equivalencias de condición de IVA; probar el agente en la PC con Windows.
 - **Cuidados del contenedor**: MySQL local se cae al reiniciar el contenedor (`bash bin/setup-dev.sh`; si no arranca, borrar `/var/run/mysqld/*.lock` y `/var/lib/mysql/vm.pid`).
   Las claves, certificados y datos reales de clientes nunca van al repo ni al chat.
 
 ## Regla de grillas (Hernán, 17/11/2026)
 
-Todas las grillas: orden por columna, botón Excel (todo lo filtrado) y que entren en la pantalla con scroll propio vertical y a la derecha (0.14.0).
+Todas las grillas: **orden por columna**, botón **Excel** (todo lo filtrado) y que **entren en la pantalla** con scroll propio vertical y a la derecha
+(0.14.0); también las grillas con campos para completar, como «Qué se cancela» del recibo (0.14.1).
+- Con páginas: orden en el servidor (`Core\Orden::sql()` con un mapa clave => SQL fijo + `th_orden()` en la vista; el filtro lleva `orden`). Sin páginas: `public/assets/grilla.js`.
+- Excel genérico: `?excel=grilla&tabla=N` → `App::handle` marca `Core\GrillaExcel::$pedido`, `Configuracion::porPagina()` devuelve el máximo y la tabla del HTML
+  sale en .xlsx (importes como número; códigos/CUIT/números de comprobante como texto; sin columnas de botones ni columnas de campos vacías).
+- Solo los renglones del comprobante (se agregan y se quitan) llevan `data-grilla="no"`. En celular siguen las tarjetas.
+
+## Subdiario impreso para el libro (0.15.0)
+
+Listados → Subdiario IVA ventas → **Imprimir para el libro** (`/listados/iva-ventas/pdf`, `Listados\SubdiarioPdf` + `IvaVentas::libro()`): A4 apaisado
+(`new Pdf(true)`), datos de la empresa, período y número de hoja (hoja inicial elegible) en cada hoja; una fila por comprobante con neto e IVA por
+alícuota, exento, «otros» (solo si hay diferencias) y total; transporte entre hojas; totales y resumen por alícuota. En los datos del VFP la columna
+«Otros» marca algunas NC cuyo IVA quedó vinculado por el neto: revisarlas con el contador.
 
 ## Portal de clientes (0.13.0)
 
 `/portal`: el cliente entra con un link que le llega al mail (sin contraseña, 30 min, una vez) y baja sus comprobantes y ve su saldo. Se prende en
 Configuración (`portal.activo`) y necesita el mail de salida. Código: `Modules/Portal`, vistas `views/portal` (layout propio, sin el menú del sistema).
+Entran los mails de «Mails para las facturas» y «Mails para listados»; solo comprobantes vigentes y fiscales (D-36); tabla `portal_accesos` (hash del link).
+El mail de cada factura agrega la dirección del portal cuando está activo.
 
 ## Datos de OYS (copia 11/11/2026, en Drive, nunca al repo)
 
