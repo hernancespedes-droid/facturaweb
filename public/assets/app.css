@@ -1106,3 +1106,11 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 @media (max-width: 760px) { .table-wrap.grilla { overflow: visible; max-height: none; } .grilla-barra { justify-content: flex-start; } }
 .form-libro { margin: 0; align-items: flex-end; }
 .form-libro .field input { width: 5.5em; }
+
+/* Imputador en dos paneles (cuenta corriente) */
+.imputador-resumen { display: flex; flex-wrap: wrap; gap: 8px 32px; }
+.imputador-resumen > div { display: flex; flex-direction: column; }
+.imputador-resumen b { font-size: 1.3rem; }
+.imputador > .card { min-width: 0; }
+.imputador td input[data-imp-cr], .imputador td input[data-imp-db] { min-width: 120px; text-align: right; }
+.imputador td[data-label="Comprobante"] { white-space: nowrap; }
