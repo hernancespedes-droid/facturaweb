@@ -268,6 +268,24 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     page.once('dialog', d => d.accept());
     await Promise.all([page.waitForNavigation(), page.click('.zona-peligro button')]);
     ok((await page.textContent('.alerta')).includes('lo usan'), 'no borra un vendedor en uso');
+    // portal de clientes: el cliente entra con el link del mail y baja su factura (escritorio y celular)
+    const token = execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_portal.php')]).toString().trim();
+    const cli = await browser.newContext({ ...devices['Pixel 7'] });
+    const pc = await cli.newPage();
+    await pc.goto(BASE + '/portal');
+    ok((await pc.textContent('h1')).includes('Mis comprobantes'), 'portal: pantalla de ingreso por mail');
+    await pc.screenshot({ path: path.join(CAPTURAS, 'portal-ingreso.png'), fullPage: true });
+    await pc.goto(BASE + '/portal/acceso/' + token);
+    ok(pc.url().endsWith('/portal/comprobantes'), 'portal: el link del mail hace entrar');
+    ok((await pc.textContent('h1')).includes('CLIENTE E2E SRL'), 'portal: ve sus datos');
+    ok((await pc.locator('.portal-lista li').count()) >= 1, 'portal: lista sus comprobantes');
+    const descarga = await cli.request.get(await pc.locator('.portal-lista a[download]').first().evaluate(a => a.href));
+    ok(descarga.status() === 200 && (descarga.headers()['content-type'] || '').includes('pdf'), 'portal: descarga el PDF');
+    ok(await pc.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'portal: celular sin scroll horizontal');
+    await pc.screenshot({ path: path.join(CAPTURAS, 'portal-comprobantes.png'), fullPage: true });
+    await pc.goto(BASE + '/portal/acceso/' + token);
+    ok((await pc.textContent('body')).includes('ya se usó'), 'portal: el link no sirve dos veces');
+    await cli.close();
     ok(errores.length === 0, 'sin errores de JavaScript' + (errores.length ? ': ' + errores.join(' | ') : ''));
     await ctx.close();
 
