@@ -4,7 +4,7 @@ Contexto, decisiones y estado del proyecto: skill `facturaweb-proyecto` (copia e
 y `docs/analisis-migracion.md`. Esto es solo lo técnico del repositorio.
 
 > **No modificar `bin/package.sh`, `bin/test.sh`, `bin/setup-dev.sh`, `bin/dev-server.sh` ni `bin/env.sh`.** El hosting (Ferozo, sin SSH) les cambia los permisos y GIT se niega a
-> sincronizar si una versión nueva los toca («local changes would be overwritten»). Quedaron congelados (`package.sh` y `test.sh` son las versiones viejas); los scripts vivos son
+> sincronizar si una versión nueva los toca («local changes would be overwritten»). Quedaron congelados **idénticos a los del commit d0daf5a** (0.11.0), que es lo que tiene el servidor de OYS; si cambian respecto de lo que tiene el servidor, GIT no actualiza (pasó con 0.11.1); los scripts vivos son
 > `bin/pruebas.sh` (pruebas) y `bin/empaquetar.sh` (paquete). Si hace falta cambiar algo de eso, hacerlo en archivos nuevos.
 
 ## Al empezar una sesión
