@@ -69,4 +69,33 @@ final class IvaVentasTest extends ComprobantesTestCase
         $this->assertSame(200, $x->status);
         $this->assertStringStartsWith('PK', $x->body, 'es un .xlsx (zip)');
     }
+
+    public function testLibroConBasesPorAlicuotaYPdfApaisadoConFolio(): void
+    {
+        $this->emitirDosAlicuotasYNc();
+        $l = \App\Modules\Listados\IvaVentas::libro($this->f(['pruebas' => '1']));
+        $this->assertSame([21.0, 10.5], $l['alicuotas'], 'solo las alícuotas que aparecen, de mayor a menor');
+        $this->assertCount(2, $l['filas']);
+        [$fc, $nc] = $l['filas'][0]['tipo'] === 'FC' ? $l['filas'] : array_reverse($l['filas']);
+        $this->assertSame([200.0, 42.0, 100.0, 10.5, 50.0, 402.5, 0.0], [(float) $fc['base_0'], (float) $fc['iva_0'], (float) $fc['base_1'], (float) $fc['iva_1'], (float) $fc['exento'], (float) $fc['total'], $fc['otros']]);
+        $this->assertSame([-100.0, -21.0, -121.0], [(float) $nc['base_0'], (float) $nc['iva_0'], (float) $nc['total']], 'la NC resta');
+
+        $this->loginComo($this->crearUsuario('t_op', 'operador'));
+        $this->assertSame(403, $this->get('/listados/iva-ventas/pdf', $this->f())->status);
+        $this->loginComo($this->crearUsuario('t_adm', 'admin'));
+        $r = $this->get('/listados/iva-ventas/pdf', ['pruebas' => '1', 'folio' => '37'] + $this->f());
+        $this->assertSame(200, $r->status);
+        $this->assertSame('application/pdf', $r->headers['Content-Type']);
+        $this->assertStringStartsWith('%PDF', $r->body);
+        $this->assertStringContainsString('/MediaBox [0 0 841.89 595.28]', $r->body, 'hoja apaisada');
+        $texto = '';
+        preg_match_all('/stream\n(.*?)\nendstream/s', $r->body, $m);
+        foreach ($m[1] as $st) {
+            $texto .= (string) @gzuncompress($st);
+        }
+        $this->assertStringContainsString("Hoja N.\xba 37", $texto, 'arranca en el folio pedido');
+        $this->assertStringContainsString('SUBDIARIO DE IVA VENTAS', $texto);
+        $this->assertStringContainsString('402,50', $texto);
+        $this->assertStringContainsString('RESUMEN POR AL', $texto);
+    }
 }

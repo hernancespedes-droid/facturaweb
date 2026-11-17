@@ -16,7 +16,14 @@ $nombreAlic = static fn (float $a) => rtrim(rtrim(number_format($a, 2, ',', ''),
 ?>
 <div class="page-head">
     <div><p class="eyebrow">Listados</p><h1>Subdiario de IVA ventas</h1></div>
-    <a class="btn btn-ghost" href="<?= e(url('/listados/iva-ventas') . '?' . http_build_query(['excel' => 1] + $f)) ?>">Enviar a Excel</a>
+    <div class="acciones">
+        <form method="get" action="<?= e(url('/listados/iva-ventas/pdf')) ?>" target="_blank" class="toolbar form-libro">
+            <?php foreach (array_diff_key($f, ['orden' => 1]) as $k => $v): ?><input type="hidden" name="<?= e($k) ?>" value="<?= e($v) ?>"><?php endforeach; ?>
+            <label class="field"><span>Hoja inicial</span><input name="folio" value="1" inputmode="numeric" size="4" title="Número de hoja del libro desde el que se imprime"></label>
+            <button class="btn" type="submit">Imprimir para el libro</button>
+        </form>
+        <a class="btn btn-ghost" href="<?= e(url('/listados/iva-ventas') . '?' . http_build_query(['excel' => 1] + $f)) ?>">Enviar a Excel</a>
+    </div>
 </div>
 
 <form method="get" action="<?= e(url('/listados/iva-ventas')) ?>" class="toolbar filtros">

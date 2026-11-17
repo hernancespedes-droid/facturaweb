@@ -30,6 +30,15 @@ final class Pdf
     private int $actual = 0;
     /** @var array<int,array{datos:string,ancho:int,alto:int,color:int}> imágenes JPEG (una por contenido distinto) */
     private array $imagenes = [];
+    /** Tamaño de la hoja (mm): A4 vertical salvo que se pida apaisada. */
+    public readonly float $anchoHoja;
+    public readonly float $altoHoja;
+
+    public function __construct(bool $apaisada = false)
+    {
+        $this->anchoHoja = $apaisada ? self::ALTO : self::ANCHO;
+        $this->altoHoja = $apaisada ? self::ANCHO : self::ALTO;
+    }
 
     public function pagina(): void
     {
@@ -42,9 +51,9 @@ final class Pdf
         return rtrim(rtrim(number_format($mm * self::PT, 2, '.', ''), '0'), '.') ?: '0';
     }
 
-    private static function y(float $mm): string
+    private function y(float $mm): string
     {
-        return self::pt(self::ALTO - $mm);
+        return self::pt($this->altoHoja - $mm);
     }
 
     /** Texto en Windows-1252 (lo que no existe en esa codificación sale como "?"). */
@@ -112,22 +121,22 @@ final class Pdf
         }
         $esc = strtr(self::cp1252($s), ['\\' => '\\\\', '(' => '\\(', ')' => '\\)']);
         $this->paginas[$this->actual] .= sprintf("BT %s g /%s %s Tf %s %s Td (%s) Tj ET\n", $gris, $bold ? 'F2' : 'F1', rtrim(rtrim(number_format($size, 2, '.', ''), '0'), '.'),
-            self::pt($x), self::y($y), $esc);
+            self::pt($x), $this->y($y), $esc);
     }
 
     public function linea(float $x1, float $y1, float $x2, float $y2, float $grosor = 0.2, float $gris = 0.0): void
     {
-        $this->paginas[$this->actual] .= sprintf("%s G %s w %s %s m %s %s l S\n", $gris, self::pt($grosor), self::pt($x1), self::y($y1), self::pt($x2), self::y($y2));
+        $this->paginas[$this->actual] .= sprintf("%s G %s w %s %s m %s %s l S\n", $gris, self::pt($grosor), self::pt($x1), $this->y($y1), self::pt($x2), $this->y($y2));
     }
 
     public function rect(float $x, float $y, float $w, float $h, float $grosor = 0.2, ?float $relleno = null): void
     {
         $pdf = '';
         if ($relleno !== null) {
-            $pdf .= sprintf("%s g %s %s %s %s re f\n", $relleno, self::pt($x), self::y($y + $h), self::pt($w), self::pt($h));
+            $pdf .= sprintf("%s g %s %s %s %s re f\n", $relleno, self::pt($x), $this->y($y + $h), self::pt($w), self::pt($h));
         }
         if ($grosor > 0) {
-            $pdf .= sprintf("0 G %s w %s %s %s %s re S\n", self::pt($grosor), self::pt($x), self::y($y + $h), self::pt($w), self::pt($h));
+            $pdf .= sprintf("0 G %s w %s %s %s %s re S\n", self::pt($grosor), self::pt($x), $this->y($y + $h), self::pt($w), self::pt($h));
         }
         $this->paginas[$this->actual] .= $pdf;
     }
@@ -148,7 +157,7 @@ final class Pdf
             $this->imagenes[$clave] = ['datos' => $jpeg, 'ancho' => $info[0], 'alto' => $info[1], 'color' => $canales];
         }
         $n = array_search($clave, array_keys($this->imagenes), true) + 1;
-        $this->paginas[$this->actual] .= sprintf("q %s 0 0 %s %s %s cm /Im%d Do Q\n", self::pt($w), self::pt($h), self::pt($x), self::y($y + $h), $n);
+        $this->paginas[$this->actual] .= sprintf("q %s 0 0 %s %s %s cm /Im%d Do Q\n", self::pt($w), self::pt($h), self::pt($x), $this->y($y + $h), $n);
     }
 
     /** Dibuja una matriz de QR (true = módulo negro) de $lado milímetros, con un margen blanco de un módulo. @param array<int,array<int,bool>> $m */
@@ -160,7 +169,7 @@ final class Pdf
         for ($f = 0; $f < $n; $f++) {
             for ($c = 0; $c < $n; $c++) {
                 if ($m[$f][$c]) {
-                    $this->paginas[$this->actual] .= sprintf("%s %s %s %s re f ", self::pt($x + ($c + 1) * $mod), self::y($y + ($f + 2) * $mod), self::pt($mod), self::pt($mod));
+                    $this->paginas[$this->actual] .= sprintf("%s %s %s %s re f ", self::pt($x + ($c + 1) * $mod), $this->y($y + ($f + 2) * $mod), self::pt($mod), self::pt($mod));
                 }
             }
         }
@@ -196,7 +205,7 @@ final class Pdf
         $recursos = '<< /Font << /F1 3 0 R /F2 4 0 R >>' . ($xobj !== '' ? ' /XObject <<' . $xobj . ' >>' : '') . ' >>';
         foreach ($this->paginas as $i => $contenido) {
             $p = 5 + $i * 2;
-            $objs[$p] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' . self::pt(self::ANCHO) . ' ' . self::pt(self::ALTO) . '] /Contents ' . ($p + 1)
+            $objs[$p] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' . self::pt($this->anchoHoja) . ' ' . self::pt($this->altoHoja) . '] /Contents ' . ($p + 1)
                 . ' 0 R /Resources ' . $recursos . ' >>';
             $datos = function_exists('gzcompress') ? gzcompress($contenido, 6) : $contenido;
             $filtro = function_exists('gzcompress') ? ' /Filter /FlateDecode' : '';
