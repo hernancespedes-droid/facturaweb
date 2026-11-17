@@ -95,6 +95,7 @@ final class ComprobanteImpreso
             : 'Contado' . ($h['pagos'] !== [] ? ' - ' . ($h['pagos'][0]['fpago_descripcion'] ?? $h['pagos'][0]['p_fpago']) : '');
 
         return [
+            'logo' => \App\Modules\Configuracion\Logo::obtener(),
             'emisor' => [
                 'nombre' => (string) ($emisor['empresa'] ?? ''), 'domicilio' => (string) ($emisor['tk_direccion'] ?? ''), 'telefono' => (string) ($emisor['tk_telefono'] ?? ''),
                 'mail' => (string) ($emisor['mail'] ?? ''), 'cuit' => cuit_texto($emisor['cuit'] ?? ''), 'iibb' => (string) ($emisor['tk_i_brutos'] ?? ''),

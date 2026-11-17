@@ -5,8 +5,8 @@ namespace App\Core;
 
 /**
  * Generador de PDF mínimo, sin librerías (en el hosting no hay Composer): páginas A4, texto en Helvetica y
- * Helvetica-Bold (fuentes estándar de PDF, codificación Windows-1252: tildes y eñes), líneas, rectángulos y
- * un código QR dibujado con rectángulos. Las coordenadas son en milímetros, con el origen arriba a la izquierda.
+ * Helvetica-Bold (fuentes estándar de PDF, codificación Windows-1252: tildes y eñes), líneas, rectángulos,
+ * imágenes JPEG (se incrustan tal cual, DCTDecode) y un código QR dibujado con rectángulos. Las coordenadas son en milímetros, con el origen arriba a la izquierda.
  */
 final class Pdf
 {
@@ -28,6 +28,8 @@ final class Pdf
     /** @var string[] contenido de cada página */
     private array $paginas = [''];
     private int $actual = 0;
+    /** @var array<int,array{datos:string,ancho:int,alto:int,color:int}> imágenes JPEG (una por contenido distinto) */
+    private array $imagenes = [];
 
     public function pagina(): void
     {
@@ -130,6 +132,25 @@ final class Pdf
         $this->paginas[$this->actual] .= $pdf;
     }
 
+    /**
+     * Imagen JPEG en ($x, $y) (esquina de arriba a la izquierda) de $w x $h milímetros.
+     * La misma imagen repetida (por ejemplo el logo en cada página) se incrusta una sola vez.
+     */
+    public function jpeg(string $jpeg, float $x, float $y, float $w, float $h): void
+    {
+        $info = @getimagesizefromstring($jpeg);
+        if ($info === false || $info[2] !== IMAGETYPE_JPEG) {
+            throw new \InvalidArgumentException('La imagen no es un JPEG.');
+        }
+        $clave = md5($jpeg);
+        if (!isset($this->imagenes[$clave])) {
+            $canales = (int) ($info['channels'] ?? 3);
+            $this->imagenes[$clave] = ['datos' => $jpeg, 'ancho' => $info[0], 'alto' => $info[1], 'color' => $canales];
+        }
+        $n = array_search($clave, array_keys($this->imagenes), true) + 1;
+        $this->paginas[$this->actual] .= sprintf("q %s 0 0 %s %s %s cm /Im%d Do Q\n", self::pt($w), self::pt($h), self::pt($x), self::y($y + $h), $n);
+    }
+
     /** Dibuja una matriz de QR (true = módulo negro) de $lado milímetros, con un margen blanco de un módulo. @param array<int,array<int,bool>> $m */
     public function qr(array $m, float $x, float $y, float $lado): void
     {
@@ -159,14 +180,29 @@ final class Pdf
         $objs[2] = '<< /Type /Pages /Kids [' . implode(' ', $kids) . '] /Count ' . $n . ' >>';
         $objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
         $objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+        // las imágenes van después de las páginas (5 + 2 por página)
+        $primeraImg = 5 + $n * 2;
+        $xobj = '';
+        $k = 0;
+        foreach ($this->imagenes as $img) {
+            $num = $primeraImg + $k;
+            $xobj .= ' /Im' . ($k + 1) . ' ' . $num . ' 0 R';
+            $espacio = $img['color'] === 1 ? '/DeviceGray' : ($img['color'] === 4 ? '/DeviceCMYK' : '/DeviceRGB');
+            $objs[$num] = '<< /Type /XObject /Subtype /Image /Width ' . $img['ancho'] . ' /Height ' . $img['alto'] . ' /ColorSpace ' . $espacio
+                . ($img['color'] === 4 ? ' /Decode [1 0 1 0 1 0 1 0]' : '')
+                . ' /BitsPerComponent 8 /Filter /DCTDecode /Length ' . strlen($img['datos']) . " >>\nstream\n" . $img['datos'] . "\nendstream";
+            $k++;
+        }
+        $recursos = '<< /Font << /F1 3 0 R /F2 4 0 R >>' . ($xobj !== '' ? ' /XObject <<' . $xobj . ' >>' : '') . ' >>';
         foreach ($this->paginas as $i => $contenido) {
             $p = 5 + $i * 2;
             $objs[$p] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' . self::pt(self::ANCHO) . ' ' . self::pt(self::ALTO) . '] /Contents ' . ($p + 1)
-                . ' 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>';
+                . ' 0 R /Resources ' . $recursos . ' >>';
             $datos = function_exists('gzcompress') ? gzcompress($contenido, 6) : $contenido;
             $filtro = function_exists('gzcompress') ? ' /Filter /FlateDecode' : '';
             $objs[$p + 1] = '<< /Length ' . strlen((string) $datos) . $filtro . " >>\nstream\n" . $datos . "\nendstream";
         }
+        ksort($objs);
         $info = count($objs) + 1;
         $objs[$info] = '<< /Title (' . strtr(self::cp1252($titulo), ['\\' => '\\\\', '(' => '\\(', ')' => '\\)']) . ') /Producer (FacturaWeb) >>';
 
