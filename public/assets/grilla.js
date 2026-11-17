@@ -1,5 +1,5 @@
 /*
- * Grillas de todo el sistema (las tablas .table dentro de .table-wrap que no son formularios):
+ * Grillas de todo el sistema (las tablas .table, también las que tienen campos para completar; no las marcadas data-grilla="no"):
  *  - Orden por columna: las grillas con páginas ya traen el título como link (el servidor ordena todo, no solo la página); en las demás se
  *    ordena acá al tocar el título (▲ / ▼), entendiendo números con puntos de miles, importes y fechas dd/mm/aaaa.
  *  - "Excel": la misma página con ?excel=grilla&tabla=N (el servidor exporta TODO lo filtrado, con los permisos de siempre).
@@ -10,9 +10,9 @@
   var esCelular = function () { return window.matchMedia('(max-width: 760px)').matches; };
 
   function esGrilla(t) {
-    if (t.getAttribute('data-grilla') === 'no') return false;
-    var campos = t.querySelectorAll('input:not([type=hidden]), select, textarea');
-    return campos.length === 0;
+    // Todas, también las que tienen campos para completar (cobrar, aplicar…); solo se excluyen las marcadas data-grilla="no"
+    // (los renglones de un comprobante, que se agregan y se quitan mientras se carga).
+    return t.getAttribute('data-grilla') !== 'no';
   }
   var grillas = Array.prototype.filter.call(document.querySelectorAll('table.table'), esGrilla);
   if (!grillas.length) return;

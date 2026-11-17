@@ -125,7 +125,7 @@ $hoyIso = date('Y-m-d');
     <?php if (isset($errores['items'])): ?><div class="alerta alerta-error" role="alert"><?= nl2br(e($errores['items'])) ?></div><?php endif; ?>
     <p class="small muted" data-leyenda-precio></p>
     <div class="table-wrap">
-        <table class="table table-cards renglones" data-renglones>
+        <table class="table table-cards renglones" data-renglones data-grilla="no">
             <thead><tr><th>Artículo</th><th>Descripción</th><th>Cantidad</th><th data-th-precio>Precio</th><th>IVA</th><th>Importe</th><th></th></tr></thead>
             <tbody data-renglones-cuerpo>
             <?php foreach ($items as $i => $it): ?>
