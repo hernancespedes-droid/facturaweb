@@ -271,6 +271,9 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.textContent('h1')).includes('Subdiario de IVA ventas'), 'abre el subdiario de IVA ventas');
     ok((await page.locator('tbody tr').count()) >= 3, 'el subdiario lista los comprobantes emitidos');
     ok((await page.textContent('tfoot')).includes('Totales'), 'el subdiario muestra los totales del período');
+    const libro = await ctx.request.get(BASE + '/listados/iva-ventas/pdf?pruebas=1&folio=5');
+    ok(libro.status() === 200 && (libro.headers()['content-type'] || '').includes('pdf'), 'subdiario: el PDF para el libro se genera');
+    ok((await page.locator('form.form-libro button:has-text("Imprimir para el libro")').count()) === 1, 'subdiario: botón Imprimir para el libro con hoja inicial');
     await page.screenshot({ path: path.join(CAPTURAS, 'iva-ventas.png'), fullPage: true });
     // sin mail configurado el envío está deshabilitado
     await page.goto(urlFactura);

@@ -38,6 +38,27 @@ final class ListadosController
         ]));
     }
 
+    /** Subdiario impreso para el libro contable (PDF apaisado, con folio y transporte). ?folio=N para seguir la numeración del libro. */
+    public static function ivaVentasPdf(Request $req, array $params): Response
+    {
+        $f = self::filtros($req);
+        $folio = max(1, min(99999, (int) ($req->query['folio'] ?? 1)));
+        $pdf = SubdiarioPdf::generar(IvaVentas::libro($f), (new \App\Modules\Comprobantes\ComprobantesService())->emisor(), self::periodo($f), $folio);
+        return new Response(200, $pdf, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="subdiario-iva-ventas.pdf"', 'Cache-Control' => 'no-store']);
+    }
+
+    /** "Noviembre 2026" si es un mes completo; si no, "01/11/2026 al 15/11/2026". */
+    private static function periodo(array $f): string
+    {
+        $d = \App\Core\Valida::fecha((string) ($f['desde'] ?? ''));
+        $h = \App\Core\Valida::fecha((string) ($f['hasta'] ?? ''));
+        if ($d !== null && $h !== null && substr($d, 8) === '01' && $h === date('Y-m-t', (int) strtotime($d))) {
+            $meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            return $meses[(int) substr($d, 5, 2) - 1] . ' ' . substr($d, 0, 4);
+        }
+        return ($d !== null ? date('d/m/Y', (int) strtotime($d)) : 'el inicio') . ' al ' . ($h !== null ? date('d/m/Y', (int) strtotime($h)) : date('d/m/Y'));
+    }
+
     private static function excel(array $f): Response
     {
         $r = IvaVentas::listar($f, 1, 1, true);

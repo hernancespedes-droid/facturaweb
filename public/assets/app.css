@@ -1104,3 +1104,5 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .th-ordenable[aria-sort="descending"]::after { content: ' ▼'; }
 .grilla-barra { display: flex; justify-content: flex-end; margin: 0 0 6px; }
 @media (max-width: 760px) { .table-wrap.grilla { overflow: visible; max-height: none; } .grilla-barra { justify-content: flex-start; } }
+.form-libro { margin: 0; align-items: flex-end; }
+.form-libro .field input { width: 5.5em; }

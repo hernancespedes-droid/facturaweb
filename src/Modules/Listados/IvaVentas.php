@@ -112,4 +112,43 @@ final class IvaVentas
         $totales['iva_otras'] = round($otras, 2);
         return ['filas' => $filas, 'total' => (int) $cn->fetchColumn(), 'totales' => $totales];
     }
+
+    /**
+     * Datos para el libro (subdiario impreso): en orden cronológico, con base imponible e IVA de cada alícuota que aparece en el período,
+     * exento, «otros» (lo que el total tiene además: percepciones, no gravado, redondeos) y la condición de IVA del cliente. Las NC restan.
+     *
+     * @param array<string,string> $f desde, hasta, pv, tipo, pruebas
+     * @return array{filas:array<int,array<string,mixed>>,alicuotas:float[]}
+     */
+    public static function libro(array $f): array
+    {
+        [$where, $p] = self::filtro($f);
+        $pdo = Db::pdo();
+        $al = $pdo->prepare("SELECT DISTINCT i.alicuota FROM iva i JOIN subdiario s ON s.fe_clave = i.subdiario_id {$where} AND i.importe <> 0 ORDER BY i.alicuota DESC");
+        $al->execute($p);
+        $alicuotas = array_map('floatval', $al->fetchAll(\PDO::FETCH_COLUMN));
+        $sg = "IF(s.tipo = 'NC', -1, 1)";
+        $cols = '';
+        foreach ($alicuotas as $k => $a) {
+            $v = number_format($a, 2, '.', ''); // valor de la base, no del usuario
+            $cols .= ", COALESCE(SUM(IF(i.alicuota = {$v}, i.monto, 0)), 0) * {$sg} AS base_{$k}, COALESCE(SUM(IF(i.alicuota = {$v}, i.importe, 0)), 0) * {$sg} AS iva_{$k}";
+        }
+        $nro = Tipos::sqlNumeroVisible('s');
+        $st = $pdo->prepare("SELECT s.fe_clave, s.fecha, s.tipo, s.letra, s.prefijo, {$nro} AS numero, s.es_prueba,
+                COALESCE(s.cliente_razon_social, c.razon_social) AS razon_social, s.cuit_cliente, s.iva_cliente,
+                s.neto_exento * {$sg} AS exento, s.neto * {$sg} AS total {$cols}
+            FROM subdiario s LEFT JOIN clientes c ON c.codigo = s.cliente LEFT JOIN iva i ON i.subdiario_id = s.fe_clave
+            {$where} GROUP BY s.fe_clave ORDER BY s.fecha, s.prefijo, s.tipo, s.letra, numero LIMIT " . ExcelListado::MAX);
+        $st->execute($p);
+        $filas = $st->fetchAll();
+        foreach ($filas as &$r) {
+            $suma = (float) $r['exento'];
+            foreach (array_keys($alicuotas) as $k) {
+                $suma += (float) $r["base_{$k}"] + (float) $r["iva_{$k}"];
+            }
+            $r['otros'] = round((float) $r['total'] - $suma, 2);
+        }
+        unset($r);
+        return ['filas' => $filas, 'alicuotas' => $alicuotas];
+    }
 }
