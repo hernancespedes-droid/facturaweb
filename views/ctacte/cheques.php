@@ -26,7 +26,7 @@ $est = (string) ($f['estado'] ?? '');
     <div class="resumen-cifras small"><b><?= (int) $total ?></b> cheque(s) · <b>Total:</b> <?= e(plata_dec($suma)) ?></div>
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
     <div class="table-wrap"><table class="table table-cards">
-        <thead><tr><th>Cobro</th><th>N.º</th><th>Banco</th><th>Cliente</th><th class="num">Importe</th><th>Estado</th><?= $puedeCambiar ? '<th></th>' : '' ?></tr></thead>
+        <?php $u = url('/cheques'); ?><thead><tr><?= th_orden('Cobro', 'cobro', $f, $u) ?><?= th_orden('N.º', 'numero', $f, $u) ?><?= th_orden('Banco', 'banco', $f, $u) ?><?= th_orden('Cliente', 'cliente', $f, $u) ?><?= th_orden('Importe', 'importe', $f, $u, true) ?><?= th_orden('Estado', 'estado', $f, $u) ?><?= $puedeCambiar ? '<th></th>' : '' ?></tr></thead>
         <tbody>
         <?php foreach ($filas as $r): $diferido = $r['p_fecvto'] !== null && $r['p_fecvto'] > $hoy; ?>
             <tr><td data-label="Cobro" class="nw"><?= e(fecha($r['p_fecvto'])) ?><?= $diferido && $r['cheque_estado'] === '' ? ' <span class="chip">diferido</span>' : '' ?></td>

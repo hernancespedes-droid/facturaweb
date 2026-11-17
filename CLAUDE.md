@@ -70,6 +70,12 @@ Siempre que una pantalla pida un artículo o un cliente, el campo es un **buscad
 debajo y **el usuario elige siempre**; nunca se toma la primera. Reutilizar `Articulos\BuscadorArticulos` + `public/assets/buscador.js` (artículos) y
 `Comprobantes → buscarCliente` (clientes). Cada buscador lleva además la lupa (`icono_lista()` + `public/assets/ventana-lista.js`) que abre la lista para elegir. Detalle en el skill `facturaweb-proyecto`.
 
+## Grillas (regla de Hernán)
+
+Toda grilla: **orden por columna** (con páginas, en el servidor con `Core\Orden::sql()` + `th_orden()`; sin páginas lo hace `grilla.js`), **Excel**
+(genérico: `?excel=grilla&tabla=N` → `Core\GrillaExcel`, todo lo filtrado) y **alto de pantalla** con scroll propio (vertical y a la derecha). Una tabla
+que es formulario o no debe tener esto lleva `data-grilla="no"`. Las grillas nuevas con páginas tienen que declarar sus columnas ordenables.
+
 ## Seguridad
 
 Sentencias preparadas siempre (los nombres de tabla/columna solo salen de definiciones del código), `password_hash`, CSRF en todo POST,

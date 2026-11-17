@@ -337,7 +337,7 @@ final class StockService
         $cn = $this->pdo->prepare("SELECT COUNT(*) FROM (SELECT a.codigo, COALESCE(SUM(s.saldo), 0) AS saldo {$base}) t");
         $cn->execute($p);
         $st = $this->pdo->prepare("SELECT a.codigo, a.descripcion, a.sku, a.unidades_por_bulto, a.stock_minimo_unidades AS minimo, COALESCE(SUM(s.saldo), 0) AS saldo {$base}
-            ORDER BY a.descripcion LIMIT {$porPagina} OFFSET " . (max(1, $pagina) - 1) * $porPagina);
+            ORDER BY " . \App\Core\Orden::sql(['codigo' => 'a.codigo', 'descripcion' => 'a.descripcion', 'sku' => 'a.sku', 'saldo' => 'saldo', 'minimo' => 'a.stock_minimo_unidades'], (string) ($f['orden'] ?? ''), 'a.descripcion') . " LIMIT {$porPagina} OFFSET " . (max(1, $pagina) - 1) * $porPagina);
         $st->execute($p);
         return ['filas' => $st->fetchAll(), 'total' => (int) $cn->fetchColumn()];
     }
@@ -351,12 +351,12 @@ final class StockService
     }
 
     /** Kardex: movimientos de un artículo, el más nuevo primero. @return array{filas:array<int,array<string,mixed>>,total:int} */
-    public function kardex(string $articulo, int $pagina, int $porPagina): array
+    public function kardex(string $articulo, int $pagina, int $porPagina, string $orden = ''): array
     {
         $cn = $this->pdo->prepare('SELECT COUNT(*) FROM stock_movimientos WHERE articulo = ?');
         $cn->execute([$articulo]);
         $st = $this->pdo->prepare("SELECT m.*, d.nombre AS deposito, u.usuario FROM stock_movimientos m JOIN depositos d ON d.id = m.deposito_id LEFT JOIN usuarios u ON u.id = m.usuario_id
-            WHERE m.articulo = ? ORDER BY m.id DESC LIMIT {$porPagina} OFFSET " . (max(1, $pagina) - 1) * $porPagina);
+            WHERE m.articulo = ? ORDER BY " . \App\Core\Orden::sql(['fecha' => 'm.fecha', 'origen' => 'm.origen', 'deposito' => 'd.nombre', 'cantidad' => 'm.cantidad', 'usuario' => 'u.usuario'], $orden, 'm.id DESC') . " LIMIT {$porPagina} OFFSET " . (max(1, $pagina) - 1) * $porPagina);
         $st->execute([$articulo]);
         return ['filas' => $st->fetchAll(), 'total' => (int) $cn->fetchColumn()];
     }

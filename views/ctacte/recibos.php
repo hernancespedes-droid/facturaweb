@@ -21,7 +21,7 @@ $paginas = (int) ceil($total / max(1, $porPagina));
 <?php else: ?>
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
     <div class="table-wrap"><table class="table table-cards">
-        <thead><tr><th>Fecha</th><th>Recibo</th><th>Cliente</th><th class="num">Cancela</th><th class="num">Cobrado</th><th>Estado</th></tr></thead>
+        <?php $u = url('/recibos'); ?><thead><tr><?= th_orden('Fecha', 'fecha', $f, $u, true) ?><?= th_orden('Recibo', 'recibo', $f, $u) ?><?= th_orden('Cliente', 'cliente', $f, $u) ?><?= th_orden('Cancela', 'cancela', $f, $u, true) ?><?= th_orden('Cobrado', 'cobrado', $f, $u, true) ?><?= th_orden('Estado', 'estado', $f, $u) ?></tr></thead>
         <tbody>
         <?php foreach ($filas as $r): ?>
             <tr><td data-label="Fecha" class="nw"><?= e(fecha($r['fecha'])) ?></td>

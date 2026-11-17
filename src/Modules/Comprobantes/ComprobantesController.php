@@ -31,7 +31,7 @@ final class ComprobantesController
 
     public static function index(Request $req, array $params): Response
     {
-        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'tipo', 'cliente', 'numero', 'estado'])));
+        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'tipo', 'cliente', 'numero', 'estado', 'orden'])));
         if (!array_key_exists('desde', $req->query)) {
             $f['desde'] = date('01/m/Y'); // por omisión, lo del mes
         }

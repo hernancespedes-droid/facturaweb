@@ -39,7 +39,7 @@ $paginas = (int) ceil($total / max(1, $porPagina));
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
     <div class="table-wrap">
         <table class="table table-cards">
-            <thead><tr><th>Fecha</th><th>Comprobante</th><th>Cliente</th><th>Pago</th><th>Total</th><th>Estado</th></tr></thead>
+            <?php $u = url('/comprobantes'); ?><thead><tr><?= th_orden('Fecha', 'fecha', $f, $u, true) ?><?= th_orden('Comprobante', 'numero', $f, $u) ?><?= th_orden('Cliente', 'cliente', $f, $u) ?><?= th_orden('Pago', 'pago', $f, $u) ?><?= th_orden('Total', 'total', $f, $u, true) ?><?= th_orden('Estado', 'estado', $f, $u) ?></tr></thead>
             <tbody>
             <?php foreach ($filas as $c): [$estadoTxt, $estadoClase] = estado_comprobante($c); ?>
                 <tr>

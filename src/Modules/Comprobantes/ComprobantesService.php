@@ -801,6 +801,10 @@ final class ComprobantesService
      * @param array<string,mixed> $f desde, hasta (dd/mm/aaaa o aaaa-mm-dd), tipo, cliente (texto), numero, estado
      * @return array{filas:array<int,array<string,mixed>>,total:int,suma:float}
      */
+    /** Columnas ordenables del listado de comprobantes (clave => SQL fijo). */
+    public const ORDEN_LISTA = ['fecha' => 's.fecha', 'numero' => 's.tipo, s.letra, s.prefijo, s.comprobante', 'cliente' => 'razon_social',
+        'pago' => 's.forma_pago', 'total' => 's.neto', 'estado' => 's.estado, s.es_prueba'];
+
     public function listar(array $f, int $pagina, int $porPagina): array
     {
         $w = [];
@@ -848,7 +852,7 @@ final class ComprobantesService
         $st = $this->pdo->prepare(
             "SELECT s.fe_clave, s.fecha, s.tipo, s.letra, s.prefijo, s.comprobante, s.fe_nrocbte, s.fe_ccae, s.cliente, s.neto, s.forma_pago, s.estado, s.electronica, s.fe_entorno, s.es_prueba,
                     COALESCE(s.cliente_razon_social, c.razon_social) AS razon_social {$base}
-              ORDER BY s.fecha DESC, s.fe_clave DESC LIMIT {$porPagina} OFFSET {$desde}"
+              ORDER BY " . \App\Core\Orden::sql(self::ORDEN_LISTA, (string) ($f['orden'] ?? ''), 's.fecha DESC, s.fe_clave DESC') . " LIMIT {$porPagina} OFFSET {$desde}"
         );
         $st->execute($p);
         return ['filas' => $st->fetchAll(), 'total' => (int) $total, 'suma' => Calculadora::r2((float) $suma)];

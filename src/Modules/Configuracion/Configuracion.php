@@ -53,6 +53,9 @@ final class Configuracion
 
     public static function porPagina(): int
     {
+        if (\App\Core\GrillaExcel::$pedido) {
+            return \App\Core\ExcelListado::MAX; // Excel de la grilla: todo lo filtrado, no solo la página
+        }
         return max(10, min(500, self::entero(self::POR_PAGINA, 50)));
     }
 

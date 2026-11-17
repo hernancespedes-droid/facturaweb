@@ -76,6 +76,8 @@ final class App
         Auth::reset();
         \App\Modules\Configuracion\Configuracion::reset();
         \App\Core\Validador::olvidar();
+        // "Enviar a Excel" de cualquier grilla: la página se arma igual (mismos permisos y filtros) pero sin paginar, y la tabla sale en .xlsx.
+        \App\Core\GrillaExcel::$pedido = $req->method === 'GET' && ($req->query['excel'] ?? '') === 'grilla';
         try {
             $esApi = str_starts_with($req->path, '/api/'); // API del agente: sin formulario, sin sesión y sin CSRF (usa clave en el encabezado)
             if (!$esApi && $req->method === 'POST' && $req->post === [] && (int) ($req->server['CONTENT_LENGTH'] ?? 0) > 0) {
@@ -102,6 +104,16 @@ final class App
             }
         }
 
+        if (\App\Core\GrillaExcel::$pedido && $res->status === 200 && str_starts_with((string) ($res->headers['Content-Type'] ?? ''), 'text/html')) {
+            $xlsx = \App\Core\GrillaExcel::desdeHtml($res->body, max(0, (int) ($req->query['tabla'] ?? 0)));
+            if ($xlsx !== null) {
+                $res = new Response(200, $xlsx, [
+                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'Content-Disposition' => 'attachment; filename="' . \App\Core\GrillaExcel::nombre($res->body) . '"',
+                    'Cache-Control' => 'no-store',
+                ]);
+            }
+        }
         if ($res->status >= 400 && $res->body === '') {
             $res = $this->errorPage($res->status);
         }
