@@ -43,6 +43,7 @@ async function factura(page, precio) {
   await r.locator('[data-cantidad]').fill('1');
   await r.locator('[data-precio]').fill(precio);
   await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+  await page.check('input[name=forma_pago][value="2"]'); // la forma de pago se elige al terminar
   await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
 }
 
@@ -178,6 +179,7 @@ async function factura(page, precio) {
     ok((await page.textContent('[data-t-total]')).includes('242,00'), 'presupuesto: el precio lleva el IVA incluido (2 x 121 = 242)');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
     ok((await page.textContent('body')).includes('no va a ARCA ni al subdiario'), 'presupuesto: la revisión aclara que no es fiscal');
+    await page.check('input[name=forma_pago][value="2"]');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
     const prUrl = page.url();
     ok(/\/comprobantes\/\d+$/.test(prUrl), 'presupuesto: se emite');
