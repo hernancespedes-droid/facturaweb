@@ -233,6 +233,13 @@
       var extra = document.createElement('small');
       extra.textContent = [a.sku ? 'SKU ' + a.sku : '', a.ean13 ? 'EAN ' + a.ean13 : '', a.precio ? '$ ' + a.precio : ''].filter(Boolean).join(' · ');
       li.appendChild(cod); li.appendChild(det); li.appendChild(document.createElement('br')); li.appendChild(extra);
+      var st = window.StockArticulo ? window.StockArticulo.texto(a) : '';
+      if (st) {
+        var sp = document.createElement('small');
+        sp.className = 'stock-art' + (window.StockArticulo.sinStock(a) ? ' sin-stock' : '');
+        sp.textContent = st;
+        li.appendChild(document.createElement('br')); li.appendChild(sp);
+      }
       li.addEventListener('mousedown', function (ev) { ev.preventDefault(); elegir(i); });
       listaArt.appendChild(li);
     });

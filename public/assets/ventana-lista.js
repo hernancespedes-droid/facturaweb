@@ -53,7 +53,8 @@
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (n !== pedido) return;
-        var cols = cfg.columnas;
+        var cols = cfg.columnas.concat(window.StockArticulo && d.depositos ? window.StockArticulo.columnas(d.depositos) : []);
+        armarCabeza(cols);
         cuerpo.innerHTML = '';
         if (!d.items.length) {
           var tr0 = document.createElement('tr'), td0 = document.createElement('td');
@@ -76,16 +77,23 @@
         info.textContent = 'Página ' + estado.pagina;
       });
   }
+  // Títulos de la tabla: se rearman si cambian las columnas (las de stock llegan con la respuesta del servidor)
+  function armarCabeza(cols) {
+    var firma = cols.map(function (c) { return c.rotulo; }).join('|');
+    if (cabeza.getAttribute('data-firma') === firma) return;
+    cabeza.setAttribute('data-firma', firma);
+    cabeza.innerHTML = '';
+    cols.forEach(function (c) {
+      var th = document.createElement('th'); th.textContent = c.rotulo; if (c.num) th.className = 'num'; if (c.chica) th.setAttribute('data-chica', ''); cabeza.appendChild(th);
+    });
+    cabeza.appendChild(document.createElement('th'));
+  }
   function abrir(preset, url, cb) {
     if (!dlg) crear();
     cfg = { url: url, alElegir: cb, columnas: PRESETS[preset].columnas };
     titulo.textContent = PRESETS[preset].titulo;
     buscar.placeholder = PRESETS[preset].placeholder;
-    cabeza.innerHTML = '';
-    cfg.columnas.forEach(function (c) {
-      var th = document.createElement('th'); th.textContent = c.rotulo; if (c.num) th.className = 'num'; if (c.chica) th.setAttribute('data-chica', ''); cabeza.appendChild(th);
-    });
-    cabeza.appendChild(document.createElement('th'));
+    armarCabeza(cfg.columnas);
     estado = { pagina: 1, q: '' };
     buscar.value = '';
     dlg.showModal();

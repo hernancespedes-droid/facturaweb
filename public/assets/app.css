@@ -1124,3 +1124,9 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .resumen-fila { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-bottom: 8px; }
 .resumen-fila > div { display: flex; flex-direction: column; }
 .resumen-fila b { font-size: 1.3rem; }
+
+/* Stock del artículo en los buscadores */
+.sugerencias .stock-art { opacity: 1; font-weight: 600; color: var(--ok, #1c7c4f); }
+.sugerencias .stock-art.sin-stock { color: var(--error, #c0392b); }
+.ventana-lista { width: min(1180px, 96vw); }
+.ventana-lista .va-tabla td.num { white-space: nowrap; }

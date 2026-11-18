@@ -260,6 +260,24 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.goto(BASE + '/stock?q=e2e');
     ok((await page.content()).includes('E2E-001'), 'saldos de stock: aparece el artículo con saldo');
     await page.screenshot({ path: path.join(CAPTURAS, 'stock-saldos.png'), fullPage: true });
+    // el stock se ve en los buscadores de los comprobantes: una columna por depósito
+    execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_stock.php'), 'on']);
+    await page.goto(BASE + '/comprobantes/nuevo?tipo=FC');
+    await page.fill('#cliente-q', 'CLIENTE E2E FINAL');
+    await page.waitForSelector('[data-cliente-lista] li');
+    await page.click('[data-cliente-lista] li');
+    await page.fill('[data-renglon] [data-articulo]', 'articulo e2');
+    await page.waitForSelector('#articulos-sugerencias li .stock-art');
+    const sugStock = await page.textContent('#articulos-sugerencias');
+    ok(sugStock.includes('Stock') && sugStock.includes('E2E SEGUNDO'), 'comprobante: el buscador muestra el stock de cada depósito');
+    await page.screenshot({ path: path.join(CAPTURAS, 'buscador-stock.png') });
+    await page.click('[data-lista-articulos]');
+    await page.waitForSelector('dialog.ventana-lista td');
+    const cab = await page.textContent('dialog.ventana-lista thead');
+    ok(cab.includes('E2E SEGUNDO') && cab.includes('Total'), 'ventana «ver lista»: una columna de stock por depósito y el total');
+    await page.screenshot({ path: path.join(CAPTURAS, 'lista-articulos-stock.png') });
+    await page.keyboard.press('Escape');
+    execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_stock.php'), 'off']);
     // grillas: orden por columna (servidor con páginas, navegador sin páginas), Excel y alto que entra en la pantalla
     await page.goto(BASE + '/comprobantes?cliente=E2E');
     await Promise.all([page.waitForNavigation(), page.click('th a.th-orden:has-text("Total")')]);

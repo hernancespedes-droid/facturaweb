@@ -201,5 +201,6 @@ $hoyIso = date('Y-m-d');
         <td><button type="button" class="btn btn-ghost btn-sm" data-quitar aria-label="Quitar renglón" title="Quitar renglón">✕</button></td>
     </tr>
 </template>
+<script src="<?= e(asset('assets/stock-articulo.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/ventana-lista.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/comprobante.js')) ?>" defer></script>

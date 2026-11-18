@@ -69,13 +69,57 @@ final class BuscadorArticulos
         $st->execute($par);
         $filas = $st->fetchAll();
         $hayMas = count($filas) > $porPagina;
-        return ['items' => self::formatear(array_slice($filas, 0, $porPagina), null), 'hay_mas' => $hayMas];
+        return ['items' => self::formatear(array_slice($filas, 0, $porPagina), null), 'hay_mas' => $hayMas, 'depositos' => self::nombresDepositos()];
+    }
+
+    /** Nombres de los depósitos activos (columnas de stock de la ventana «ver lista»), o null si el stock no está activado. @return string[]|null */
+    private static function nombresDepositos(): ?array
+    {
+        if (!\App\Modules\Stock\StockService::activo()) {
+            return null;
+        }
+        return array_map(static fn (array $d) => (string) $d['nombre'], (new \App\Modules\Stock\StockService())->depositos());
+    }
+
+    /**
+     * Stock de cada artículo por depósito, para que quien carga vea dónde hay. Null si el stock no está activado; si el artículo no controla stock,
+     * solo se marca. Pedido de Hernán (18/11): una columna por depósito.
+     *
+     * @param array<int,array<string,mixed>> $filas @return array<string,array<string,mixed>> codigo => stock
+     */
+    private static function stockDe(array $filas): array
+    {
+        if ($filas === [] || !\App\Modules\Stock\StockService::activo()) {
+            return [];
+        }
+        $pdo = Db::pdo();
+        $deps = (new \App\Modules\Stock\StockService($pdo))->depositos();
+        $codigos = array_map(static fn (array $a) => (string) $a['codigo'], $filas);
+        $st = $pdo->prepare('SELECT articulo, deposito_id, saldo FROM stock_saldos WHERE articulo IN (' . implode(', ', array_fill(0, count($codigos), '?')) . ')');
+        $st->execute($codigos);
+        $saldo = [];
+        foreach ($st->fetchAll() as $s) {
+            $saldo[(string) $s['articulo']][(int) $s['deposito_id']] = (float) $s['saldo'];
+        }
+        $out = [];
+        foreach ($filas as $a) {
+            $porDep = [];
+            $total = 0.0;
+            foreach ($deps as $d) {
+                $q = $saldo[(string) $a['codigo']][(int) $d['id']] ?? 0.0;
+                $porDep[] = ['n' => (string) $d['nombre'], 's' => $q];
+                $total += $q;
+            }
+            $out[(string) $a['codigo']] = ['controla' => (int) $a['controla_stock'] === 1, 'total' => round($total, 3), 'depositos' => $porDep];
+        }
+        return $out;
     }
 
     /** @param array<int,array<string,mixed>> $filas @return array<int,array<string,mixed>> */
     private static function formatear(array $filas, ?int $porBulto): array
     {
         $cot = (new \App\Modules\Comprobantes\ComprobantesService())->cotizacionDolar(date('Y-m-d'));
+        $stock = self::stockDe($filas);
         $out = [];
         foreach ($filas as $a) {
             $precio = (float) $a['precio_unitario'] > 0 ? (float) $a['precio_unitario'] : (float) $a['precio_de_venta_1'];
@@ -83,7 +127,8 @@ final class BuscadorArticulos
             $out[] = ['codigo' => $a['codigo'], 'descripcion' => $a['descripcion'], 'alicuota' => (string) $a['alicuota'],
                 'sku' => (string) $a['sku'], 'ean13' => (string) $a['ean13'], 'dun14' => (string) $a['dun14'],
                 'cantidad' => $porBulto, // D-17
-                'precio' => numero($dolares ? $precio * $cot : $precio, 4), 'moneda' => $a['moneda'], 'cotizacion' => $dolares ? $cot : null];
+                'precio' => numero($dolares ? $precio * $cot : $precio, 4), 'moneda' => $a['moneda'], 'cotizacion' => $dolares ? $cot : null,
+                'stock' => $stock[(string) $a['codigo']] ?? null];
         }
         return $out;
     }
