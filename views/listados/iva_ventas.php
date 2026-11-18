@@ -32,7 +32,7 @@ $nombreAlic = static fn (float $a) => rtrim(rtrim(number_format($a, 2, ',', ''),
     <select name="pv" aria-label="Punto de venta"><option value="">Todos los puntos de venta</option>
         <?php foreach ($pvs as $pv): ?><option value="<?= $pv ?>" <?= (string) ($f['pv'] ?? '') === (string) $pv ? 'selected' : '' ?>><?= e(sprintf('%04d', $pv)) ?></option><?php endforeach; ?></select>
     <select name="tipo" aria-label="Tipo"><option value="">Todos los tipos</option>
-        <?php foreach (Tipos::NOMBRES as $k => $t): ?><option value="<?= $k ?>" <?= ($f['tipo'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select>
+        <?php foreach (array_diff_key(Tipos::NOMBRES, array_flip(Tipos::INTERNOS)) as $k => $t): ?><option value="<?= $k ?>" <?= ($f['tipo'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select>
     <label class="check"><input type="checkbox" name="pruebas" value="1" <?= ($f['pruebas'] ?? '') === '1' ? 'checked' : '' ?>> Incluir comprobantes de prueba</label>
     <button class="btn btn-ghost" type="submit">Ver</button>
 </form>

@@ -9,7 +9,7 @@ namespace App\Modules\Comprobantes;
  */
 final class ComprobanteImpreso
 {
-    private const TITULOS = ['FC' => 'FACTURA', 'NC' => 'NOTA DE CREDITO', 'ND' => 'NOTA DE DEBITO'];
+    private const TITULOS = ['FC' => 'FACTURA', 'NC' => 'NOTA DE CREDITO', 'ND' => 'NOTA DE DEBITO', 'PR' => 'PRESUPUESTO', 'NX' => 'NOTA DE CREDITO'];
     private const CONDICION_EMISOR = [1 => 'Responsable Inscripto', 7 => 'Responsable Monotributo', 4 => 'IVA Exento'];
 
     /** Suma de los renglones como se ven (en la A, netos; en la B y C, con IVA). */
@@ -102,7 +102,7 @@ final class ComprobanteImpreso
                 'inicio' => !empty($emisor['inicio_actividades']) ? fecha($emisor['inicio_actividades']) : '',
                 'condicion' => trim((string) ($emisor['tk_iva'] ?? '')) !== '' ? (string) $emisor['tk_iva'] : (self::CONDICION_EMISOR[(int) ($emisor['iva'] ?? 0)] ?? ''),
             ],
-            'titulo' => self::TITULOS[$h['tipo']] ?? $h['tipo'], 'letra' => $letra, 'codigo' => (int) $h['tipoafipoys'] ?: Tipos::tipoAfip($h['tipo'], $letra),
+            'interno' => Tipos::interno((string) $h['tipo']), 'titulo' => self::TITULOS[$h['tipo']] ?? $h['tipo'], 'letra' => $letra, 'codigo' => (int) $h['tipoafipoys'] ?: Tipos::tipoAfip($h['tipo'], $letra),
             'numero' => numero_cbte($h['prefijo'], $nroCbte), 'fecha' => fecha($h['fecha']),
             'cliente' => [
                 'razon_social' => (string) ($h['cliente_razon_social'] ?? $cli['razon_social'] ?? ''), 'codigo' => (string) $h['cliente'],

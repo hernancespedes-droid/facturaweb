@@ -49,6 +49,12 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
 - `ctact.tico`: débitos < 7 (FC 1, ND 2, AD 3), créditos ≥ 7 (RC 7, NC 8, AC 9). `ctact.saldo` es lo que falta cancelar; el recibo deja su anticipo como saldo propio. Cada cancelación es una fila de `imputaciones` (`ctact_db` / `ctact_cr`).
 - Pantallas con cliente: `views/ctacte/_picker.php` + `public/assets/cliente-picker.js` (buscador + lupa, el usuario siempre elige).
 
+## Presupuesto (0.16.0)
+
+`PR` (Presupuesto) y `NX` (su contrapartida) son comprobantes **internos** (letra X, `Tipos::INTERNOS`): actúan como factura / nota de crédito (stock, caja, `ctact` tico 4 y 10)
+pero **no van al subdiario de IVA, al Libro IVA Digital, al portal ni al VFP**: todo lo fiscal que lee `subdiario` tiene que filtrar con `Tipos::sqlSoloFiscales()` (o `tipo NOT IN ('PR','NX')`).
+Un presupuesto genera **una sola** factura (`presupuesto_id` único) que va **solo al subdiario** (`solo_subdiario = 1`: sin caja, `ctact` ni stock). Ventas diarias: `Listados/VentasDiarias`. Detalle en el skill.
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.

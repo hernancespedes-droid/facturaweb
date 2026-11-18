@@ -89,7 +89,7 @@ final class ComprobantePdf
         // centro: letra
         $pdf->rect($m + 86, $m, 18, 20, 0.3);
         $pdf->texto($m + 86, $m + 13, $d['letra'], 26, true, 'C', 18);
-        $pdf->texto($m + 86, $m + 18, 'Cód. ' . str_pad((string) $d['codigo'], 2, '0', STR_PAD_LEFT), 6.5, false, 'C', 18);
+        $pdf->texto($m + 86, $m + 18, $d['interno'] ? 'No fiscal' : 'Cód. ' . str_pad((string) $d['codigo'], 2, '0', STR_PAD_LEFT), 6.5, false, 'C', 18);
         $pdf->linea($m + 95, $m + 20, $m + 95, $m + 38, 0.3);
         // derecha: comprobante
         $pdf->texto($m + 110, $m + 8, $d['titulo'], 13, true);
@@ -172,8 +172,8 @@ final class ComprobantePdf
             }
         } else {
             $pdf->rect($m, $yp, self::ANCHO, 28, 0.5);
-            $pdf->texto($m, $yp + 12, 'COMPROBANTE INTERNO', 12, true, 'C', self::ANCHO);
-            $pdf->texto($m, $yp + 18.5, 'Sin CAE de ARCA: no tiene validez fiscal', 9, false, 'C', self::ANCHO);
+            $pdf->texto($m, $yp + 12, $d['interno'] ? 'DOCUMENTO NO VÁLIDO COMO FACTURA' : 'COMPROBANTE INTERNO', 12, true, 'C', self::ANCHO);
+            $pdf->texto($m, $yp + 18.5, $d['interno'] ? 'Comprobante interno de la empresa: no tiene validez fiscal' : 'Sin CAE de ARCA: no tiene validez fiscal', 9, false, 'C', self::ANCHO);
         }
         $pdf->texto($m, $yp + 32, implode(' ', mb_str_split($d['copia'])), 8, true, 'R', self::ANCHO);
     }

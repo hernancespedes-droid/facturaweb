@@ -41,7 +41,7 @@ final class ExportadorVfp
     private const LETRA_REGISTRO = ['iva' => 'I', 'estadistica' => 'E', 'caja' => 'J', 'ctact' => 'T'];
 
     /** Condición de lo pendiente: emitido en la web, con validez fiscal, que el VFP no tiene ni rechazó. */
-    private const PENDIENTE = "canal = 'W' AND es_prueba = 0 AND vfp_enviado IS NULL AND vfp_error IS NULL";
+    private const PENDIENTE = "canal = 'W' AND es_prueba = 0 AND tipo NOT IN ('PR', 'NX') AND vfp_enviado IS NULL AND vfp_error IS NULL";
 
     public static function enc(mixed $v): string
     {

@@ -40,6 +40,7 @@
     if (letra === 'A') { ley.textContent = 'Factura A: los precios van sin IVA (netos); el IVA se suma al total.'; th.textContent = 'Precio neto'; }
     else if (letra === 'B') { ley.textContent = 'Factura B: los precios van con el IVA incluido.'; th.textContent = 'Precio con IVA'; }
     else if (letra === 'C') { ley.textContent = 'Factura C: los precios son finales, sin IVA discriminado.'; th.textContent = 'Precio final'; }
+    else if (letra === 'X') { ley.textContent = 'Comprobante X (no fiscal): los precios van con el IVA incluido.'; th.textContent = 'Precio con IVA'; }
     else { ley.textContent = 'Elegí el cliente para saber si es A, B o C.'; th.textContent = 'Precio'; }
     recalcular();
   }
@@ -118,7 +119,7 @@
     set('[data-cond-pago]', c.cond_pago);
     set('[data-email]', c.email);
     if (tipo === 'FC') actualizarLetra(c.letra);
-    else cargarAsociables(c.codigo);
+    else if (tipo !== 'PR') cargarAsociables(c.codigo);
     recalcular();
   }
   // Ícono de lupa junto al buscador: ventana con la lista de clientes para elegir uno
@@ -128,10 +129,10 @@
   });
   function cargarAsociables(cliente) {
     var sel = form.querySelector('[data-asociado]');
-    fetch(form.getAttribute('data-url-asociables') + '?cliente=' + encodeURIComponent(cliente), { credentials: 'same-origin' })
+    fetch(form.getAttribute('data-url-asociables') + '?cliente=' + encodeURIComponent(cliente) + '&tipo=' + encodeURIComponent(tipo), { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (arr) {
-        sel.innerHTML = '<option value="">Elegí la factura o nota de débito</option>';
+        sel.innerHTML = '<option value="">' + (tipo === 'NX' ? 'Elegí el presupuesto' : 'Elegí la factura o nota de débito') + '</option>';
         arr.forEach(function (a) {
           var o = document.createElement('option');
           o.value = a.id; o.textContent = a.texto; o.setAttribute('data-letra', a.letra);
@@ -159,7 +160,7 @@
   // ---- forma de pago (DECISIÓN D-09, Claude, a confirmar por Hernán: arranca en cuenta corriente, como el VFP, aunque el cliente tenga contado)
   function formaPago() {
     var cont = form.querySelector('[name="forma_pago"]:checked');
-    var contado = cont && cont.value === '1' && tipo !== 'NC';
+    var contado = cont && cont.value === '1' && tipo !== 'NC' && tipo !== 'NX';
     var bloque = form.querySelector('[data-contado]');
     if (bloque) bloque.hidden = !contado;
     var fp = form.querySelector('[data-fpago]');

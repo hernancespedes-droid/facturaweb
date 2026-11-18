@@ -82,7 +82,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   `public/assets/buscador.js` (`<input data-buscador-url="…">`). Clientes: `Comprobantes → buscarCliente`. Además cada buscador lleva un ícono de lupa que abre la ventana «ver lista» (`public/assets/ventana-lista.js`: `VentanaLista.articulos/clientes`; servidor `?listar=1`, `BuscadorArticulos::listar`, `buscarCliente`) para recorrer y elegir: **toda pantalla nueva con artículos o clientes lleva buscador + lupa** (`icono_lista()`). **Al crear una pantalla nueva con estos
   datos hay que reutilizar estos buscadores, no hacer otro campo.** El servidor igual vuelve a validar lo que llega.
 
-## Estado actual (17/11/2026, versión 0.15.0) y cómo se trabaja
+## Estado actual (17/11/2026, versión 0.16.0) y cómo se trabaja
 
 - **Ya facturando en ARCA producción** (Hernán emitió factura y nota de crédito): alias OYS (CUIT 20-11499319-1), certificado propio de la web, **punto de venta 7**
   (el 4 es del VFP: no se toca). Config de ARCA fuera de `public_html` (`afip_oys/` en el hosting). Modo en `config/local.php` (`afip.modo`).
@@ -90,7 +90,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   apuntando a `public/`. Se actualiza con GIT → botón `>_` y luego **Sistema → Aplicar cambios**. No activar el webhook de auto-despliegue.
 - **Rama `main` + pull requests** (igual que oesteparts): cada cambio en una rama `claude/…`, PR a `main` y fusión. Versión en `VERSION` (0.4.0 etapa 3, 0.4.1
   códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos, 0.7.2 lupa y lista de clientes, 0.8.0 web→VFP, 0.9.0 alta de clientes y licencia, 0.10.0 cuenta corriente y recibos, 0.11.0 Libro IVA Digital, 0.11.1 arreglo de GIT en Ferozo, 0.12.0 logo en los comprobantes,
-  0.12.1 scripts de `bin/` congelados, 0.13.0 portal de clientes, 0.14.0/0.14.1 grillas con orden, Excel y alto de pantalla, 0.15.0 subdiario impreso para el libro).
+  0.12.1 scripts de `bin/` congelados, 0.13.0 portal de clientes, 0.14.0/0.14.1 grillas con orden, Excel y alto de pantalla, 0.15.0 subdiario impreso para el libro, 0.15.1 imputador en dos paneles, 0.15.2 web a pantalla completa, 0.16.0 presupuesto y ventas diarias).
 - **Scripts congelados**: no tocar `bin/package.sh`, `bin/test.sh`, `bin/setup-dev.sh`, `bin/dev-server.sh` ni `bin/env.sh` (si cambian, el GIT de Ferozo no
   actualiza). Los vivos son `bin/pruebas.sh` (pruebas) y `bin/empaquetar.sh` (paquete).
 - **Hecho más allá de las etapas**: artículos con EAN-13/DUN-14/SKU/unidades por bulto; buscador de artículos en renglones y stock; texto adicional por renglón;
@@ -105,6 +105,20 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   etapas 6 y 7; en el portal: recibos, resumen de cuenta y aviso por mail de comprobante nuevo; pantalla de equivalencias de condición de IVA; probar el agente en la PC con Windows.
 - **Cuidados del contenedor**: MySQL local se cae al reiniciar el contenedor (`bash bin/setup-dev.sh`; si no arranca, borrar `/var/run/mysqld/*.lock` y `/var/lib/mysql/vm.pid`).
   Las claves, certificados y datos reales de clientes nunca van al repo ni al chat.
+
+## Presupuesto: vender sin factura de ARCA (pedido de Hernán, 17/11/2026, versión 0.16.0)
+
+**El presupuesto es la opción para poder vender algo sin hacer una factura en ARCA.** Reglas (decisiones D-37…D-42, nota `docs/entregas/0.16.0-presupuesto.md`):
+- Tipo `PR` (Presupuesto), **letra X**, no fiscal, numeración propia por sucursal (`sucursales.ultimo_presupuesto`), precios con IVA incluido. Vive en `subdiario` con
+  `es_prueba = 0` y se deja afuera **por tipo** (`Tipos::INTERNOS`, `Tipos::sqlSoloFiscales`) del subdiario de IVA, del Libro IVA Digital, del portal y del lote al VFP.
+- **Actúa como una factura**: se cobra (caja) o va a cuenta corriente (`ctact.tico` 4, débito: se cobra con recibo, se imputa, sale en el extracto), **descuenta stock**
+  (si `stock.controlar` está activo), sale en PDF/impresión («Documento no válido como factura»), mail y WhatsApp (`wa.me` + «Compartir el PDF»; `compartir.js`).
+- **Genera UNA factura** (`subdiario.presupuesto_id` único; `/comprobantes/{id}/facturar`): mismos renglones/cliente/descuento, letra del cliente (A: precio con IVA → neto),
+  CAE normal; **solo va al subdiario** (`solo_subdiario = 1`: sin caja, sin cuenta corriente, sin stock). Sus NC/ND también. No se factura un presupuesto con contrapartida.
+- **Contrapartida**: tipo `NX` («Nota de crédito X», `tico` 10): repone stock, saldo a favor, no supera el presupuesto, corrige solo presupuestos.
+- **Listados → Ventas diarias** (`Listados/VentasDiarias`): PR y FC mezclados, solo los que se cobraron o fueron a cuenta corriente (`solo_subdiario = 0`, así la factura de un
+  presupuesto no se repite); además NC/NX restando (D-40, a confirmar).
+- Falta: que el presupuesto viaje al VFP (D-41) y permisos propios (hoy `comprobantes.emitir`).
 
 ## Regla de grillas (Hernán, 17/11/2026)
 

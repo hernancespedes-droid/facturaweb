@@ -20,6 +20,7 @@ final class Menu
             'articulos' => ['texto' => 'Artículos', 'ruta' => '/articulos', 'permiso' => 'articulos.ver', 'grupo' => 'Maestros'],
         ];
         $o['comprobantes_fc'] = ['texto' => 'Nueva factura', 'ruta' => '/comprobantes/nuevo?tipo=FC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
+        $o['comprobantes_pr'] = ['texto' => 'Nuevo presupuesto', 'ruta' => '/comprobantes/nuevo?tipo=PR', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes_nc'] = ['texto' => 'Nueva nota de crédito', 'ruta' => '/comprobantes/nuevo?tipo=NC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes_nd'] = ['texto' => 'Nueva nota de débito', 'ruta' => '/comprobantes/nuevo?tipo=ND', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes'] = ['texto' => 'Comprobantes', 'ruta' => '/comprobantes', 'permiso' => 'comprobantes.ver', 'grupo' => 'Facturación'];
@@ -29,6 +30,7 @@ final class Menu
         $o['imputar'] = ['texto' => 'Imputación manual', 'ruta' => '/cuenta-corriente/imputar', 'permiso' => 'ctacte.imputar', 'grupo' => 'Cuenta corriente'];
         $o['ctacte_ajuste'] = ['texto' => 'Ajuste de cuenta corriente', 'ruta' => '/cuenta-corriente/ajuste', 'permiso' => 'ctacte.ajustar', 'grupo' => 'Cuenta corriente'];
         $o['cheques'] = ['texto' => 'Cheques en cartera', 'ruta' => '/cheques', 'permiso' => 'ctacte.ver', 'grupo' => 'Cuenta corriente'];
+        $o['ventas_diarias'] = ['texto' => 'Ventas diarias', 'ruta' => '/listados/ventas-diarias', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         $o['iva_ventas'] = ['texto' => 'Subdiario IVA ventas', 'ruta' => '/listados/iva-ventas', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         $o['libro_iva'] = ['texto' => 'Libro IVA Digital (ventas)', 'ruta' => '/listados/libro-iva-digital', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         foreach (Definiciones::todas() as $t => $d) {

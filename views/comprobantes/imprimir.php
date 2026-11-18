@@ -69,7 +69,7 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
             <?php foreach (array_filter([$e['domicilio'], $e['telefono'] !== '' ? 'Tel.: ' . $e['telefono'] : '', $e['mail']]) as $l): ?><div><?= e($l) ?></div><?php endforeach; ?>
             <?php if ($e['condicion'] !== ''): ?><div><b><?= e($e['condicion']) ?></b></div><?php endif; ?>
         </div>
-        <div class="letra"><b><?= e($d['letra']) ?></b><span>Cód. <?= e(str_pad((string) $d['codigo'], 2, '0', STR_PAD_LEFT)) ?></span></div>
+        <div class="letra"><b><?= e($d['letra']) ?></b><span><?= $d['interno'] ? 'No fiscal' : 'Cód. ' . e(str_pad((string) $d['codigo'], 2, '0', STR_PAD_LEFT)) ?></span></div>
         <div class="datos">
             <div class="titulo"><?= e($d['titulo']) ?></div>
             <div class="nro">Nº <?= e($d['numero']) ?></div>
@@ -110,7 +110,8 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
                 <?php if ($d['aviso_prueba'] !== ''): ?><div class="prueba"><?= e($d['aviso_prueba']) ?></div><?php endif; ?></div>
         </div>
     <?php else: ?>
-        <div class="estado"><b>COMPROBANTE INTERNO</b>Sin CAE de ARCA: no tiene validez fiscal</div>
+        <?php if ($d['interno']): ?><div class="estado"><b>DOCUMENTO NO VÁLIDO COMO FACTURA</b>Comprobante interno de la empresa: no tiene validez fiscal</div>
+        <?php else: ?><div class="estado"><b>COMPROBANTE INTERNO</b>Sin CAE de ARCA: no tiene validez fiscal</div><?php endif; ?>
     <?php endif; ?>
     <div class="copia"><?= e(implode(' ', mb_str_split($d['copia']))) ?></div>
 </div>

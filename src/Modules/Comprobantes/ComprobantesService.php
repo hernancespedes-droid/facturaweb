@@ -96,10 +96,22 @@ final class ComprobantesService
         if (!Tipos::valido($tipo)) {
             return ['ok' => false, 'errores' => ['tipo' => 'Elegí el tipo de comprobante.'], 'cbte' => null];
         }
+        $interno = Tipos::interno($tipo); // presupuesto o su contrapartida: sin ARCA, sin IVA fiscal
+
+        // Factura que sale de un presupuesto: los renglones, el cliente y el descuento son los del presupuesto (no se editan)
+        $presupuesto = null;
+        $presId = $tipo === 'FC' ? (int) ($in['presupuesto'] ?? 0) : 0;
+        if ($presId > 0) {
+            $presupuesto = $this->presupuestoParaFacturar($presId);
+            if (is_string($presupuesto)) {
+                return ['ok' => false, 'errores' => ['presupuesto' => $presupuesto], 'cbte' => null];
+            }
+            $in = $this->entradaDesdePresupuesto($presupuesto) + $in;
+        }
 
         // Emisor
         $emisor = $this->emisor();
-        if ($emisor['condicion'] === null || !Valida::cuit((string) ($emisor['cuit'] ?? ''))) {
+        if (!$interno && ($emisor['condicion'] === null || !Valida::cuit((string) ($emisor['cuit'] ?? '')))) {
             $err['emisor'] = 'Faltan los datos de la empresa: cargá razón social, CUIT y condición de IVA en Tablas → Parámetros.';
         }
 
@@ -118,20 +130,22 @@ final class ComprobantesService
             $err['cliente'] = 'El cliente está desactivado.';
         } else {
             $condArca = $this->condicionArca((int) $cliente['iva']);
-            if ($condArca === null) {
+            if ($condArca === null && !$interno) {
                 $err['cliente'] = 'No hay equivalencia de ARCA para la condición de IVA del cliente (código ' . (int) $cliente['iva']
                     . '). Corregí la condición del cliente o cargá la equivalencia.';
             }
         }
 
-        // Asociado (notas de crédito y débito)
+        // Asociado (notas de crédito y débito; la contrapartida X corrige un presupuesto)
         $asoc = null;
-        if ($tipo !== 'FC') {
-            $asoc = $this->asociado((int) ($in['asociado'] ?? 0), $codCli);
+        if (in_array($tipo, ['NC', 'ND', 'NX'], true)) {
+            $asoc = $this->asociado((int) ($in['asociado'] ?? 0), $codCli, $tipo);
             if (!is_array($asoc)) {
                 $err['asociado'] = $asoc;
             }
         }
+        // Lo que sale de un presupuesto (la factura y sus notas) va solo al subdiario: sin caja, cuenta corriente ni stock
+        $solo = $presupuesto !== null || (is_array($asoc) && (int) ($asoc['solo_subdiario'] ?? 0) === 1);
 
         // Sucursal: la de la factura asociada, o la elegida
         $sucs = $this->sucursales();
@@ -141,7 +155,7 @@ final class ComprobantesService
             $err['sucursal'] = 'Elegí la sucursal (punto de venta). Si no hay ninguna, cargá el punto de venta en Tablas → Sucursales.';
         }
         // Con ARCA: la sucursal tiene que poder emitir electrónicamente y lo que se corrige tiene que tener CAE
-        $electronica = $suc !== null && Arca::electronica($suc);
+        $electronica = $suc !== null && !$interno && Arca::electronica($suc);
         if ($electronica && ($problema = Arca::problema($suc)) !== null) {
             $err['sucursal'] = $problema;
         }
@@ -151,7 +165,9 @@ final class ComprobantesService
 
         // Letra
         $letra = '';
-        if (is_array($asoc)) {
+        if ($interno) {
+            $letra = Tipos::LETRA_INTERNA;
+        } elseif (is_array($asoc)) {
             $letra = (string) $asoc['letra'];
         } elseif ($emisor['condicion'] !== null && $condArca !== null) {
             $letra = Tipos::letra((string) $emisor['condicion'], $condArca);
@@ -159,13 +175,13 @@ final class ComprobantesService
         if ($letra !== '' && $suc !== null && Tipos::columnaNumerador($tipo, $letra) === null) {
             $err['tipo'] = 'No se emiten ' . mb_strtolower(Tipos::NOMBRES[$tipo]) . ' ' . $letra . '.';
         }
-        if (is_array($asoc) && $emisor['condicion'] !== null && $emisor['condicion'] !== 'RI' && $letra !== 'C') {
+        if (!$interno && is_array($asoc) && $emisor['condicion'] !== null && $emisor['condicion'] !== 'RI' && $letra !== 'C') {
             $err['asociado'] = 'El comprobante asociado no es compatible con la condición de IVA de la empresa.';
         }
 
         // Concepto (ARCA): productos, servicios o ambos. Con servicios hace falta el período y el vencimiento del pago.
         // DECISIÓN D-11 (Claude, a confirmar por Hernán): el concepto por omisión sale de Configuración (el VFP mandaba siempre 1, productos).
-        $concepto = (int) ($in['concepto'] ?? Configuracion::entero('comprobantes.concepto_defecto', 1));
+        $concepto = $interno ? 1 : (int) ($in['concepto'] ?? Configuracion::entero('comprobantes.concepto_defecto', 1));
         if (!in_array($concepto, [1, 2, 3], true)) {
             $err['concepto'] = 'Elegí productos, servicios o ambos.';
             $concepto = 1;
@@ -191,7 +207,7 @@ final class ComprobantesService
             $err['forma_pago'] = 'Elegí contado o cuenta corriente.';
         }
         $pago = null;
-        if ($formaPago === 1 && $tipo !== 'NC') {
+        if ($formaPago === 1 && !Tipos::credito($tipo) && !$solo) {
             $pago = $this->validarPago($in, $err);
         }
 
@@ -267,6 +283,8 @@ final class ComprobantesService
             $codAlic = trim((string) ($r['alicuota'] ?? ''));
             if (!isset($alic[$codAlic])) {
                 $e[] = 'elegí la alícuota de IVA';
+            } elseif ($presupuesto !== null && $letra === 'A' && $precio !== null && $alic[$codAlic] > 0) {
+                $precio = $precio / (1 + $alic[$codAlic] / 100); // el presupuesto tiene el IVA incluido; la factura A va neta
             }
             if ($e !== []) {
                 $errItems[] = "Renglón {$n}: " . implode(', ', $e) . '.';
@@ -301,10 +319,10 @@ final class ComprobantesService
 
         // DECISIÓN D-01 (Claude, a confirmar por Hernán): una nota de crédito no puede superar lo que queda por acreditar de la
         // factura. El VFP lo permitía. Se cambia en Configuración (comprobantes.nc_limite_factura) sin tocar el código.
-        if ($calc !== null && $tipo === 'NC' && is_array($asoc) && !isset($err['items']) && Configuracion::activo('comprobantes.nc_limite_factura')) {
+        if ($calc !== null && Tipos::credito($tipo) && is_array($asoc) && !isset($err['items']) && Configuracion::activo('comprobantes.nc_limite_factura')) {
             $libre = Calculadora::r2((float) $asoc['neto'] - $this->acreditado((int) $asoc['fe_clave']));
             if ($calc['total'] > $libre + 0.004) {
-                $err['items'] = 'La nota de crédito (' . plata($calc['total']) . ') supera lo que queda por acreditar de la factura (' . plata($libre) . ').';
+                $err['items'] = 'La nota de crédito (' . plata($calc['total']) . ') supera lo que queda por acreditar de ' . ($tipo === 'NX' ? 'el presupuesto' : 'la factura') . ' (' . plata($libre) . ').';
             }
         }
 
@@ -313,7 +331,7 @@ final class ComprobantesService
         // Configuración (comprobantes.credito_cero_sin_limite): destildado, el límite 0 significa "no se le puede fiar".
         $excede = false;
         $controlaCredito = $cliente !== null && ((float) $cliente['credito'] > 0 || !Configuracion::activo('comprobantes.credito_cero_sin_limite'));
-        if ($calc !== null && $cliente !== null && $formaPago === 2 && $tipo !== 'NC' && $controlaCredito) {
+        if ($calc !== null && $cliente !== null && $formaPago === 2 && !Tipos::credito($tipo) && !$solo && $controlaCredito) {
             $deuda = $this->deudaCliente($codCli);
             $excede = $deuda + $calc['total'] > (float) $cliente['credito'] + 0.004;
             if ($excede && !($puedeExcederCredito && ($in['excede_ok'] ?? '') === '1')) {
@@ -348,17 +366,69 @@ final class ComprobantesService
             'email' => $mails, 'asociado' => is_array($asoc) ? $asoc : null, 'calculo' => $calc, 'excede_credito' => $excede,
             'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
             'concepto' => $concepto, 'serv_desde' => $servDesde, 'serv_hasta' => $servHasta, 'vto_pago' => $vtoPago,
-            'advertencias' => (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
+            'interno' => $interno, 'solo_subdiario' => $solo, 'presupuesto' => $presupuesto !== null ? (int) $presupuesto['fe_clave'] : null,
+            'advertencias' => $solo ? [] : (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
         ]];
     }
 
+    /**
+     * Presupuesto listo para convertirse en factura (con sus renglones), o el motivo por el que no se puede: solo una factura por presupuesto
+     * y ninguno con contrapartida (nota de crédito X).
+     * @return string|array<string,mixed>
+     */
+    public function presupuestoParaFacturar(int $id): string|array
+    {
+        $st = $this->pdo->prepare("SELECT * FROM subdiario WHERE fe_clave = ? AND tipo = 'PR'");
+        $st->execute([$id]);
+        $p = $st->fetch();
+        if ($p === false) {
+            return 'El presupuesto no existe.';
+        }
+        if ($p['estado'] !== '') {
+            return 'El presupuesto está anulado.';
+        }
+        $st = $this->pdo->prepare('SELECT comprobante, prefijo, fe_nrocbte, fe_ccae FROM subdiario WHERE presupuesto_id = ?');
+        $st->execute([$id]);
+        if (($f = $st->fetch()) !== false) {
+            return 'Este presupuesto ya generó la factura ' . numero_visible($f) . ': un presupuesto se factura una sola vez.';
+        }
+        $st = $this->pdo->prepare("SELECT COUNT(*) FROM subdiario WHERE tipo = 'NX' AND estado = '' AND fe_tipocbte_asoc = 'PR' AND fe_nrocbte_asoc = ? AND sucursal = ? AND (fe_fecha_asoc IS NULL OR fe_fecha_asoc = ?)");
+        $st->execute([$p['comprobante'], $p['sucursal'], $p['fecha']]);
+        if ((int) $st->fetchColumn() > 0) {
+            return 'Este presupuesto tiene una nota de crédito X: no se puede facturar.';
+        }
+        $st = $this->pdo->prepare('SELECT * FROM estadistica WHERE subdiario_id = ? ORDER BY orden, fe_clave');
+        $st->execute([$id]);
+        $p['items'] = $st->fetchAll();
+        return $p;
+    }
+
+    /** Lo que sería el formulario de una factura con los datos de un presupuesto (precios con IVA; la factura A los pasa a neto). @return array<string,mixed> */
+    public function entradaDesdePresupuesto(array $p): array
+    {
+        $porCodigo = [];
+        foreach ($this->alicuotas() as $cod => $pct) {
+            $porCodigo[(string) $pct] = $cod;
+        }
+        $items = [];
+        foreach ($p['items'] as $it) {
+            $items[] = ['articulo' => (string) ($it['articulo'] ?? ''), 'descripcion' => (string) $it['observaciones'], 'texto' => (string) ($it['texto_impresion'] ?? ''),
+                'cantidad' => number_format((float) $it['unidades'], 3, ',', ''), 'precio' => number_format((float) $it['precio'], 4, ',', ''),
+                'alicuota' => $porCodigo[(string) (float) $it['por_iva']] ?? ''];
+        }
+        return ['tipo' => 'FC', 'presupuesto' => (string) $p['fe_clave'], 'cliente' => (string) $p['cliente'], 'sucursal' => (string) $p['sucursal'],
+            'forma_pago' => (string) $p['forma_pago'], 'descuento' => (float) $p['porcentaje_descuento'] > 0 ? number_format((float) $p['porcentaje_descuento'], 2, ',', '') : '',
+            'vendedor' => (string) ($p['vendedor'] ?? ''), 'cond_pago' => (string) ($p['cond_pago'] ?? ''), 'email' => (string) ($p['fe_cemailenvio'] ?? ''),
+            'observaciones' => (string) ($p['observaciones'] ?? ''), 'orden_compra' => (string) ($p['orden_compra'] ?? ''), 'items' => $items];
+    }
+
     /** @return string|array<string,mixed> el comprobante asociado (con sucursal, letra, neto...) o el motivo por el que no sirve */
-    private function asociado(int $feClave, int $cliente): string|array
+    private function asociado(int $feClave, int $cliente, string $tipo = 'NC'): string|array
     {
         if ($feClave <= 0) {
-            return 'Elegí el comprobante que se corrige (factura o nota de débito del cliente).';
+            return $tipo === 'NX' ? 'Elegí el presupuesto que se corrige.' : 'Elegí el comprobante que se corrige (factura o nota de débito del cliente).';
         }
-        $st = $this->pdo->prepare('SELECT fe_clave, tipo, letra, sucursal, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, cliente, neto, estado FROM subdiario WHERE fe_clave = ?');
+        $st = $this->pdo->prepare('SELECT fe_clave, tipo, letra, sucursal, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, cliente, neto, estado, solo_subdiario FROM subdiario WHERE fe_clave = ?');
         $st->execute([$feClave]);
         $a = $st->fetch();
         if ($a === false) {
@@ -367,8 +437,8 @@ final class ComprobantesService
         if ((int) $a['cliente'] !== $cliente) {
             return 'El comprobante asociado es de otro cliente.';
         }
-        if (!in_array($a['tipo'], ['FC', 'ND'], true)) {
-            return 'Solo se asocian facturas o notas de débito.';
+        if ($tipo === 'NX' ? $a['tipo'] !== 'PR' : !in_array($a['tipo'], ['FC', 'ND'], true)) {
+            return $tipo === 'NX' ? 'La nota de crédito X solo corrige presupuestos.' : 'Solo se asocian facturas o notas de débito.';
         }
         if ($a['estado'] !== '') {
             return 'El comprobante asociado está anulado.';
@@ -381,7 +451,7 @@ final class ComprobantesService
     {
         $st = $this->pdo->prepare(
             "SELECT COALESCE(SUM(n.neto), 0) FROM subdiario n JOIN subdiario a ON a.fe_clave = ?
-              WHERE n.tipo = 'NC' AND n.estado = '' AND n.sucursal = a.sucursal AND n.letra = a.letra
+              WHERE n.tipo = IF(a.tipo = 'PR', 'NX', 'NC') AND n.estado = '' AND n.sucursal = a.sucursal AND n.letra = a.letra
                 AND n.fe_tipocbte_asoc = a.tipo AND n.fe_nrocbte_asoc = " . Tipos::sqlNumeroVisible('a') . "
                 AND (n.fe_fecha_asoc IS NULL OR n.fe_fecha_asoc = a.fecha)"
         );
@@ -479,6 +549,12 @@ final class ComprobantesService
             return $previo + ['repetido' => true];
         }
         \App\Modules\Licencia\Licencia::exigirParaEmitir(); // suscripción vigente (solo si la instalación la exige)
+        if (!empty($cbte['presupuesto'])) { // antes de pedir un CAE: el presupuesto solo genera una factura
+            $ya = $this->presupuestoParaFacturar((int) $cbte['presupuesto']);
+            if (is_string($ya)) {
+                throw new PresupuestoYaFacturado($ya);
+            }
+        }
         if (!empty($cbte['electronica'])) {
             return $this->emitirConArca($cbte, $operacion, $usuarioId);
         }
@@ -605,9 +681,20 @@ final class ComprobantesService
         $cli = $cbte['cliente'];
         $asoc = $cbte['asociado'];
         $ahora = date('Y-m-d H:i:s');
+        $solo = !empty($cbte['solo_subdiario']); // factura (o nota) de un presupuesto: solo al subdiario
+        $presupuestoId = !empty($cbte['presupuesto']) ? (int) $cbte['presupuesto'] : null;
 
         $this->pdo->beginTransaction();
         try {
+            if ($presupuestoId !== null) { // el presupuesto queda bloqueado: dos usuarios no lo facturan a la vez
+                $st = $this->pdo->prepare("SELECT 1 FROM subdiario WHERE fe_clave = ? AND tipo = 'PR' FOR UPDATE");
+                $st->execute([$presupuestoId]);
+                $libre = $this->pdo->prepare('SELECT 1 FROM subdiario WHERE presupuesto_id = ?');
+                $libre->execute([$presupuestoId]);
+                if ($st->fetchColumn() === false || $libre->fetchColumn() !== false) {
+                    throw new PresupuestoYaFacturado('El presupuesto ya generó su factura.');
+                }
+            }
             // Numeración: la fila de la sucursal queda bloqueada hasta el commit (dos usuarios no toman el mismo número).
             $st = $this->pdo->prepare("SELECT `{$col}` FROM sucursales WHERE codigo = ? FOR UPDATE");
             $st->execute([$cbte['sucursal']]);
@@ -645,8 +732,9 @@ final class ComprobantesService
                 'creado_por' => $usuarioId > 0 ? $usuarioId : null, 'operacion' => $operacion,
                 'fe_concepto' => (int) ($cbte['concepto'] ?? 1), 'fe_serv_desde' => $cbte['serv_desde'] ?? null, 'fe_serv_hasta' => $cbte['serv_hasta'] ?? null,
                 'fe_vencimiento' => $cbte['vto_pago'] ?? null,
+                'presupuesto_id' => $presupuestoId, 'solo_subdiario' => $solo ? 1 : 0,
             ] + ($arca === null
-                ? ['es_prueba' => 1, 'fe_entorno' => '']
+                ? ['es_prueba' => Tipos::interno($tipo) ? 0 : 1, 'fe_entorno' => '']
                 : ['electronica' => 1, 'fe_nrocbte' => $numero, 'fe_ccae' => $arca['cae'], 'fe_dfecha' => $arca['fecha'], 'fe_dvtocae' => $arca['vence'],
                    'fe_ntipoafip' => $cbte['tipo_afip'], 'fe_mobservaciones' => $arca['observaciones'] !== [] ? implode("\n", $arca['observaciones']) : null,
                    'es_prueba' => Arca::entorno() === 'P' ? 0 : 1, 'fe_entorno' => Arca::entorno()]));
@@ -669,10 +757,13 @@ final class ComprobantesService
             }
 
             // Stock (si está activado): la factura descuenta y la nota de crédito repone, en esta misma transacción (D-19)
-            (new \App\Modules\Stock\StockService($this->pdo))->porComprobante($tipo, $id, $c['items'], $usuarioId > 0 ? $usuarioId : null);
+            // (el presupuesto y su contrapartida también mueven stock; la factura de un presupuesto no: ya lo movió el presupuesto)
+            if (!$solo) {
+                (new \App\Modules\Stock\StockService($this->pdo))->porComprobante($tipo, $id, $c['items'], $usuarioId > 0 ? $usuarioId : null);
+            }
 
             // Cómo se paga: la nota de crédito no mueve caja (como el VFP)
-            if ($tipo !== 'NC') {
+            if (!Tipos::credito($tipo) && !$solo) {
                 $pago = $cbte['pago'];
                 $this->insertar('caja', [
                     'subdiario_id' => $id, 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $cbte['sucursal'],
@@ -683,7 +774,7 @@ final class ComprobantesService
                 ]);
             }
             // Cuenta corriente: la factura y la nota de débito generan deuda; la nota de crédito, saldo a favor
-            if ($cbte['forma_pago'] === 2) {
+            if ($cbte['forma_pago'] === 2 && !$solo) {
                 $this->insertar('ctact', [
                     'subdiario_id' => $id, 'cliente' => $cli['codigo'], 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'tico' => Tipos::tico($tipo), 'letra' => $letra,
                     'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'], 'numero' => $numero, 'neto' => $c['total'], 'descuento' => 0,
@@ -692,8 +783,14 @@ final class ComprobantesService
             }
             $this->pdo->prepare('UPDATE clientes SET ultima_compra = ? WHERE codigo = ?')->execute([$cbte['fecha'], $cli['codigo']]);
             $this->pdo->commit();
+        } catch (PresupuestoYaFacturado $e) {
+            $this->pdo->rollBack();
+            throw $e;
         } catch (\PDOException $e) {
             $this->pdo->rollBack();
+            if ($e->getCode() === '23000' && str_contains($e->getMessage(), 'uq_subdiario_presupuesto')) {
+                throw new PresupuestoYaFacturado('El presupuesto ya generó su factura.');
+            }
             if ($e->getCode() === '23000' && str_contains($e->getMessage(), 'uq_subdiario_operacion')) {
                 $previo = $this->porOperacion($operacion);
                 if ($previo !== null) {
@@ -775,7 +872,19 @@ final class ComprobantesService
             $a = $st->fetchColumn();
             $h['asociado_clave'] = $a === false ? null : (int) $a;
         }
-        $h['notas'] = $h['tipo'] === 'NC' ? [] : $this->notasDe($h);
+        $h['notas'] = Tipos::credito($h['tipo']) ? [] : $this->notasDe($h);
+        // Presupuesto ↔ factura: de qué presupuesto salió la factura, o qué factura salió del presupuesto
+        $h['presupuesto_origen'] = $h['factura_generada'] = null;
+        $cols = 'fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto';
+        if ((int) ($h['presupuesto_id'] ?? 0) > 0) {
+            $st = $this->pdo->prepare("SELECT {$cols} FROM subdiario WHERE fe_clave = ?");
+            $st->execute([$h['presupuesto_id']]);
+            $h['presupuesto_origen'] = $st->fetch() ?: null;
+        } elseif ($h['tipo'] === 'PR') {
+            $st = $this->pdo->prepare("SELECT {$cols} FROM subdiario WHERE presupuesto_id = ?");
+            $st->execute([$feClave]);
+            $h['factura_generada'] = $st->fetch() ?: null;
+        }
         return $h;
     }
 
@@ -784,7 +893,7 @@ final class ComprobantesService
     {
         $st = $this->pdo->prepare(
             "SELECT fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto FROM subdiario
-              WHERE tipo IN ('NC', 'ND') AND estado = '' AND sucursal = ? AND letra = ? AND fe_tipocbte_asoc = ? AND fe_nrocbte_asoc = ?
+              WHERE tipo IN ('NC', 'ND', 'NX') AND estado = '' AND sucursal = ? AND letra = ? AND fe_tipocbte_asoc = ? AND fe_nrocbte_asoc = ?
                 AND (fe_fecha_asoc IS NULL OR fe_fecha_asoc = ?) ORDER BY fecha, comprobante"
         );
         $st->execute([$h['sucursal'], $h['letra'], $h['tipo'], Tipos::numeroVisible($h), $h['fecha']]);
@@ -845,7 +954,7 @@ final class ComprobantesService
         }
         $where = $w === [] ? '' : ' WHERE ' . implode(' AND ', $w);
         $base = 'FROM subdiario s LEFT JOIN clientes c ON c.codigo = s.cliente' . $where;
-        $st = $this->pdo->prepare("SELECT COUNT(*), COALESCE(SUM(IF(s.tipo = 'NC', -s.neto, s.neto)), 0) {$base}");
+        $st = $this->pdo->prepare("SELECT COUNT(*), COALESCE(SUM(IF(s.tipo IN ('NC', 'NX'), -s.neto, s.neto)), 0) {$base}");
         $st->execute($p);
         [$total, $suma] = $st->fetch(PDO::FETCH_NUM);
         $desde = max(0, ($pagina - 1) * $porPagina);
@@ -858,12 +967,16 @@ final class ComprobantesService
         return ['filas' => $st->fetchAll(), 'total' => (int) $total, 'suma' => Calculadora::r2((float) $suma)];
     }
 
-    /** Facturas y notas de débito del cliente a las que se les puede hacer una NC/ND. @return array<int,array<string,mixed>> */
-    public function asociables(int $cliente): array
+    /**
+     * Facturas y notas de débito del cliente a las que se les puede hacer una NC/ND (o, para la nota de crédito X, sus presupuestos).
+     * @return array<int,array<string,mixed>>
+     */
+    public function asociables(int $cliente, string $para = 'NC'): array
     {
+        $tipos = $para === 'NX' ? "'PR'" : "'FC', 'ND'";
         $st = $this->pdo->prepare(
             "SELECT fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto FROM subdiario
-              WHERE cliente = ? AND tipo IN ('FC', 'ND') AND estado = '' ORDER BY fecha DESC, comprobante DESC LIMIT 200"
+              WHERE cliente = ? AND tipo IN ({$tipos}) AND estado = '' ORDER BY fecha DESC, comprobante DESC LIMIT 200"
         );
         $st->execute([$cliente]);
         return $st->fetchAll();

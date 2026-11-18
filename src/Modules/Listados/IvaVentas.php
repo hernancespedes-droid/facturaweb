@@ -23,7 +23,7 @@ final class IvaVentas
     /** @param array<string,string> $f desde, hasta, pv, tipo, pruebas */
     private static function filtro(array $f): array
     {
-        $w = ["s.estado = ''"];
+        $w = ["s.estado = ''", Tipos::sqlSoloFiscales('s')]; // los presupuestos (PR, NX) no van al subdiario de IVA
         $p = [];
         if (($d = Valida::fecha((string) ($f['desde'] ?? ''))) !== null) {
             $w[] = 's.fecha >= ?';
@@ -37,7 +37,7 @@ final class IvaVentas
             $w[] = 's.prefijo = ?';
             $p[] = (int) $f['pv'];
         }
-        if (Tipos::valido((string) ($f['tipo'] ?? ''))) {
+        if (Tipos::valido((string) ($f['tipo'] ?? '')) && !Tipos::interno((string) $f['tipo'])) {
             $w[] = 's.tipo = ?';
             $p[] = $f['tipo'];
         }
@@ -50,7 +50,7 @@ final class IvaVentas
     /** @return array<int,float> puntos de venta que hay en los datos (para el filtro) */
     public static function puntosVenta(): array
     {
-        return array_map('intval', Db::pdo()->query('SELECT DISTINCT prefijo FROM subdiario WHERE prefijo > 0 ORDER BY prefijo')->fetchAll(\PDO::FETCH_COLUMN));
+        return array_map('intval', Db::pdo()->query('SELECT DISTINCT prefijo FROM subdiario WHERE prefijo > 0 AND tipo NOT IN (\'PR\', \'NX\') ORDER BY prefijo')->fetchAll(\PDO::FETCH_COLUMN));
     }
 
     /**
