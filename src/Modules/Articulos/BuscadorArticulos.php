@@ -53,11 +53,14 @@ final class BuscadorArticulos
     }
 
     /** Listado para la ventana de búsqueda: artículos activos por descripción (filtrados por palabras si se escribe algo), de a 20. @return array{items:array<int,array<string,mixed>>,hay_mas:bool} */
-    public static function listar(string $q, int $pagina): array
+    public static function listar(string $q, int $pagina, ?string $rubro = null, int $porPagina = 20): array
     {
-        $porPagina = 20;
         $cond = ["estado = 'AC'"];
         $par = [];
+        if ($rubro !== null && $rubro !== '') {
+            $cond[] = 'rubro = ?';
+            $par[] = $rubro;
+        }
         foreach (array_slice(preg_split('/\s+/u', $q) ?: [], 0, 6) as $p) {
             if ($p !== '') {
                 $like = '%' . addcslashes($p, '%_\\') . '%';

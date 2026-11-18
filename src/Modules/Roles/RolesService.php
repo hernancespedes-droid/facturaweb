@@ -24,6 +24,7 @@ final class RolesService
         'articulos' => ['articulos.ver', ['articulos.editar']],
         'comprobantes' => ['comprobantes.ver', ['comprobantes.emitir', 'comprobantes.credito']],
         'cambios' => ['cambios.hacer', []],
+        'kiosco' => ['kiosco.usar', []],
         'ctacte' => ['ctacte.ver', ['ctacte.cobrar', 'ctacte.imputar', 'ctacte.ajustar']],
         'iva_ventas' => ['listados.ver', []],
         'stock' => ['stock.ver', ['stock.mover', 'stock.administrar']],

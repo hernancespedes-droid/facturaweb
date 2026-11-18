@@ -21,6 +21,7 @@ final class Menu
         ];
         $o['comprobantes_fc'] = ['texto' => 'Nueva factura', 'ruta' => '/comprobantes/nuevo?tipo=FC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes_pr'] = ['texto' => 'Nuevo presupuesto', 'ruta' => '/comprobantes/nuevo?tipo=PR', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
+        $o['kiosco'] = ['texto' => 'Kiosco', 'ruta' => '/kiosco', 'permiso' => 'kiosco.usar', 'grupo' => 'Facturación'];
         $o['cambios'] = ['texto' => 'Cambio de mercadería', 'ruta' => '/cambios', 'permiso' => 'cambios.hacer', 'grupo' => 'Facturación'];
         $o['comprobantes_nc'] = ['texto' => 'Nueva nota de crédito', 'ruta' => '/comprobantes/nuevo?tipo=NC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes_nd'] = ['texto' => 'Nueva nota de débito', 'ruta' => '/comprobantes/nuevo?tipo=ND', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
@@ -61,6 +62,9 @@ final class Menu
         $o = self::opciones()[$clave] ?? null;
         if ($o === null) {
             return false;
+        }
+        if ($clave === 'kiosco' && !\App\Modules\Kiosco\KioscoService::habilitado()) {
+            return false; // el modo Kiosco se enciende en Parámetros
         }
         if ($clave === 'cambios' && !\App\Modules\Cambios\CambiosService::habilitado()) {
             return false; // el modo ticket de cambio se enciende en Parámetros

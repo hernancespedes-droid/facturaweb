@@ -82,13 +82,15 @@ $disc = $c['letra'] === 'A';
 endif; ?>
 
 <div class="actions">
-    <form method="post" action="<?= e(url('/comprobantes')) ?>" class="inline" id="form-emitir">
+    <form method="post" action="<?= e($urlEmitir ?? url('/comprobantes')) ?>" class="inline" id="form-emitir">
         <?= csrf_field() ?>
         <input type="hidden" name="datos" value="<?= e($datos) ?>">
         <input type="hidden" name="operacion" value="<?= e($operacion) ?>">
         <button class="btn" type="submit" data-un-solo-envio>Emitir <?= e(Tipos::titulo($c['tipo'], $c['letra'])) ?></button>
     </form>
-    <?php if (!empty($c['presupuesto'])): ?>
+    <?php if (!empty($urlVolver)): ?>
+        <a class="btn btn-ghost" href="<?= e($urlVolver) ?>">Volver al kiosco</a>
+    <?php elseif (!empty($c['presupuesto'])): ?>
         <a class="btn btn-ghost" href="<?= e(url('/comprobantes/' . (int) $c['presupuesto'])) ?>">Volver al presupuesto</a>
     <?php else: ?>
     <form method="post" action="<?= e(url('/comprobantes/editar')) ?>" class="inline">

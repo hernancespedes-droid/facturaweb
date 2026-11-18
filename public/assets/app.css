@@ -1139,3 +1139,44 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 .pago-linea > .field { flex: 1 1 180px; min-width: 0; margin: 0; }
 .pago-linea .pago-cheque { flex: 1 1 100%; }
 .pago-linea .pago-quitar { flex: 0 0 auto; }
+
+/* Modo Kiosco: tarjetas de productos y carrito siempre visible */
+.kiosco { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
+.kiosco-catalogo { min-width: 0; }
+.kiosco-carrito { position: sticky; top: 84px; max-height: calc(100vh - 104px); display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.kiosco-carrito h2 { margin: 0; }
+.kiosco-lineas { flex: 1 1 auto; overflow: auto; min-height: 60px; }
+.kiosco-barra { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.kiosco-buscar { width: 100%; font-size: 1.1rem; padding: 12px 14px; }
+.kiosco-rubros { display: flex; flex-wrap: wrap; gap: 6px; }
+.k-chip { border: 1px solid var(--border, #d6dbe6); background: var(--panel, #fff); color: inherit; border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+.k-chip.activo { background: var(--brand, #2f6bff); color: #fff; border-color: var(--brand, #2f6bff); }
+.kiosco-tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.k-tarjeta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; padding: 12px; min-height: 130px; border: 1px solid var(--border, #d6dbe6); border-radius: 12px; background: var(--panel, #fff); color: inherit; cursor: pointer; font: inherit; }
+.k-tarjeta:hover, .k-tarjeta:focus-visible { border-color: var(--brand, #2f6bff); box-shadow: 0 2px 10px rgba(47, 107, 255, .18); outline: none; }
+.k-tarjeta:active { transform: scale(.98); }
+.k-tarjeta .k-cod { font-size: .75rem; opacity: .65; }
+.k-tarjeta .k-desc { font-weight: 600; flex: 1 1 auto; }
+.k-tarjeta .k-precio { font-size: 1.15rem; font-weight: 700; }
+.k-tarjeta .k-stock { font-size: .78rem; color: var(--ok, #1c7c4f); font-weight: 600; }
+.k-tarjeta .k-stock.sin, .k-tarjeta.sin-stock .k-precio { color: var(--error, #c0392b); }
+.kiosco-mas { text-align: center; }
+.k-linea { padding: 8px 0; border-bottom: 1px solid var(--border, #d6dbe6); }
+.k-linea-cab { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.k-linea-ctl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.k-linea-sub { margin-left: auto; }
+.k-cant { width: 3.6rem; text-align: center; padding: 6px; }
+.k-aviso { color: var(--error, #c0392b); }
+.kiosco-total { display: flex; justify-content: space-between; align-items: baseline; font-size: 1.1rem; margin: 4px 0; }
+.kiosco-total b { font-size: 1.9rem; }
+.kiosco-cobrar { flex: 1 1 auto; font-size: 1.2rem; padding: 14px; }
+.kiosco-hecho .kiosco-hecho-links a { margin-left: 12px; }
+.kiosco-cliente [data-cliente-caja] { position: relative; margin-top: 6px; }
+@media (max-width: 900px) {
+  .kiosco { grid-template-columns: 1fr; }
+  .kiosco-catalogo { padding-bottom: 56vh; }
+  .kiosco-carrito { position: fixed; left: 0; right: 0; bottom: 0; top: auto; max-height: 52vh; z-index: 40; border-radius: 14px 14px 0 0; box-shadow: 0 -4px 18px rgba(0, 0, 0, .22); overflow: auto; }
+  .kiosco-lineas { flex: 0 0 auto; max-height: 24vh; min-height: 96px; }
+  .kiosco-carrito > p.small { display: none; }
+  .kiosco-tarjetas { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}

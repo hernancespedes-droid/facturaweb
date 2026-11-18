@@ -94,6 +94,7 @@ final class Definiciones
                     'ultimo_cliente' => ['label' => 'Último código de cliente', 'tipo' => 'entero', 'min' => 0, 'max' => 99999999, 'grupo' => 'Numeradores'],
                     'ultimo_recibo' => ['label' => 'Último recibo', 'tipo' => 'entero', 'min' => 0, 'max' => 99999999, 'grupo' => 'Numeradores'],
                     'por_impuesto' => $pct('% impuesto') + ['grupo' => 'Numeradores'],
+                    'kiosco' => ['label' => 'Habilitar modo Kiosco (carrito de mostrador con los productos en tarjetas; al finalizar genera un presupuesto)', 'tipo' => 'si_no', 'grupo' => 'Mostrador'],
                     'ticket_cambio' => ['label' => 'Habilita modo ticket de cambio (ticket sin importes para regalos y cambio de mercadería)', 'tipo' => 'si_no', 'grupo' => 'Mostrador'],
                 ],
                 'lista' => ['empresa', 'cuit'],
