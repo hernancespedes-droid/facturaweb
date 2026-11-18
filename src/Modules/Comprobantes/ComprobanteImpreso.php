@@ -9,7 +9,7 @@ namespace App\Modules\Comprobantes;
  */
 final class ComprobanteImpreso
 {
-    private const TITULOS = ['FC' => 'FACTURA', 'NC' => 'NOTA DE CREDITO', 'ND' => 'NOTA DE DEBITO', 'PR' => 'PRESUPUESTO', 'NX' => 'NOTA DE CREDITO'];
+    private const TITULOS = ['FC' => 'FACTURA', 'NC' => 'NOTA DE CREDITO', 'ND' => 'NOTA DE DEBITO', 'PR' => 'PRESUPUESTO', 'NX' => 'NOTA DE CREDITO', 'CM' => 'CAMBIO'];
     private const CONDICION_EMISOR = [1 => 'Responsable Inscripto', 7 => 'Responsable Monotributo', 4 => 'IVA Exento'];
 
     /** Suma de los renglones como se ven (en la A, netos; en la B y C, con IVA). */

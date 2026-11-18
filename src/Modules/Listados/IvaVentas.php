@@ -50,7 +50,7 @@ final class IvaVentas
     /** @return array<int,float> puntos de venta que hay en los datos (para el filtro) */
     public static function puntosVenta(): array
     {
-        return array_map('intval', Db::pdo()->query('SELECT DISTINCT prefijo FROM subdiario WHERE prefijo > 0 AND tipo NOT IN (\'PR\', \'NX\') ORDER BY prefijo')->fetchAll(\PDO::FETCH_COLUMN));
+        return array_map('intval', Db::pdo()->query('SELECT DISTINCT prefijo FROM subdiario WHERE prefijo > 0 AND ' . Tipos::sqlSoloFiscales() . ' ORDER BY prefijo')->fetchAll(\PDO::FETCH_COLUMN));
     }
 
     /**

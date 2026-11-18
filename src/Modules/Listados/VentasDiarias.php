@@ -19,7 +19,7 @@ use App\Modules\Comprobantes\Tipos;
  */
 final class VentasDiarias
 {
-    public const TIPOS = ['FC', 'PR', 'NC', 'NX'];
+    public const TIPOS = ['FC', 'PR', 'CM', 'NC', 'NX'];
     private const ORDEN = ['fecha' => 's.fecha', 'numero' => 's.tipo, s.letra, s.prefijo, numero', 'cliente' => 'razon_social', 'pago' => 's.forma_pago', 'total' => 'total'];
     private const SIGNO = "IF(s.tipo IN ('NC', 'NX'), -1, 1)";
 

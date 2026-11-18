@@ -262,7 +262,7 @@ if (!function_exists('estado_comprobante')) {
         if (($c['estado'] ?? '') !== '') {
             return ['Anulado', 'badge-off'];
         }
-        if (in_array($c['tipo'] ?? '', ['PR', 'NX'], true)) {
+        if (in_array($c['tipo'] ?? '', \App\Modules\Comprobantes\Tipos::INTERNOS, true)) {
             return ['No fiscal', 'badge-warn']; // presupuesto y su contrapartida
         }
         $cae = (string) ($c['fe_ccae'] ?? '');

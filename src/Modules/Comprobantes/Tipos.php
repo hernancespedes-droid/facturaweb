@@ -6,15 +6,17 @@ namespace App\Modules\Comprobantes;
 /** Tipos de comprobante, letras y sus códigos (los de sucursales, de cta. cte. y de ARCA). */
 final class Tipos
 {
-    public const NOMBRES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'ND' => 'Nota de débito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X'];
+    public const NOMBRES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'ND' => 'Nota de débito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X', 'CM' => 'Cambio'];
     /**
      * Comprobantes internos (no fiscales, letra X): el presupuesto y su contrapartida. No van al subdiario de IVA, ni al Libro IVA Digital,
      * ni se piden a ARCA, ni viajan al VFP. PR actúa como una factura (stock, caja, cuenta corriente); NX como una nota de crédito.
      */
-    public const INTERNOS = ['PR', 'NX'];
+    public const INTERNOS = ['PR', 'NX', 'CM'];
+    /** Los internos listos para un NOT IN de SQL. */
+    public const SQL_INTERNOS = "'PR', 'NX', 'CM'";
     public const LETRA_INTERNA = 'X';
-    /** tico de ctact: 1 factura, 2 nota de débito, 4 presupuesto, 8 nota de crédito, 10 nota de crédito X (los créditos son >= 7). */
-    private const TICO = ['FC' => 1, 'ND' => 2, 'PR' => 4, 'NC' => 8, 'NX' => 10];
+    /** tico de ctact: 1 factura, 2 nota de débito, 4 presupuesto, 5 cambio (diferencia a cobrar), 8 nota de crédito, 10 nota de crédito X (los créditos son >= 7). */
+    private const TICO = ['FC' => 1, 'ND' => 2, 'PR' => 4, 'CM' => 5, 'NC' => 8, 'NX' => 10];
     /** Código ARCA de la letra: factura A=1, B=6, C=11; la nota de débito suma 1 y la de crédito 2. */
     private const BASE_AFIP = ['A' => 1, 'B' => 6, 'C' => 11];
     private const DESPLAZAMIENTO = ['FC' => 0, 'ND' => 1, 'NC' => 2];
@@ -58,7 +60,7 @@ final class Tipos
     public static function sqlSoloFiscales(string $a = ''): string
     {
         $p = $a === '' ? '' : $a . '.';
-        return "{$p}tipo NOT IN ('PR', 'NX')";
+        return "{$p}tipo NOT IN (" . self::SQL_INTERNOS . ')';
     }
 
     public static function tico(string $tipo): int
@@ -68,7 +70,7 @@ final class Tipos
 
     public static function titulo(string $tipo, string $letra): string
     {
-        return $tipo === 'NX' ? self::NOMBRES['NX'] : self::NOMBRES[$tipo] . ' ' . $letra;
+        return $tipo === 'NX' ? self::NOMBRES['NX'] : self::NOMBRES[$tipo] . ' ' . $letra; // «Cambio X», «Presupuesto X», «Nota de crédito X»
     }
 
     public static function tipoAfip(string $tipo, string $letra): int
@@ -101,7 +103,7 @@ final class Tipos
     public static function columnaNumerador(string $tipo, string $letra): ?string
     {
         if ($letra === self::LETRA_INTERNA) {
-            return ['PR' => 'ultimo_presupuesto', 'NX' => 'ultima_nc_x'][$tipo] ?? null;
+            return ['PR' => 'ultimo_presupuesto', 'NX' => 'ultima_nc_x', 'CM' => 'ultimo_cambio'][$tipo] ?? null;
         }
         $base = ['FC' => 'ultima_factura_', 'NC' => 'ultima_nc_', 'ND' => 'ultima_nd_'][$tipo] ?? null;
         return $base !== null && isset(self::BASE_AFIP[$letra]) ? $base . strtolower($letra) : null;

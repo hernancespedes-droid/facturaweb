@@ -6,7 +6,7 @@
   'use strict';
   var sec = document.querySelector('[data-pago]');
   if (!sec) return;
-  var total = parseFloat(sec.getAttribute('data-total')) || 0;
+  function totalActual() { return parseFloat(sec.getAttribute("data-total")) || 0; }
   function num(txt) {
     txt = String(txt || '').replace(/[\s$]/g, '');
     if (txt === '') return 0;
@@ -25,6 +25,7 @@
   var aviso = sec.querySelector('[data-vuelto-aviso]');
 
   function actualizar() {
+    var total = totalActual();
     var r = document.querySelector('[name="forma_pago"]:checked');
     var contado = !!r && r.value === '1';
     bloque.hidden = !contado;
@@ -48,5 +49,6 @@
   document.querySelectorAll('[name="forma_pago"]').forEach(function (x) { x.addEventListener('change', actualizar); });
   fp.addEventListener('change', actualizar);
   rec.addEventListener('input', actualizar);
+  sec.addEventListener('pago:total', actualizar); // el total puede cambiar (cambio de mercadería: la diferencia a cobrar)
   actualizar();
 })();

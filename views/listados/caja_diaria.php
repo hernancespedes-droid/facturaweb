@@ -46,6 +46,7 @@ $otros = $r['total_cobrado'] - $tipoMonto(1) - $tipoMonto(3) - $tipoMonto(10) - 
     <div><span class="muted small">Vendido de contado</span><b><?= e($p($v['contado'])) ?></b></div>
     <div><span class="muted small">Facturas</span><b><?= e($p($v['facturas'])) ?></b></div>
     <div><span class="muted small">Presupuestos</span><b><?= e($p($v['presupuestos'])) ?></b></div>
+    <?php if ($v['cambios'] > 0): ?><div><span class="muted small">Cambios (diferencia cobrada)</span><b><?= e($p($v['cambios'])) ?></b></div><?php endif; ?>
     <?php if ($v['notas_debito'] > 0): ?><div><span class="muted small">Notas de débito</span><b><?= e($p($v['notas_debito'])) ?></b></div><?php endif; ?>
     <?php if ($v['notas_credito'] > 0): ?><div><span class="muted small">Notas de crédito (restan)</span><b>− <?= e($p($v['notas_credito'])) ?></b></div><?php endif; ?>
 </section>

@@ -23,6 +23,10 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
     <div class="acciones">
         <a class="btn" href="<?= e(url('/comprobantes/' . $h['fe_clave'] . '/imprimir')) ?>" target="_blank" rel="noopener">Imprimir</a>
         <a class="btn btn-ghost" href="<?= e(url('/comprobantes/' . $h['fe_clave'] . '/pdf')) ?>" target="_blank" rel="noopener">PDF</a>
+        <?php if (\App\Modules\Cambios\CambiosService::habilitado() && in_array($h['tipo'], ['PR', 'FC'], true) && $h['estado'] === '' && (int) $h['solo_subdiario'] === 0): ?>
+            <a class="btn btn-ghost" href="<?= e(url('/cambios/ticket/' . $h['fe_clave'])) ?>" target="_blank" rel="noopener">Ticket de cambio</a>
+            <?php if (\App\Modules\Auth\Auth::puede('cambios.hacer')): ?><a class="btn btn-ghost" href="<?= e(url('/cambios/nuevo') . '?cbte=' . $h['fe_clave']) ?>">Hacer un cambio</a><?php endif; ?>
+        <?php endif; ?>
         <?php if ($puedeEmitir && $h['tipo'] === 'PR' && $h['estado'] === ''): ?>
             <?php if ($h['factura_generada'] === null && $h['notas'] === []): ?>
                 <a class="btn" href="<?= e(url('/comprobantes/' . $h['fe_clave'] . '/facturar')) ?>">Generar factura</a>
@@ -40,7 +44,8 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
 
 <?php if (\App\Modules\Comprobantes\Tipos::interno($h['tipo'])): ?><div class="alerta alerta-info small"><?= $h['tipo'] === 'PR'
     ? 'Presupuesto: no es una factura ni va al subdiario de IVA. Descuenta stock y se cobra o va a cuenta corriente.' . ($h['factura_generada'] === null ? ' Se puede generar una factura, una sola vez.' : '')
-    : 'Contrapartida de un presupuesto: repone el stock y deja saldo a favor del cliente. No es fiscal.' ?></div>
+    : ($h['tipo'] === 'CM' ? 'Cambio de mercadería: lo devuelto volvió al stock, lo que se llevó salió, y el total es solo la diferencia cobrada. No es fiscal.'
+        : 'Contrapartida de un presupuesto: repone el stock y deja saldo a favor del cliente. No es fiscal.') ?></div>
 <?php elseif ((int) $h['solo_subdiario'] === 1): ?><div class="alerta alerta-info small">Este comprobante sale de un presupuesto: va <b>solo al subdiario</b>. No toca caja, cuenta corriente ni stock (ya los movió el presupuesto).</div>
 <?php endif; ?>
 <?php if (!$conCae && !\App\Modules\Comprobantes\Tipos::interno($h['tipo'])): ?><div class="alerta alerta-info small">Comprobante interno: no tiene CAE de ARCA, no tiene validez fiscal.</div>
@@ -60,6 +65,12 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
         <?php if ($h['factura_generada'] !== null): ?>
             <div><dt>Factura generada</dt><dd><a href="<?= e(url('/comprobantes/' . $h['factura_generada']['fe_clave'])) ?>"><?= e(Tipos::titulo($h['factura_generada']['tipo'], $h['factura_generada']['letra']) . ' ' . numero_visible($h['factura_generada'])) ?></a></dd></div>
         <?php endif; ?>
+        <?php if ($h['cambio_origen'] !== null): ?>
+            <div><dt>Cambio de</dt><dd><a href="<?= e(url('/comprobantes/' . $h['cambio_origen']['fe_clave'])) ?>"><?= e(Tipos::titulo($h['cambio_origen']['tipo'], $h['cambio_origen']['letra']) . ' ' . numero_visible($h['cambio_origen'])) ?></a></dd></div>
+        <?php endif; ?>
+        <?php foreach ($h['cambios'] as $cm): ?>
+            <div><dt>Cambio</dt><dd><a href="<?= e(url('/comprobantes/' . $cm['fe_clave'])) ?>"><?= e(Tipos::titulo('CM', 'X') . ' ' . numero_visible($cm)) ?></a> · <?= e(fecha($cm['fecha'])) ?> · diferencia <?= e(plata_dec($cm['neto'])) ?></dd></div>
+        <?php endforeach; ?>
         <?php if ($h['presupuesto_origen'] !== null): ?>
             <div><dt>Sale del presupuesto</dt><dd><a href="<?= e(url('/comprobantes/' . $h['presupuesto_origen']['fe_clave'])) ?>"><?= e(Tipos::titulo('PR', 'X') . ' ' . numero_visible($h['presupuesto_origen'])) ?></a></dd></div>
         <?php endif; ?>

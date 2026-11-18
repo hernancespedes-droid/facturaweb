@@ -18,7 +18,7 @@ use PDO;
  */
 final class StockService
 {
-    public const ORIGENES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X', 'INGRESO' => 'Ingreso', 'EGRESO' => 'Egreso', 'AJUSTE' => 'Ajuste', 'TRANSF' => 'Transferencia'];
+    public const ORIGENES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X', 'CM' => 'Cambio', 'INGRESO' => 'Ingreso', 'EGRESO' => 'Egreso', 'AJUSTE' => 'Ajuste', 'TRANSF' => 'Transferencia'];
 
     private PDO $pdo;
 
@@ -222,6 +222,35 @@ final class StockService
             : $this->pdo->prepare('SELECT COALESCE(SUM(saldo), 0) FROM stock_saldos WHERE articulo = ? AND deposito_id = ?');
         $st->execute($deposito === null ? [$articulo] : [$articulo, $deposito]);
         return (float) $st->fetchColumn();
+    }
+
+    /**
+     * Stock de un cambio de mercadería: lo devuelto entra y lo que se lleva sale (un movimiento por artículo con el neto), en la transacción del cambio.
+     * @param array<int,array<string,mixed>> $devueltos @param array<int,array<string,mixed>> $nuevos
+     */
+    public function porCambio(int $subdiarioId, array $devueltos, array $nuevos, ?int $usuarioId): void
+    {
+        if (!self::activo()) {
+            return;
+        }
+        $neto = [];
+        foreach ($devueltos as $d) {
+            if ((string) $d['articulo'] !== '') {
+                $neto[(string) $d['articulo']] = ($neto[(string) $d['articulo']] ?? 0.0) + (float) $d['cantidad'];
+            }
+        }
+        foreach ($nuevos as $n) {
+            $neto[(string) $n['articulo']] = ($neto[(string) $n['articulo']] ?? 0.0) - (float) $n['cantidad'];
+        }
+        ksort($neto); // mismo orden de bloqueo que las facturas (sin deadlocks)
+        $dep = $this->depositoPrincipal();
+        $ctrl = $this->pdo->prepare('SELECT controla_stock FROM articulos WHERE codigo = ?');
+        foreach ($neto as $a => $cant) {
+            $ctrl->execute([$a]);
+            if ((int) $ctrl->fetchColumn() === 1 && abs($cant) > 0.0004) {
+                $this->mover((string) $a, $dep, $cant, 'CM', $subdiarioId, $usuarioId);
+            }
+        }
     }
 
     /**

@@ -324,26 +324,7 @@ final class ComprobantesService
 
         // Vuelto: si el cliente entrega de más y la forma de pago lo acepta (efectivo), la diferencia es el vuelto que hay que darle
         if ($pago !== null && $calc !== null && !isset($err['fpago']) && !isset($err['items'])) {
-            $recibidoTxt = trim((string) ($in['recibido'] ?? ''));
-            $totalVenta = $calc['total'];
-            $recibido = $totalVenta;
-            if ($recibidoTxt !== '') {
-                $v = Valida::decimal($recibidoTxt);
-                if ($v === null || $v <= 0 || $v > Calculadora::MAX_IMPORTE) {
-                    $err['recibido'] = 'El importe recibido no es válido.';
-                } else {
-                    $recibido = Calculadora::r2($v);
-                }
-            }
-            if (!isset($err['recibido'])) {
-                if ($recibido < $totalVenta - 0.004) {
-                    $err['recibido'] = 'El cliente entregó menos que el total (' . plata($totalVenta) . '): cobrá el total o elegí cuenta corriente.';
-                } elseif ($recibido > $totalVenta + 0.004 && !$pago['acepta_vuelto']) {
-                    $err['recibido'] = $pago['descripcion'] . ' no acepta vuelto: cobrá exactamente ' . plata($totalVenta) . '.';
-                }
-            }
-            $pago['recibido'] = $recibido;
-            $pago['vuelto'] = max(0.0, Calculadora::r2($recibido - $totalVenta));
+            $pago = $this->aplicarVuelto($pago, $calc['total'], $in, $err);
         }
 
         // DECISIÓN D-01 (Claude, a confirmar por Hernán): una nota de crédito no puede superar lo que queda por acreditar de la
@@ -359,12 +340,10 @@ final class ComprobantesService
         // cada comprobante a cuenta corriente de un cliente con límite 0 pedía autorización de un supervisor. Se cambia en
         // Configuración (comprobantes.credito_cero_sin_limite): destildado, el límite 0 significa "no se le puede fiar".
         $excede = false;
-        $controlaCredito = $cliente !== null && ((float) $cliente['credito'] > 0 || !Configuracion::activo('comprobantes.credito_cero_sin_limite'));
-        if ($calc !== null && $cliente !== null && $formaPago === 2 && !Tipos::credito($tipo) && !$solo && $controlaCredito) {
-            $deuda = $this->deudaCliente($codCli);
-            $excede = $deuda + $calc['total'] > (float) $cliente['credito'] + 0.004;
-            if ($excede && !($puedeExcederCredito && ($in['excede_ok'] ?? '') === '1')) {
-                $err['credito'] = 'El comprobante excede el crédito del cliente (límite ' . plata((float) $cliente['credito']) . ', deuda actual ' . plata($deuda)
+        if ($calc !== null && $cliente !== null && $formaPago === 2 && !Tipos::credito($tipo) && !$solo && ($ex = $this->creditoExcedido($cliente, $calc['total'])) !== null) {
+            $excede = true;
+            if (!($puedeExcederCredito && ($in['excede_ok'] ?? '') === '1')) {
+                $err['credito'] = 'El comprobante excede el crédito del cliente (límite ' . plata($ex['limite']) . ', deuda actual ' . plata($ex['deuda'])
                     . '). ' . ($puedeExcederCredito ? 'Tildá "Autorizo exceder el crédito" para emitirlo.' : 'Pedile a un administrador que lo autorice.');
             }
         }
@@ -489,12 +468,54 @@ final class ComprobantesService
     }
 
     /**
+     * Lo que entrega el cliente y el vuelto (D-44): sin importe recibido es el total justo; de menos no es un pago; de más solo si la forma acepta vuelto.
+     * @param array<string,mixed> $pago el de validarPago() @param array<string,string> $err @return array<string,mixed> el pago con 'recibido' y 'vuelto'
+     */
+    public function aplicarVuelto(array $pago, float $total, array $in, array &$err): array
+    {
+        $recibidoTxt = trim((string) ($in['recibido'] ?? ''));
+        $recibido = $total;
+        if ($recibidoTxt !== '') {
+            $v = Valida::decimal($recibidoTxt);
+            if ($v === null || $v <= 0 || $v > Calculadora::MAX_IMPORTE) {
+                $err['recibido'] = 'El importe recibido no es válido.';
+            } else {
+                $recibido = Calculadora::r2($v);
+            }
+        }
+        if (!isset($err['recibido'])) {
+            if ($recibido < $total - 0.004) {
+                $err['recibido'] = 'El cliente entregó menos que el total (' . plata($total) . '): cobrá el total o elegí cuenta corriente.';
+            } elseif ($recibido > $total + 0.004 && !$pago['acepta_vuelto']) {
+                $err['recibido'] = $pago['descripcion'] . ' no acepta vuelto: cobrá exactamente ' . plata($total) . '.';
+            }
+        }
+        $pago['recibido'] = $recibido;
+        $pago['vuelto'] = max(0.0, Calculadora::r2($recibido - $total));
+        return $pago;
+    }
+
+    /**
+     * DECISIÓN D-02: un cliente con límite 0 no tiene control de crédito (interruptor comprobantes.credito_cero_sin_limite). Si pasarse del límite,
+     * devuelve [limite, deuda]; si no, null.
+     * @param array<string,mixed> $cliente @return array{limite:float,deuda:float}|null
+     */
+    public function creditoExcedido(array $cliente, float $total): ?array
+    {
+        if (!((float) $cliente['credito'] > 0 || !Configuracion::activo('comprobantes.credito_cero_sin_limite'))) {
+            return null;
+        }
+        $deuda = $this->deudaCliente((int) $cliente['codigo']);
+        return $deuda + $total > (float) $cliente['credito'] + 0.004 ? ['limite' => (float) $cliente['credito'], 'deuda' => $deuda] : null;
+    }
+
+    /**
      * DECISIÓN D-04 (Claude, a confirmar por Hernán): un solo medio de pago por comprobante (efectivo, tickets, tarjeta o cheque).
      * El VFP tenía una pantalla de pagos mixtos (pagos_factu_ped) y cheques de terceros: eso va con las cobranzas (etapa 4).
      *
      * @param array<string,string> $err @return array<string,mixed>|null
      */
-    private function validarPago(array $in, array &$err): ?array
+    public function validarPago(array $in, array &$err): ?array
     {
         $cod = trim((string) ($in['fpago'] ?? ''));
         $st = $this->pdo->prepare('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE codigo = ?');
@@ -917,6 +938,18 @@ final class ComprobantesService
             $st = $this->pdo->prepare("SELECT {$cols} FROM subdiario WHERE presupuesto_id = ?");
             $st->execute([$feClave]);
             $h['factura_generada'] = $st->fetch() ?: null;
+        }
+        // Cambios de mercadería: de qué comprobante es un cambio (CM) y qué cambios tiene un presupuesto o una factura
+        $h['cambio_origen'] = null;
+        $h['cambios'] = [];
+        if ($h['tipo'] === 'CM' && (int) ($h['cambio_de'] ?? 0) > 0) {
+            $st = $this->pdo->prepare("SELECT {$cols} FROM subdiario WHERE fe_clave = ?");
+            $st->execute([$h['cambio_de']]);
+            $h['cambio_origen'] = $st->fetch() ?: null;
+        } elseif (in_array($h['tipo'], ['PR', 'FC'], true)) {
+            $st = $this->pdo->prepare("SELECT {$cols} FROM subdiario WHERE cambio_de = ? AND estado = '' ORDER BY fecha, fe_clave");
+            $st->execute([$feClave]);
+            $h['cambios'] = $st->fetchAll();
         }
         return $h;
     }
