@@ -15,6 +15,9 @@ use App\Core\Db;
  */
 final class BuscadorArticulos
 {
+    /** Token de la venta en curso de quien busca: sus propias reservas no se cuentan como «reservado por otros» (lo fija el controlador de la pantalla). */
+    public static ?string $reserva = null;
+
     /** @return array<int,array<string,mixed>> */
     public static function buscar(string $q, bool $exacto): array
     {
@@ -104,6 +107,15 @@ final class BuscadorArticulos
         foreach ($st->fetchAll() as $s) {
             $saldo[(string) $s['articulo']][(int) $s['deposito_id']] = (float) $s['saldo'];
         }
+        // Lo reservado por otros puestos (con quién) y lo que queda libre en el depósito desde el que se vende
+        $principal = (new \App\Modules\Stock\StockService($pdo))->depositoPrincipal();
+        $res = [];
+        $r = $pdo->prepare('SELECT r.articulo, r.cantidad, COALESCE(u.nombre, \'otro puesto\') AS nombre FROM stock_reservas r LEFT JOIN usuarios u ON u.id = r.usuario_id
+            WHERE r.articulo IN (' . implode(', ', array_fill(0, count($codigos), '?')) . ') AND r.vence >= NOW() AND r.token <> ? ORDER BY r.creado');
+        $r->execute([...$codigos, self::$reserva ?? '']);
+        foreach ($r->fetchAll() as $f) {
+            $res[(string) $f['articulo']][] = ['n' => (string) $f['nombre'], 'c' => (float) $f['cantidad']];
+        }
         $out = [];
         foreach ($filas as $a) {
             $porDep = [];
@@ -113,7 +125,10 @@ final class BuscadorArticulos
                 $porDep[] = ['n' => (string) $d['nombre'], 's' => $q];
                 $total += $q;
             }
-            $out[(string) $a['codigo']] = ['controla' => (int) $a['controla_stock'] === 1, 'total' => round($total, 3), 'depositos' => $porDep];
+            $reservado = array_sum(array_column($res[(string) $a['codigo']] ?? [], 'c'));
+            $libre = ($saldo[(string) $a['codigo']][$principal] ?? 0.0) - $reservado; // en el depósito principal (desde donde se vende)
+            $out[(string) $a['codigo']] = ['controla' => (int) $a['controla_stock'] === 1, 'total' => round($total, 3), 'depositos' => $porDep,
+                'reservas' => $res[(string) $a['codigo']] ?? [], 'disponible' => round($libre, 3)];
         }
         return $out;
     }
@@ -123,6 +138,7 @@ final class BuscadorArticulos
     {
         $cot = (new \App\Modules\Comprobantes\ComprobantesService())->cotizacionDolar(date('Y-m-d'));
         $stock = self::stockDe($filas);
+        $fotos = Foto::urls(array_map(static fn (array $a) => (string) $a['codigo'], $filas));
         $out = [];
         foreach ($filas as $a) {
             $precio = (float) $a['precio_unitario'] > 0 ? (float) $a['precio_unitario'] : (float) $a['precio_de_venta_1'];
@@ -131,7 +147,8 @@ final class BuscadorArticulos
                 'sku' => (string) $a['sku'], 'ean13' => (string) $a['ean13'], 'dun14' => (string) $a['dun14'],
                 'cantidad' => $porBulto, // D-17
                 'precio' => numero($dolares ? $precio * $cot : $precio, 4), 'moneda' => $a['moneda'], 'cotizacion' => $dolares ? $cot : null,
-                'stock' => $stock[(string) $a['codigo']] ?? null];
+                'stock' => $stock[(string) $a['codigo']] ?? null,
+                'foto' => $fotos[(string) $a['codigo']]['chica'] ?? null, 'foto_grande' => $fotos[(string) $a['codigo']]['grande'] ?? null];
         }
         return $out;
     }

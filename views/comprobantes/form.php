@@ -54,10 +54,13 @@ $hoyIso = date('Y-m-d');
 
 <form method="post" action="<?= e(url('/comprobantes/revisar')) ?>" class="card form" id="form-comprobante" novalidate
       data-condicion-emisor="<?= e($emisor['condicion'] ?? '') ?>" data-tipo="<?= e($tipo) ?>" data-letra="<?= e($letra) ?>" data-sin-iva="<?= !empty($sinIva) ? '1' : '0' ?>"
-      data-url-cliente="<?= e(url('/comprobantes/buscar-cliente')) ?>" data-url-articulo="<?= e(url('/comprobantes/buscar-articulo')) ?>"
+      data-url-cliente="<?= e(url('/comprobantes/buscar-cliente')) ?>" data-url-articulo="<?= e(url('/comprobantes/buscar-articulo') . '?reserva=' . $reserva) ?>"
       data-url-asociables="<?= e(url('/comprobantes/asociables')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="tipo" value="<?= e($tipo) ?>">
+    <?php if (in_array($tipo, ['FC', 'PR'], true) && \App\Modules\Stock\StockService::activo()): ?>
+        <input type="hidden" name="reserva" value="<?= e((string) $reserva) ?>" data-reserva data-url="<?= e(url('/stock/reservar')) ?>" data-csrf-nombre="<?= e(\App\Core\Csrf::CAMPO) ?>" data-csrf="<?= e(\App\Core\Csrf::token()) ?>">
+    <?php endif; ?>
 
     <h2>Cliente</h2>
     <div class="field has-picker<?= isset($errores['cliente']) ? ' has-error' : '' ?>" data-picker>
@@ -109,6 +112,7 @@ $hoyIso = date('Y-m-d');
     </div>
 
     <h2>Renglones</h2>
+    <div class="alerta alerta-warn small" role="status" data-reserva-aviso hidden>Hay productos reservados por otro puesto o sin stock suficiente: para venderlos igual, al emitir hace falta la autorización de un supervisor.</div>
     <?php if (isset($errores['items'])): ?><div class="alerta alerta-error" role="alert"><?= nl2br(e($errores['items'])) ?></div><?php endif; ?>
     <p class="small muted" data-leyenda-precio></p>
     <div class="table-wrap">
@@ -119,7 +123,8 @@ $hoyIso = date('Y-m-d');
                 <tr data-renglon>
                     <td data-label="Artículo"><div class="campo-con-boton"><input name="items[<?= $i ?>][articulo]" value="<?= e($it['articulo'] ?? '') ?>" maxlength="60" placeholder="Código, barras, SKU o descripción" data-articulo autocomplete="off" role="combobox" aria-autocomplete="list"><?= icono_lista('data-lista-articulos', 'artículos') ?></div></td>
                     <td data-label="Descripción"><input name="items[<?= $i ?>][descripcion]" value="<?= e($it['descripcion'] ?? '') ?>" maxlength="255" data-descripcion>
-                        <textarea name="items[<?= $i ?>][texto]" rows="1" maxlength="2000" placeholder="Texto adicional que se imprime en la factura (opcional)" data-texto><?= e($it['texto'] ?? '') ?></textarea></td>
+                        <textarea name="items[<?= $i ?>][texto]" rows="1" maxlength="2000" placeholder="Texto adicional que se imprime en la factura (opcional)" data-texto><?= e($it['texto'] ?? '') ?></textarea>
+                        <small data-reserva-estado hidden></small></td>
                     <td data-label="Cantidad"><input name="items[<?= $i ?>][cantidad]" value="<?= e($it['cantidad'] ?? '') ?>" inputmode="decimal" data-decimales="3" data-cantidad></td>
                     <td data-label="Precio"><input name="items[<?= $i ?>][precio]" value="<?= e($it['precio'] ?? '') ?>" inputmode="decimal" data-decimales="4" data-precio></td>
                     <td data-label="IVA"><select name="items[<?= $i ?>][alicuota]" data-alicuota>
@@ -193,7 +198,8 @@ $hoyIso = date('Y-m-d');
     <tr data-renglon>
         <td data-label="Artículo"><div class="campo-con-boton"><input name="items[__I__][articulo]" maxlength="60" placeholder="Código, barras, SKU o descripción" data-articulo autocomplete="off" role="combobox" aria-autocomplete="list"><?= icono_lista('data-lista-articulos', 'artículos') ?></div></td>
         <td data-label="Descripción"><input name="items[__I__][descripcion]" maxlength="255" data-descripcion>
-            <textarea name="items[__I__][texto]" rows="1" maxlength="2000" placeholder="Texto adicional que se imprime en la factura (opcional)" data-texto></textarea></td>
+            <textarea name="items[__I__][texto]" rows="1" maxlength="2000" placeholder="Texto adicional que se imprime en la factura (opcional)" data-texto></textarea>
+            <small data-reserva-estado hidden></small></td>
         <td data-label="Cantidad"><input name="items[__I__][cantidad]" inputmode="decimal" data-decimales="3" data-cantidad></td>
         <td data-label="Precio"><input name="items[__I__][precio]" inputmode="decimal" data-decimales="4" data-precio></td>
         <td data-label="IVA"><select name="items[__I__][alicuota]" data-alicuota>
@@ -204,4 +210,5 @@ $hoyIso = date('Y-m-d');
 </template>
 <script src="<?= e(asset('assets/stock-articulo.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/ventana-lista.js')) ?>" defer></script>
+<script src="<?= e(asset('assets/reservas.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/comprobante.js')) ?>" defer></script>

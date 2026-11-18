@@ -29,6 +29,7 @@ final class KioscoTest extends ComprobantesTestCase
         $pdo->exec("INSERT INTO articulos (codigo, descripcion, alicuota, precio_unitario) VALUES ('T-ART2', 'OTRO ARTICULO DE PRUEBA', '21', 150)");
         $this->stock = new StockService();
         $this->stock->cargar('INGRESO', 'T-ART', $this->stock->depositoPrincipal(), '5', 'unidades', 'inicial', null);
+        $this->stock->cargar('INGRESO', 'T-ART2', $this->stock->depositoPrincipal(), '3', 'unidades', 'inicial', null);
     }
 
     protected function tearDown(): void

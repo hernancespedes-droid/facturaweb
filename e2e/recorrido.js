@@ -354,11 +354,32 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.goto(BASE + '/stock?q=e2e-001');
     ok((await page.content()).includes('E2E-001'), 'cambio: el stock refleja el cambio');
 
+    // ---- foto del artículo con zoom: se sube en la ficha, se ve en el kiosco y se amplía con el visor
+    const fotoPng = execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_foto.php')]).toString().trim();
+    await page.goto(BASE + '/articulos/ficha?codigo=E2E-001');
+    await page.setInputFiles('input[name=foto]', fotoPng);
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Subir foto")')]);
+    ok(await page.isVisible('a[data-ampliar] img.foto-previa'), 'foto: la ficha muestra la foto subida');
+    await page.click('a[data-ampliar]');
+    await page.waitForSelector('dialog.visor[open] img');
+    ok((await page.textContent('[data-zoom-nivel]')).includes('100'), 'foto: el visor abre en 100 %');
+    await page.click('[data-zoom-mas]');
+    ok(parseInt(await page.textContent('[data-zoom-nivel]'), 10) > 100, 'foto: el botón + hace zoom');
+    await page.dispatchEvent('.visor-lienzo', 'dblclick');
+    await page.screenshot({ path: path.join(CAPTURAS, 'foto-zoom.png') });
+    await page.keyboard.press('Escape');
+    ok(!(await page.isVisible('dialog.visor[open]')), 'foto: Esc cierra el visor');
+
     // ---- modo Kiosco: tarjetas con stock, carrito siempre visible y cobro como presupuesto
     await page.goto(BASE + '/kiosco');
     await page.waitForSelector('.k-tarjeta');
     const tar = page.locator('.k-tarjeta', { hasText: 'E2E-001' });
     ok((await tar.textContent()).includes('Stock'), 'kiosco: cada tarjeta muestra su stock');
+    ok(await tar.locator('.k-foto').count() > 0, 'kiosco: la tarjeta muestra la foto del producto');
+    await tar.locator('.k-zoom').click();
+    await page.waitForSelector('dialog.visor[open] img');
+    ok(await page.isVisible('dialog.visor[open] img') && (await page.locator('.k-linea').count()) === 0, 'kiosco: la lupa amplía la foto sin agregar al carrito');
+    await page.keyboard.press('Escape');
     await tar.click();
     await tar.click();
     ok((await page.inputValue('.k-linea .k-cant')) === '2', 'kiosco: tocar la tarjeta suma de a uno en el carrito');

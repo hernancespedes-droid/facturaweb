@@ -10,6 +10,8 @@ use App\Modules\Arca\ArcaSinRespuesta;
 use App\Modules\Arca\AutorizacionRechazada;
 use App\Modules\Arca\GrabacionFallida;
 use App\Modules\Configuracion\Configuracion;
+use App\Modules\Stock\ReservasService;
+use App\Modules\Stock\StockNoDisponible;
 use PDO;
 
 /**
@@ -89,7 +91,7 @@ final class ComprobantesService
      * @param bool $puedeExcederCredito el usuario tiene comprobantes.credito
      * @return array{ok:bool,errores:array<string,string>,cbte:?array<string,mixed>}
      */
-    public function armar(array $in, bool $puedeExcederCredito = false): array
+    public function armar(array $in, bool $puedeExcederCredito = false, int $usuarioId = 0): array
     {
         $err = [];
         $tipo = strtoupper(trim((string) ($in['tipo'] ?? '')));
@@ -364,6 +366,24 @@ final class ComprobantesService
             }
         }
 
+        // Stock (D-51): lo que no alcanza (stock menos lo reservado por otros puestos) solo se vende con la autorización de un supervisor, y se exige al emitir,
+        // no al revisar (la revisión muestra qué falta y pide la autorización). Los servicios y lo que no controla stock no cuentan.
+        $reserva = ReservasService::tokenValido($in['reserva'] ?? null);
+        $faltantes = [];
+        $autorizo = null;
+        if (in_array($tipo, ['FC', 'PR'], true) && !$solo && $items !== [] && !isset($err['items'])) {
+            $rs = new ReservasService($this->pdo);
+            $faltantes = $rs->faltantes($items, $reserva);
+            if ($faltantes !== [] && !$pagoPendiente) {
+                $a = $rs->autorizar($in, $usuarioId);
+                if ($a['ok']) {
+                    $autorizo = ['usuario_id' => $a['usuario_id'], 'nombre' => $a['nombre']];
+                } else {
+                    $err['stock'] = ($a['error'] !== null ? $a['error'] . "\n" : '') . 'No alcanza el stock disponible: hace falta la autorización de un supervisor para venderlo igual.';
+                }
+            }
+        }
+
         $mails = null;
         if (trim((string) ($in['email'] ?? '')) !== '') {
             $mails = Valida::mails((string) $in['email']);
@@ -392,7 +412,8 @@ final class ComprobantesService
             'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
             'concepto' => $concepto, 'serv_desde' => $servDesde, 'serv_hasta' => $servHasta, 'vto_pago' => $vtoPago,
             'interno' => $interno, 'sin_iva' => $sinIva, 'solo_subdiario' => $solo, 'presupuesto' => $presupuesto !== null ? (int) $presupuesto['fe_clave'] : null,
-            'advertencias' => $solo ? [] : (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
+            'stock_faltantes' => $faltantes, 'stock_autorizado' => $autorizo, 'reserva_token' => $reserva,
+            'advertencias' => $solo || in_array($tipo, ['FC', 'PR'], true) ? [] : (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
         ]];
     }
 
@@ -923,6 +944,21 @@ final class ComprobantesService
 
             // Stock (si está activado): la factura descuenta y la nota de crédito repone, en esta misma transacción (D-19)
             // (el presupuesto y su contrapartida también mueven stock; la factura de un presupuesto no: ya lo movió el presupuesto)
+            if (!$solo && in_array($tipo, ['FC', 'PR'], true)) {
+                // Se vuelve a controlar adentro de la transacción con los saldos bloqueados: dos puestos que emiten a la vez lo último que queda no lo venden los dos
+                // sin autorización. Si ARCA ya autorizó el comprobante no se puede abortar: se graba y queda asentado que no había autorización.
+                $rs = new ReservasService($this->pdo);
+                $falta = $rs->faltantes($c['items'], $cbte['reserva_token'] ?? null, true);
+                if ($falta !== []) {
+                    if ($arca === null && empty($cbte['stock_autorizado'])) {
+                        throw new StockNoDisponible(implode("\n", array_map(static fn (array $f) => $f['mensaje'], $falta)));
+                    }
+                    $rs->registrar($falta, $usuarioId, $arca === null ? $cbte['stock_autorizado'] : null, $id);
+                }
+                if (!empty($cbte['reserva_token'])) {
+                    $rs->liberar((string) $cbte['reserva_token']);
+                }
+            }
             if (!$solo) {
                 (new \App\Modules\Stock\StockService($this->pdo))->porComprobante($tipo, $id, $c['items'], $usuarioId > 0 ? $usuarioId : null);
             }

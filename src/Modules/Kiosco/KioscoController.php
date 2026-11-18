@@ -49,6 +49,7 @@ final class KioscoController
         if (self::apagado() !== null) {
             return new Response(404);
         }
+        BuscadorArticulos::$reserva = \App\Modules\Stock\ReservasService::tokenValido($req->query['reserva'] ?? null); // lo reservado por OTROS puestos (no lo propio)
         $q = trim((string) ($req->query['q'] ?? ''));
         if (isset($req->query['exacto'])) {
             return Response::json(['items' => BuscadorArticulos::buscar($q, true), 'hay_mas' => false]);
@@ -78,11 +79,11 @@ final class KioscoController
                     'alicuota' => (string) ($x['alicuota'] ?? '')];
             }
         }
-        $datos = ['tipo' => 'PR', 'origen' => 'kiosco', 'cliente' => (string) ($req->post['cliente'] ?? ''), 'items' => $items];
+        $datos = ['tipo' => 'PR', 'origen' => 'kiosco', 'cliente' => (string) ($req->post['cliente'] ?? ''), 'items' => $items, 'reserva' => (string) ($req->post['reserva'] ?? '')];
         if (trim((string) ($req->post['sucursal'] ?? '')) !== '') { // si no viene, con un solo punto de venta se usa ese
             $datos['sucursal'] = (string) $req->post['sucursal'];
         }
-        $r = (new ComprobantesService())->armar($datos, Auth::puede('comprobantes.credito'));
+        $r = (new ComprobantesService())->armar($datos, Auth::puede('comprobantes.credito'), (int) Auth::id());
         if (!$r['ok']) {
             Session::flash('error', 'No se pudo armar la venta: ' . implode(' ', array_values($r['errores'])));
             return Response::redirect(url('/kiosco'));

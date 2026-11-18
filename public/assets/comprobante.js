@@ -49,7 +49,37 @@
   }
 
   // ---- totales (mismas reglas que Calculadora.php)
+  // ---- reservas de stock (D-51): lo que lleva la factura o el presupuesto queda reservado a nombre de quien lo carga hasta que se emite
+  var datosRes = form.querySelector('[data-reserva]');
+  var reservas = datosRes && window.Reservas && (tipo === 'FC' || tipo === 'PR') ? window.Reservas.crear({
+    url: datosRes.getAttribute('data-url'), csrfNombre: datosRes.getAttribute('data-csrf-nombre'), csrf: datosRes.getAttribute('data-csrf'), token: datosRes.value, origen: 'comprobante',
+    alEstado: function (estados) {
+      var hay = false;
+      form.querySelectorAll('[data-renglon]').forEach(function (tr) {
+        var s = tr.querySelector('[data-reserva-estado]');
+        if (!s) return;
+        var cod = tr.querySelector('[data-articulo]').value.trim();
+        var e = estados.filter(function (x) { return x.clave === cod; })[0];
+        s.hidden = !e;
+        if (e) { var t = window.StockArticulo.estadoReserva(e); s.textContent = t.txt; s.className = 'reserva-estado small ' + (t.mal ? 'texto-error' : 'muted'); if (t.mal) hay = true; }
+      });
+      var aviso = form.querySelector('[data-reserva-aviso]');
+      if (aviso) aviso.hidden = !hay;
+    }
+  }) : null;
+  function reservar() {
+    if (!reservas) return;
+    var l = [];
+    form.querySelectorAll('[data-renglon]').forEach(function (tr) {
+      var a = tr.querySelector('[data-articulo]').value.trim();
+      var c = num(tr.querySelector('[data-cantidad]').value);
+      if (a !== '' && c > 0) l.push({ articulo: a, cantidad: String(c) });
+    });
+    reservas.sync(l);
+  }
+
   function recalcular() {
+    reservar();
     var desc = num(form.querySelector('[data-descuento]').value);
     desc = isNaN(desc) ? 0 : Math.max(0, Math.min(100, desc));
     var factor = 1 - desc / 100;
@@ -199,6 +229,7 @@
   // artículo: buscador por código, código de barras (EAN-13 / DUN-14), SKU o descripción; sugiere mientras se escribe
   var listaArt = document.getElementById('articulos-sugerencias');
   var urlArt = form.getAttribute('data-url-articulo');
+  var sepArt = urlArt.indexOf('?') < 0 ? '?' : '&';
   var timerArt = null, pedido = 0, activo = null, opciones = [], marcada = -1;
   function cerrarLista() { listaArt.hidden = true; listaArt.innerHTML = ''; opciones = []; marcada = -1; }
   function aplicar(tr, a) {
@@ -256,7 +287,7 @@
   function buscarExacto(inp, alResolver) {
     var q = inp.value.trim();
     if (q === '') return;
-    fetch(urlArt + '?exacto=1&q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+    fetch(urlArt + sepArt + 'exacto=1&q=' + encodeURIComponent(q), { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (arr) { if (arr.length) { aplicar(inp.closest('[data-renglon]'), arr[0]); if (alResolver) alResolver(); } });
   }
@@ -275,7 +306,7 @@
     if (inp.value.trim().length < 2) { cerrarLista(); return; }
     timerArt = setTimeout(function () {
       var n = ++pedido;
-      fetch(urlArt + '?q=' + encodeURIComponent(inp.value.trim()), { credentials: 'same-origin' })
+      fetch(urlArt + sepArt + 'q=' + encodeURIComponent(inp.value.trim()), { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
         .then(function (arr) { if (n === pedido && document.activeElement === inp) mostrar(inp, arr); });
     }, 200);

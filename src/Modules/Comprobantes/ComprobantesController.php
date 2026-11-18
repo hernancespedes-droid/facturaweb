@@ -16,6 +16,7 @@ use App\Modules\Arca\GrabacionFallida;
 use App\Modules\Auth\Auth;
 use App\Modules\Clientes\ClientesService;
 use App\Modules\Configuracion\Configuracion;
+use App\Modules\Stock\StockNoDisponible;
 
 /**
  * Pantallas de facturación. Consulta e impresión: comprobantes.ver. Emitir y los buscadores: comprobantes.emitir
@@ -104,7 +105,7 @@ final class ComprobantesController
     {
         $svc = new ComprobantesService();
         $datos = self::formulario($req->post);
-        $r = $svc->armar($datos, Auth::puede('comprobantes.credito'));
+        $r = $svc->armar($datos, Auth::puede('comprobantes.credito'), (int) Auth::id());
         if (!$r['ok']) {
             return self::form($svc, $datos, $r['errores'], 422);
         }
@@ -112,7 +113,7 @@ final class ComprobantesController
     }
 
     /** Campos de «cómo se paga»: se piden en la pantalla de revisión (con el total a la vista) y se suman a lo cargado antes de emitir. */
-    private const CAMPOS_PAGO = ['forma_pago', 'fpago', 'pagos', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'excede_ok'];
+    private const CAMPOS_PAGO = ['forma_pago', 'fpago', 'pagos', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'excede_ok', 'autoriza_yo', 'autoriza_usuario', 'autoriza_clave'];
 
     /**
      * Pantalla de revisión: el comprobante calculado y, si se cobra (factura, nota de débito, presupuesto), cómo se paga.
@@ -148,12 +149,12 @@ final class ComprobantesController
         }
         $pagoCargado = array_intersect_key($req->post, array_flip(self::CAMPOS_PAGO));
         $datos = array_merge($datos, $pagoCargado);
-        $r = $svc->armar($datos, Auth::puede('comprobantes.credito'));
+        $r = $svc->armar($datos, Auth::puede('comprobantes.credito'), (int) Auth::id());
         if (!$r['ok']) {
             // Si solo falla lo del pago, se vuelve a la revisión (con el total y lo ya elegido) en vez de al formulario
-            $soloPago = ['forma_pago', 'fpago', 'pagos', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'credito'];
+            $soloPago = ['forma_pago', 'fpago', 'pagos', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'credito', 'stock'];
             if ($pagoCargado !== [] && array_diff(array_keys($r['errores']), $soloPago) === []) {
-                $base = $svc->armar(array_diff_key($datos, array_flip(self::CAMPOS_PAGO)), Auth::puede('comprobantes.credito'));
+                $base = $svc->armar(array_diff_key($datos, array_flip(self::CAMPOS_PAGO)), Auth::puede('comprobantes.credito'), (int) Auth::id());
                 if ($base['ok']) {
                     return self::pantallaRevisar($base['cbte'], $datos, $r['errores'], $pagoCargado, 422);
                 }
@@ -167,6 +168,12 @@ final class ComprobantesController
         } catch (\InvalidArgumentException) {
             Session::flash('error', 'La pantalla de revisión venció. Revisá el comprobante de nuevo.');
             return Response::redirect(url('/comprobantes/nuevo'));
+        } catch (StockNoDisponible $ex) { // al emitir se vio que el stock ya no alcanza (otro puesto): vuelve a la revisión para pedir la autorización
+            $base = $svc->armar(array_diff_key($datos, array_flip(self::CAMPOS_PAGO)), Auth::puede('comprobantes.credito'), (int) Auth::id());
+            if ($base['ok']) {
+                return self::pantallaRevisar($base['cbte'], $datos, ['stock' => $ex->getMessage()], $pagoCargado, 422);
+            }
+            return self::form($svc, $datos, ['stock' => $ex->getMessage()], 422);
         } catch (PresupuestoYaFacturado $ex) {
             Session::flash('error', $ex->getMessage());
             return Response::redirect(url('/comprobantes/' . (int) ($r['cbte']['presupuesto'] ?? 0)));
@@ -199,7 +206,7 @@ final class ComprobantesController
             return Response::redirect(url('/comprobantes/' . $id));
         }
         $datos = $svc->entradaDesdePresupuesto($p);
-        $r = $svc->armar($datos, Auth::puede('comprobantes.credito'));
+        $r = $svc->armar($datos, Auth::puede('comprobantes.credito'), (int) Auth::id());
         if (!$r['ok']) {
             Session::flash('error', implode(' ', $r['errores']));
             return Response::redirect(url('/comprobantes/' . $id));
@@ -251,6 +258,7 @@ final class ComprobantesController
     /** Buscador de artículos del renglón: ver Articulos\BuscadorArticulos (lo usan también las pantallas de stock). */
     public static function buscarArticulo(Request $req, array $params): Response
     {
+        \App\Modules\Articulos\BuscadorArticulos::$reserva = \App\Modules\Stock\ReservasService::tokenValido($req->query['reserva'] ?? null);
         if (isset($req->query['listar'])) {
             return Response::json(\App\Modules\Articulos\BuscadorArticulos::listar(trim((string) ($req->query['q'] ?? '')), (int) ($req->query['pagina'] ?? 1)));
         }
@@ -288,6 +296,7 @@ final class ComprobantesController
     {
         $tipo = strtoupper((string) ($datos['tipo'] ?? 'FC'));
         $pdo = Db::pdo();
+        $datos['reserva'] = \App\Modules\Stock\ReservasService::tokenValido($datos['reserva'] ?? null) ?? bin2hex(random_bytes(16)); // la venta en curso (reserva de stock)
         $cliente = null;
         $asociables = [];
         if (ctype_digit((string) ($datos['cliente'] ?? '')) && (int) $datos['cliente'] > 0) {
@@ -320,7 +329,7 @@ final class ComprobantesController
         }
         return Response::html(View::render('comprobantes/form', [
             'title' => Tipos::NOMBRES[$tipo] ?? 'Comprobante', 'nav' => 'comprobantes_' . strtolower($tipo),
-            'tipo' => $tipo, 'datos' => $datos, 'errores' => $errores, 'cliente' => $cliente, 'asociables' => $asociables, 'sinIva' => $sinIva,
+            'tipo' => $tipo, 'datos' => $datos, 'reserva' => $datos['reserva'], 'errores' => $errores, 'cliente' => $cliente, 'asociables' => $asociables, 'sinIva' => $sinIva,
             'sucursales' => $svc->sucursales(), 'alicuotas' => $pdo->query('SELECT codigo, descripcion, porcentaje FROM tasas_iva ORDER BY porcentaje DESC')->fetchAll(),
             'vendedores' => $pdo->query('SELECT codigo, descripcion FROM vendedores ORDER BY descripcion')->fetchAll(),
             'condiciones' => $pdo->query('SELECT codigo, descripcion FROM condicionpago ORDER BY descripcion')->fetchAll(),

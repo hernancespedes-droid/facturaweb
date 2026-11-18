@@ -54,12 +54,32 @@ final class StockTest extends ComprobantesTestCase
         $this->assertSame(9.0, $this->stock->saldo('T-ART'), 'un renglón libre no mueve stock');
     }
 
-    public function testSePuedeFacturarSinStockYAvisa(): void
+    public function testSinStockSoloSeVendeConLaAutorizacionDeUnSupervisor(): void
     {
-        $r = $this->svc->armar($this->pedido());
-        $this->assertCount(1, $r['cbte']['advertencias'], 'avisa que no alcanza');
-        $this->emitir($this->pedido());
-        $this->assertSame(-2.0, $this->stock->saldo('T-ART'), 'queda negativo, pero factura');
+        // al revisar (todavía sin pago) se ve qué falta, sin error
+        $sinPago = $this->pedido();
+        unset($sinPago['forma_pago']);
+        $r = $this->svc->armar($sinPago);
+        $this->assertSame([], $r['errores']);
+        $this->assertCount(1, $r['cbte']['stock_faltantes'], 'avisa que no alcanza');
+        // al emitir sin autorización: no
+        $this->assertStringContainsString('autorización de un supervisor', $this->svc->armar($this->pedido())['errores']['stock']);
+        // con la autorización de un supervisor (él mismo, o con usuario y clave) se vende y queda asentado
+        $sup = $this->supervisorId();
+        $ok = $this->svc->armar($this->pedido(['autoriza_yo' => '1']), false, $sup);
+        $this->assertSame([], $ok['errores']);
+        $e = $this->svc->emitir($ok['cbte'], bin2hex(random_bytes(16)), 0);
+        $this->assertSame(-2.0, $this->stock->saldo('T-ART'), 'queda negativo, pero con autorización');
+        $a = $this->fila('SELECT articulo, cantidad, disponible, autoriza_usuario_id, subdiario_id FROM stock_autorizaciones');
+        $this->assertSame(['T-ART', '2.000', '0.000', $sup, $e['id']], [$a['articulo'], $a['cantidad'], $a['disponible'], (int) $a['autoriza_usuario_id'], (int) $a['subdiario_id']]);
+        // un usuario sin el permiso no se autoriza solo ni con la clave de otro sin permiso
+        $op = $this->crearUsuario('t_op_sa', 'operador');
+        $this->assertStringContainsString('no puede autorizar', $this->svc->armar($this->pedido(['autoriza_yo' => '1']), false, $op)['errores']['stock']);
+        $this->assertStringContainsString('no tiene permiso', $this->svc->armar($this->pedido(['autoriza_usuario' => 't_op_sa', 'autoriza_clave' => 'Prueba1234']))['errores']['stock']);
+        $this->assertStringContainsString('no es válida', $this->svc->armar($this->pedido(['autoriza_usuario' => 't_sup_auto', 'autoriza_clave' => 'mal']))['errores']['stock']);
+        $conClave = $this->svc->armar($this->pedido(['autoriza_usuario' => 't_sup_auto', 'autoriza_clave' => 'Prueba1234']));
+        $this->assertSame([], $conClave['errores'], 'un supervisor con su usuario y su clave autoriza');
+        $this->assertSame($sup, $conClave['cbte']['stock_autorizado']['usuario_id']);
     }
 
     public function testStockApagadoOArticuloQueNoControlaNoMueve(): void

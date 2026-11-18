@@ -49,6 +49,19 @@ final class Guard
         });
     }
 
+    /** Logueado y con AL MENOS UNO de esos permisos (pantallas que sirven a dos módulos). */
+    public static function algun(array $codigos, callable $handler): \Closure
+    {
+        return self::auth(static function (Request $req, array $params) use ($codigos, $handler): Response {
+            foreach ($codigos as $c) {
+                if (Auth::puede($c)) {
+                    return $handler($req, $params);
+                }
+            }
+            return new Response(403);
+        });
+    }
+
     private static function aLogin(Request $req): Response
     {
         // Después de ingresar vuelve a donde quería ir. Solo pantallas (GET).

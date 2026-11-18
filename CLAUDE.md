@@ -65,6 +65,10 @@ devuelve y saca stock y cobra solo la diferencia (`ctact.tico` 5). Se enciende e
 `Modules/Kiosco`: `/kiosco` (tarjetas + carrito en `public/assets/kiosco.js`) → `POST /kiosco/cobrar` arma un presupuesto (`datos.origen = 'kiosco'`) y reutiliza `ComprobantesController::pantallaRevisar` («Cómo se paga») → `POST /kiosco/emitir`, que solo acepta presupuestos del kiosco.
 Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usar`.
 
+## Reservas de stock y fotos (0.23.0)
+
+`Stock/ReservasService`: reservas blandas por venta en curso (token `reserva`, 15 min, `reservas.js`), `disponible` en `BuscadorArticulos`; faltantes piden autorización (`stock.autorizar`, o supervisor con clave) en `armar` y se re-controlan con filas bloqueadas en `grabar` (`StockNoDisponible`); se registran en `stock_autorizaciones`. Fotos de artículos en `articulos_fotos` (`Articulos/Foto`, `/articulos/foto`), visor con zoom en `app.js`.
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.
