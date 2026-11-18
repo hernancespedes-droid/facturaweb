@@ -43,7 +43,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
 </div>
 
 <?php if (\App\Modules\Comprobantes\Tipos::interno($h['tipo'])): ?><div class="alerta alerta-info small"><?= $h['tipo'] === 'PR'
-    ? 'Presupuesto: no es una factura ni va al subdiario de IVA. Descuenta stock y se cobra o va a cuenta corriente.' . ($h['factura_generada'] === null ? ' Se puede generar una factura, una sola vez.' : '')
+    ? 'Presupuesto' . ((int) $h['sin_iva'] === 1 ? ' sin IVA (no calcula IVA: el precio es el final)' : '') . ': no es una factura ni va al subdiario de IVA. Descuenta stock y se cobra o va a cuenta corriente.' . ($h['factura_generada'] === null ? ' Se puede generar una factura, una sola vez.' : '')
     : ($h['tipo'] === 'CM' ? 'Cambio de mercadería: lo devuelto volvió al stock, lo que se llevó salió, y el total es solo la diferencia cobrada. No es fiscal.'
         : 'Contrapartida de un presupuesto: repone el stock y deja saldo a favor del cliente. No es fiscal.') ?></div>
 <?php elseif ((int) $h['solo_subdiario'] === 1): ?><div class="alerta alerta-info small">Este comprobante sale de un presupuesto: va <b>solo al subdiario</b>. No toca caja, cuenta corriente ni stock (ya los movió el presupuesto).</div>
@@ -90,7 +90,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
             <tr><td data-label="Descripción" class="pre-linea"><?= e($it['observaciones']) ?><?= trim((string) ($it['texto_impresion'] ?? '')) !== '' ? '<div class="small muted pre-linea">' . e($it['texto_impresion']) . '</div>' : '' ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
                 <td data-label="Cantidad"><?= e(numero($it['unidades'], 3)) ?></td>
                 <td data-label="Precio" class="nw"><?= e(numero($it['precio'], 4)) ?></td>
-                <td data-label="IVA"><?= $h['letra'] === 'C' ? '—' : ((float) $it['por_iva'] > 0 ? e(numero($it['por_iva']) . ' %') : 'Exento') ?></td>
+                <td data-label="IVA"><?= $h['letra'] === 'C' || (int) $h['sin_iva'] === 1 ? '—' : ((float) $it['por_iva'] > 0 ? e(numero($it['por_iva']) . ' %') : 'Exento') ?></td>
                 <td data-label="Importe" class="nw"><?= e(plata_dec($it['total_item'])) ?></td></tr>
         <?php endforeach; ?>
         <?php if ($h['items'] === []): ?><tr><td colspan="5" class="muted">Este comprobante no tiene renglones cargados.</td></tr><?php endif; ?>

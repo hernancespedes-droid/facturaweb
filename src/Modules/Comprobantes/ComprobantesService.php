@@ -146,6 +146,9 @@ final class ComprobantesService
         }
         // Lo que sale de un presupuesto (la factura y sus notas) va solo al subdiario: sin caja, cuenta corriente ni stock
         $solo = $presupuesto !== null || (is_array($asoc) && (int) ($asoc['solo_subdiario'] ?? 0) === 1);
+        // DECISIÓN D-48 (pedido de Hernán, 18/11): con la marca «Presupuestos sin IVA» (Configuración) el presupuesto no calcula IVA sobre el valor de los productos
+        // (el precio es el final, como una factura C); la contrapartida hereda lo del presupuesto. Cada presupuesto guarda cómo se hizo (subdiario.sin_iva).
+        $sinIva = ($tipo === 'PR' && Configuracion::activo('presupuestos.sin_iva')) || ($tipo === 'NX' && is_array($asoc) && (int) ($asoc['sin_iva'] ?? 0) === 1);
 
         // Sucursal: la de la factura asociada, o la elegida
         $sucs = $this->sucursales();
@@ -314,7 +317,12 @@ final class ComprobantesService
         // Cálculo
         $calc = null;
         if ($letra !== '' && $items !== []) {
-            $calc = Calculadora::calcular($letra, $items, $desc);
+            $calc = Calculadora::calcular($sinIva ? 'C' : $letra, $items, $desc);
+            if ($sinIva) { // sin IVA discriminado, pero cada renglón conserva su alícuota (se usa si después se factura)
+                foreach ($calc['items'] as $i => $it) {
+                    $calc['items'][$i]['alicuota'] = (float) $items[$i]['alicuota'];
+                }
+            }
             if ($calc['total'] <= 0) {
                 $err['items'] = trim(($err['items'] ?? '') . "\nEl total del comprobante tiene que ser mayor que cero.");
             } elseif ($calc['total'] > Calculadora::MAX_IMPORTE) {
@@ -374,7 +382,7 @@ final class ComprobantesService
             'email' => $mails, 'asociado' => is_array($asoc) ? $asoc : null, 'calculo' => $calc, 'excede_credito' => $excede,
             'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
             'concepto' => $concepto, 'serv_desde' => $servDesde, 'serv_hasta' => $servHasta, 'vto_pago' => $vtoPago,
-            'interno' => $interno, 'solo_subdiario' => $solo, 'presupuesto' => $presupuesto !== null ? (int) $presupuesto['fe_clave'] : null,
+            'interno' => $interno, 'sin_iva' => $sinIva, 'solo_subdiario' => $solo, 'presupuesto' => $presupuesto !== null ? (int) $presupuesto['fe_clave'] : null,
             'advertencias' => $solo ? [] : (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
         ]];
     }
@@ -436,7 +444,7 @@ final class ComprobantesService
         if ($feClave <= 0) {
             return $tipo === 'NX' ? 'Elegí el presupuesto que se corrige.' : 'Elegí el comprobante que se corrige (factura o nota de débito del cliente).';
         }
-        $st = $this->pdo->prepare('SELECT fe_clave, tipo, letra, sucursal, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, cliente, neto, estado, solo_subdiario FROM subdiario WHERE fe_clave = ?');
+        $st = $this->pdo->prepare('SELECT fe_clave, tipo, letra, sucursal, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, cliente, neto, estado, solo_subdiario, sin_iva FROM subdiario WHERE fe_clave = ?');
         $st->execute([$feClave]);
         $a = $st->fetch();
         if ($a === false) {
@@ -785,7 +793,7 @@ final class ComprobantesService
                 'creado_por' => $usuarioId > 0 ? $usuarioId : null, 'operacion' => $operacion,
                 'fe_concepto' => (int) ($cbte['concepto'] ?? 1), 'fe_serv_desde' => $cbte['serv_desde'] ?? null, 'fe_serv_hasta' => $cbte['serv_hasta'] ?? null,
                 'fe_vencimiento' => $cbte['vto_pago'] ?? null,
-                'presupuesto_id' => $presupuestoId, 'solo_subdiario' => $solo ? 1 : 0,
+                'presupuesto_id' => $presupuestoId, 'solo_subdiario' => $solo ? 1 : 0, 'sin_iva' => !empty($cbte['sin_iva']) ? 1 : 0,
             ] + ($arca === null
                 ? ['es_prueba' => Tipos::interno($tipo) ? 0 : 1, 'fe_entorno' => '']
                 : ['electronica' => 1, 'fe_nrocbte' => $numero, 'fe_ccae' => $arca['cae'], 'fe_dfecha' => $arca['fecha'], 'fe_dvtocae' => $arca['vence'],
@@ -1041,7 +1049,7 @@ final class ComprobantesService
     {
         $tipos = $para === 'NX' ? "'PR'" : "'FC', 'ND'";
         $st = $this->pdo->prepare(
-            "SELECT fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto FROM subdiario
+            "SELECT fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto, sin_iva FROM subdiario
               WHERE cliente = ? AND tipo IN ({$tipos}) AND estado = '' ORDER BY fecha DESC, comprobante DESC LIMIT 200"
         );
         $st->execute([$cliente]);

@@ -45,6 +45,7 @@ $hoyIso = date('Y-m-d');
 <?php if ($interno): ?>
     <div class="alerta alerta-info small"><?= $tipo === 'PR'
         ? 'El presupuesto <b>no se factura en ARCA</b> ni va al subdiario: es una venta interna (letra X). Descuenta stock y se cobra o va a cuenta corriente. Después se puede generar una factura, una sola vez.'
+            . (!empty($sinIva) ? ' <b>«Presupuestos sin IVA» está activo:</b> no se calcula IVA, el precio de cada renglón es el final.' : '')
         : 'Contrapartida de un presupuesto (como una nota de crédito): repone el stock y deja saldo a favor del cliente. No es fiscal.' ?></div>
 <?php elseif ($modoArca !== 'interno' && $electronicas === []): ?>
     <div class="alerta alerta-warn">ARCA está en modo <b><?= e($modoArca) ?></b> pero ninguna sucursal tiene tildada "Factura electrónica": los comprobantes salen internos. Se tilda en Tablas → Sucursales.</div>
@@ -52,7 +53,7 @@ $hoyIso = date('Y-m-d');
 <?php if ($sinSucursal): ?><div class="alerta alerta-error">No hay ninguna sucursal con punto de venta: cargala en Tablas → Sucursales.</div><?php endif; ?>
 
 <form method="post" action="<?= e(url('/comprobantes/revisar')) ?>" class="card form" id="form-comprobante" novalidate
-      data-condicion-emisor="<?= e($emisor['condicion'] ?? '') ?>" data-tipo="<?= e($tipo) ?>" data-letra="<?= e($letra) ?>"
+      data-condicion-emisor="<?= e($emisor['condicion'] ?? '') ?>" data-tipo="<?= e($tipo) ?>" data-letra="<?= e($letra) ?>" data-sin-iva="<?= !empty($sinIva) ? '1' : '0' ?>"
       data-url-cliente="<?= e(url('/comprobantes/buscar-cliente')) ?>" data-url-articulo="<?= e(url('/comprobantes/buscar-articulo')) ?>"
       data-url-asociables="<?= e(url('/comprobantes/asociables')) ?>">
     <?= csrf_field() ?>
@@ -81,7 +82,7 @@ $hoyIso = date('Y-m-d');
             <select id="asociado" name="asociado" data-asociado>
                 <option value=""><?= $tipo === 'NX' ? 'Elegí el presupuesto' : 'Elegí la factura o nota de débito' ?></option>
                 <?php foreach ($asociables as $a): ?>
-                    <option value="<?= e($a['fe_clave']) ?>" data-letra="<?= e($a['letra']) ?>" <?= $v('asociado') === (string) $a['fe_clave'] ? 'selected' : '' ?>>
+                    <option value="<?= e($a['fe_clave']) ?>" data-letra="<?= e($a['letra']) ?>" data-sin-iva="<?= (int) $a['sin_iva'] ?>" <?= $v('asociado') === (string) $a['fe_clave'] ? 'selected' : '' ?>>
                         <?= e(Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a) . ' del ' . fecha($a['fecha']) . ' · ' . plata($a['neto'])) ?></option>
                 <?php endforeach; ?>
             </select><?= $err('asociado') ?></label>

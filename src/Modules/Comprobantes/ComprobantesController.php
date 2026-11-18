@@ -256,7 +256,7 @@ final class ComprobantesController
     {
         $out = [];
         foreach ((new ComprobantesService())->asociables((int) ($req->query['cliente'] ?? 0), strtoupper((string) ($req->query['tipo'] ?? 'NC'))) as $a) {
-            $out[] = ['id' => (int) $a['fe_clave'], 'letra' => $a['letra'], 'texto' => Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a)
+            $out[] = ['id' => (int) $a['fe_clave'], 'letra' => $a['letra'], 'sin_iva' => (int) $a['sin_iva'], 'texto' => Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a)
                 . ' del ' . fecha($a['fecha']) . ' · ' . plata($a['neto'])];
         }
         return Response::json($out);
@@ -292,6 +292,13 @@ final class ComprobantesController
             }
         }
         $emisor = $svc->emisor();
+        // Presupuesto sin IVA: la marca de Configuración (para la contrapartida, la del presupuesto elegido)
+        $sinIva = $tipo === 'PR' && Configuracion::activo('presupuestos.sin_iva');
+        foreach ($asociables as $a) {
+            if ($tipo === 'NX' && (string) $a['fe_clave'] === (string) ($datos['asociado'] ?? '') && (int) $a['sin_iva'] === 1) {
+                $sinIva = true;
+            }
+        }
         // Letra prevista: la de la factura que se corrige, o la que sale de la condición del emisor y del cliente
         $letra = '';
         if (Tipos::interno($tipo)) {
@@ -308,7 +315,7 @@ final class ComprobantesController
         }
         return Response::html(View::render('comprobantes/form', [
             'title' => Tipos::NOMBRES[$tipo] ?? 'Comprobante', 'nav' => 'comprobantes_' . strtolower($tipo),
-            'tipo' => $tipo, 'datos' => $datos, 'errores' => $errores, 'cliente' => $cliente, 'asociables' => $asociables,
+            'tipo' => $tipo, 'datos' => $datos, 'errores' => $errores, 'cliente' => $cliente, 'asociables' => $asociables, 'sinIva' => $sinIva,
             'sucursales' => $svc->sucursales(), 'alicuotas' => $pdo->query('SELECT codigo, descripcion, porcentaje FROM tasas_iva ORDER BY porcentaje DESC')->fetchAll(),
             'vendedores' => $pdo->query('SELECT codigo, descripcion FROM vendedores ORDER BY descripcion')->fetchAll(),
             'condiciones' => $pdo->query('SELECT codigo, descripcion FROM condicionpago ORDER BY descripcion')->fetchAll(),
