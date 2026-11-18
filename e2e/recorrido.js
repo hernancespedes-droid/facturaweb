@@ -278,6 +278,31 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.screenshot({ path: path.join(CAPTURAS, 'lista-articulos-stock.png') });
     await page.keyboard.press('Escape');
 
+    // ---- «Presupuestos sin IVA» (Sistema → Configuración): con la marca el presupuesto no calcula IVA sobre el valor de los productos
+    await page.goto(BASE + '/configuracion');
+    const marca = page.locator('input[type=checkbox][name="valor[presupuestos.sin_iva]"]');
+    ok((await marca.count()) === 1, 'presupuestos sin IVA: la marca está en Configuración');
+    await marca.check();
+    await Promise.all([page.waitForNavigation(), page.click('form button[type=submit]:has-text("Guardar")')]);
+    await page.goto(BASE + '/comprobantes/nuevo?tipo=PR');
+    await page.fill('#cliente-q', 'CLIENTE E2E FINAL');
+    await page.waitForSelector('[data-cliente-lista] li');
+    await page.click('[data-cliente-lista] li');
+    const rs = page.locator('[data-renglon]').nth(0);
+    await rs.locator('[data-descripcion]').fill('Producto sin IVA');
+    await rs.locator('[data-cantidad]').fill('2');
+    await rs.locator('[data-precio]').fill('121');
+    ok((await page.textContent('[data-leyenda-precio]')).includes('sin IVA'), 'presupuestos sin IVA: la leyenda lo dice');
+    ok((await page.textContent('[data-t-total]')).includes('242,00') && (await page.locator('[data-t-iva-filas] div').count()) === 0, 'presupuestos sin IVA: el total es 2 x 121, sin IVA');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+    await page.check('input[name=forma_pago][value="2"]');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    const verSin = await page.textContent('body');
+    ok(verSin.includes('sin IVA (no calcula IVA') && verSin.includes('$ 242,00'), 'presupuestos sin IVA: el presupuesto sale sin calcular IVA');
+    await page.goto(BASE + '/configuracion');
+    await page.locator('input[type=checkbox][name="valor[presupuestos.sin_iva]"]').uncheck();
+    await Promise.all([page.waitForNavigation(), page.click('form button[type=submit]:has-text("Guardar")')]);
+
     // ---- ticket de cambio: presupuesto de contado, se lee el ticket y se cambia un producto cobrando solo la diferencia
     await page.goto(BASE + '/comprobantes/nuevo?tipo=PR');
     await page.fill('#cliente-q', 'CLIENTE E2E FINAL');
@@ -289,8 +314,19 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.fill('[data-renglon] [data-cantidad]', '2');
     await page.fill('[data-renglon] [data-precio]', '100');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+    // varias formas de pago: 120 en efectivo + 80 con billetera virtual
     await page.check('input[name=forma_pago][value="1"]');
+    await page.fill('[data-importe-pago]', '120');
+    await page.click('[data-agregar-pago]');
+    ok((await page.locator('[data-linea]').count()) === 2, 'varias formas de pago: se agrega otra');
+    await page.locator('[data-linea]').nth(1).locator('[data-fpago]').selectOption({ label: 'BILLETERA VIRTUAL' });
+    ok((await page.textContent('[data-resumen-pago]')).includes('faltan'), 'varias formas de pago: avisa lo que falta');
+    await page.click('[data-completar-pago]');
+    ok((await page.textContent('[data-resumen-pago]')).includes('cuadra'), 'varias formas de pago: «Completar» reparte lo que falta y cuadra');
+    await page.screenshot({ path: path.join(CAPTURAS, 'pago-varias-formas.png'), fullPage: true });
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    const mixto = await page.textContent('body');
+    ok(mixto.includes('Mixto: EFECTIVO $ 120,00') && mixto.includes('BILLETERA VIRTUAL $ 80,00'), 'varias formas de pago: el comprobante queda como mixto');
     const nroPr = (await page.textContent('h1')).match(/(\d{4}-\d{8})/)[1];
     ok((await page.textContent('body')).includes('Ticket de cambio'), 'ticket de cambio: el presupuesto ofrece el ticket');
     const ticket = await ctx.request.get(page.url().replace(/\/$/, '').replace(/(\/comprobantes\/)(\d+)$/, '/cambios/ticket/$2'));

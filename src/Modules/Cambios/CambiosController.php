@@ -18,7 +18,7 @@ use App\Modules\Comprobantes\ComprobantesService;
  */
 final class CambiosController
 {
-    private const CAMPOS_PAGO = ['forma_pago', 'fpago', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'excede_ok'];
+    private const CAMPOS_PAGO = ['forma_pago', 'fpago', 'pagos', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'excede_ok'];
 
     private static function apagado(): ?Response
     {
@@ -119,7 +119,7 @@ final class CambiosController
         return Response::html(View::render('cambios/nuevo', [
             'title' => 'Cambio de mercadería', 'nav' => 'cambios', 'o' => $o, 'errores' => $errores, 'datos' => $datos, 'pagoCargado' => $pagoCargado,
             'operacion' => preg_match('/^[0-9a-f]{32}$/', (string) ($datos['operacion'] ?? '')) === 1 ? (string) $datos['operacion'] : bin2hex(random_bytes(16)),
-            'formas' => $pdo->query('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE tipo IN (1, 2, 3, 5, 10) ORDER BY tipo, descripcion')->fetchAll(),
+            'formas' => $pdo->query('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE tipo IN (1, 2, 3, 5, 6, 10) ORDER BY tipo, descripcion')->fetchAll(),
             'bancos' => $pdo->query('SELECT codigo, descripcion FROM bancos ORDER BY descripcion')->fetchAll(), 'puedeCredito' => Auth::puede('comprobantes.credito'),
         ]), $status);
     }

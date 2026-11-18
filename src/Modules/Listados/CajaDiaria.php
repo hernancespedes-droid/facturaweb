@@ -49,10 +49,13 @@ final class CajaDiaria
             $clave = ['FC' => 'facturas', 'PR' => 'presupuestos', 'CM' => 'cambios', 'ND' => 'notas_debito'][$tipo] ?? 'notas_credito';
             $v[$clave] += $suma;
             $v['comprobantes'] += (int) $n;
-            if (!Tipos::credito($tipo)) {
-                $v[(int) $fp === 2 ? 'cuenta_corriente' : 'contado'] += $suma;
-            }
         }
+        // Lo facturado a cuenta corriente es la parte de cada venta que quedó como deuda (una venta puede ser mixta: parte cobrada y parte a cuenta, D-49)
+        $st = $pdo->prepare("SELECT COALESCE(SUM(c.p_importe), 0) FROM caja c JOIN forma_de_pagos t ON t.codigo = c.p_fpago JOIN subdiario s ON s.fe_clave = c.subdiario_id
+            WHERE c.fecha BETWEEN ? AND ? AND t.tipo = 6 AND s.estado = '' AND s.solo_subdiario = 0 AND s.tipo IN ('FC', 'ND', 'PR', 'CM')");
+        $st->execute([$d, $h]);
+        $v['cuenta_corriente'] = (float) $st->fetchColumn();
+        $v['contado'] = $v['facturas'] + $v['presupuestos'] + $v['cambios'] + $v['notas_debito'] - $v['cuenta_corriente'];
         $v['ventas_netas'] = Calculadora::r2($v['facturas'] + $v['presupuestos'] + $v['cambios'] + $v['notas_debito'] - $v['notas_credito']);
         foreach ($v as $k => $x) {
             $v[$k] = Calculadora::r2($x);

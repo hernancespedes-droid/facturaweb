@@ -56,7 +56,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
         <div><dt>Cliente</dt><dd><a href="<?= e(url('/clientes/' . $h['cliente'])) ?>"><?= e($razon) ?></a> <span class="muted">(<?= e($h['cliente']) ?>)</span></dd></div>
         <div><dt>CUIT</dt><dd><?= e(cuit_texto($h['cuit_cliente']) ?: 'sin CUIT') ?></dd></div>
         <?php if (!empty($h['cliente_domicilio'] ?? $cli['domicilio'] ?? '')): ?><div><dt>Domicilio</dt><dd><?= e(trim(($h['cliente_domicilio'] ?? $cli['domicilio'] ?? '') . ' ' . ($h['cliente_localidad'] ?? $cli['localidad'] ?? ''))) ?></dd></div><?php endif; ?>
-        <div><dt>Forma de pago</dt><dd><?= (int) $h['forma_pago'] === 2 ? 'Cuenta corriente' : 'Contado' . ($h['pagos'] !== [] ? ' · ' . e($h['pagos'][0]['fpago_descripcion'] ?? $h['pagos'][0]['p_fpago']) : '') . ($h['pagos'] !== [] && (float) $h['pagos'][0]['p_vuelto'] > 0 ? ' · recibido ' . e(plata_dec($h['pagos'][0]['p_recibido'])) . ', vuelto ' . e(plata_dec($h['pagos'][0]['p_vuelto'])) : '') ?></dd></div>
+        <div><dt>Forma de pago</dt><dd><?= e(forma_pago_texto($h)) ?></dd></div>
         <?php if ($h['asociado_clave'] !== null): ?>
             <div><dt>Corrige</dt><dd><a href="<?= e(url('/comprobantes/' . $h['asociado_clave'])) ?>"><?= e(Tipos::titulo($h['fe_tipocbte_asoc'], $h['letra']) . ' ' . numero_cbte($h['prefijo'], $h['fe_nrocbte_asoc'])) ?></a></dd></div>
         <?php elseif ($h['fe_nrocbte_asoc'] > 0): ?>
