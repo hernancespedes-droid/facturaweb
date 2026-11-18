@@ -63,7 +63,7 @@ h2 { font-size: 1.3rem; margin: 24px 0 10px; text-transform: uppercase; color: #
   color: var(--brand-2);
 }
 
-.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px; }
+.wrap { max-width: none; width: 100%; margin: 0; padding: 24px clamp(16px, 2vw, 32px); }
 
 /* ---------- Encabezado ---------- */
 .topbar {
