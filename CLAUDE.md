@@ -60,6 +60,11 @@ Un presupuesto genera **una sola** factura (`presupuesto_id` único) que va **so
 `CM` (Cambio, letra X) es otro comprobante **interno** (`Tipos::INTERNOS`, `Tipos::SQL_INTERNOS`): `Cambios/CambiosService` lo arma desde un presupuesto o una factura (ticket de cambio sin importes, `TicketCambioPdf`),
 devuelve y saca stock y cobra solo la diferencia (`ctact.tico` 5). Se enciende en Parámetros (`parametros.ticket_cambio`) y se habilita por rol con `cambios.hacer`. Todo lo fiscal que lee `subdiario` sigue filtrando con `Tipos::sqlSoloFiscales()`.
 
+## Modo Kiosco (0.22.0)
+
+`Modules/Kiosco`: `/kiosco` (tarjetas + carrito en `public/assets/kiosco.js`) → `POST /kiosco/cobrar` arma un presupuesto (`datos.origen = 'kiosco'`) y reutiliza `ComprobantesController::pantallaRevisar` («Cómo se paga») → `POST /kiosco/emitir`, que solo acepta presupuestos del kiosco.
+Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usar`.
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.

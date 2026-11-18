@@ -82,7 +82,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   `public/assets/buscador.js` (`<input data-buscador-url="…">`). Clientes: `Comprobantes → buscarCliente`. Además cada buscador lleva un ícono de lupa que abre la ventana «ver lista» (`public/assets/ventana-lista.js`: `VentanaLista.articulos/clientes`; servidor `?listar=1`, `BuscadorArticulos::listar`, `buscarCliente`) para recorrer y elegir: **toda pantalla nueva con artículos o clientes lleva buscador + lupa** (`icono_lista()`). **Al crear una pantalla nueva con estos
   datos hay que reutilizar estos buscadores, no hacer otro campo.** El servidor igual vuelve a validar lo que llega.
 
-## Estado actual (17/11/2026, versión 0.21.0) y cómo se trabaja
+## Estado actual (17/11/2026, versión 0.22.0) y cómo se trabaja
 
 - **Ya facturando en ARCA producción** (Hernán emitió factura y nota de crédito): alias OYS (CUIT 20-11499319-1), certificado propio de la web, **punto de venta 7**
   (el 4 es del VFP: no se toca). Config de ARCA fuera de `public_html` (`afip_oys/` en el hosting). Modo en `config/local.php` (`afip.modo`).
@@ -90,7 +90,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   apuntando a `public/`. Se actualiza con GIT → botón `>_` y luego **Sistema → Aplicar cambios**. No activar el webhook de auto-despliegue.
 - **Rama `main` + pull requests** (igual que oesteparts): cada cambio en una rama `claude/…`, PR a `main` y fusión. Versión en `VERSION` (0.4.0 etapa 3, 0.4.1
   códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos, 0.7.2 lupa y lista de clientes, 0.8.0 web→VFP, 0.9.0 alta de clientes y licencia, 0.10.0 cuenta corriente y recibos, 0.11.0 Libro IVA Digital, 0.11.1 arreglo de GIT en Ferozo, 0.12.0 logo en los comprobantes,
-  0.12.1 scripts de `bin/` congelados, 0.13.0 portal de clientes, 0.14.0/0.14.1 grillas con orden, Excel y alto de pantalla, 0.15.0 subdiario impreso para el libro, 0.15.1 imputador en dos paneles, 0.15.2 web a pantalla completa, 0.16.0 presupuesto y ventas diarias, 0.17.0 pago al final y vuelto, 0.18.0 caja diaria, 0.19.0 stock en los buscadores, 0.20.0 ticket de cambio, 0.21.0 varias formas de pago y presupuestos sin IVA).
+  0.12.1 scripts de `bin/` congelados, 0.13.0 portal de clientes, 0.14.0/0.14.1 grillas con orden, Excel y alto de pantalla, 0.15.0 subdiario impreso para el libro, 0.15.1 imputador en dos paneles, 0.15.2 web a pantalla completa, 0.16.0 presupuesto y ventas diarias, 0.17.0 pago al final y vuelto, 0.18.0 caja diaria, 0.19.0 stock en los buscadores, 0.20.0 ticket de cambio, 0.21.0 varias formas de pago y presupuestos sin IVA, 0.22.0 modo Kiosco).
 - **Scripts congelados**: no tocar `bin/package.sh`, `bin/test.sh`, `bin/setup-dev.sh`, `bin/dev-server.sh` ni `bin/env.sh` (si cambian, el GIT de Ferozo no
   actualiza). Los vivos son `bin/pruebas.sh` (pruebas) y `bin/empaquetar.sh` (paquete).
 - **Hecho más allá de las etapas**: artículos con EAN-13/DUN-14/SKU/unidades por bulto; buscador de artículos en renglones y stock; texto adicional por renglón;
@@ -106,7 +106,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 - **Cuidados del contenedor**: MySQL local se cae al reiniciar el contenedor (`bash bin/setup-dev.sh`; si no arranca, borrar `/var/run/mysqld/*.lock` y `/var/lib/mysql/vm.pid`).
   Las claves, certificados y datos reales de clientes nunca van al repo ni al chat.
 
-## Presupuesto: vender sin factura de ARCA (pedido de Hernán, 17/11/2026, versión 0.21.0)
+## Presupuesto: vender sin factura de ARCA (pedido de Hernán, 17/11/2026, versión 0.22.0)
 
 **El presupuesto es la opción para poder vender algo sin hacer una factura en ARCA.** Reglas (decisiones D-37…D-42, nota `docs/entregas/0.16.0-presupuesto.md`):
 - Tipo `PR` (Presupuesto), **letra X**, no fiscal, numeración propia por sucursal (`sucursales.ultimo_presupuesto`), precios con IVA incluido. Vive en `subdiario` con
@@ -120,7 +120,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   presupuesto no se repite); además NC/NX restando (D-40, a confirmar).
 - Falta: que el presupuesto viaje al VFP (D-41) y permisos propios (hoy `comprobantes.emitir`).
 
-## Pedido de mostrador (Hernán, 18/11/2026) — se hace en entregas
+## Pedido de mostrador (Hernán, 18/11/2026) — hecho en entregas (completo)
 
 1. **Pago al final + vuelto + Tarjeta/Billetera** — HECHA en 0.17.0 (D-43, D-44): la forma de pago se pide en la pantalla de revisión (con el total a la vista) para facturas, ND y presupuestos;
    `forma_de_pagos.acepta_vuelto` (ABM en Tablas → Formas de pago), `caja.p_recibido/p_vuelto`, tipo de pago 10 = Billetera virtual.
@@ -128,9 +128,9 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 3. **Stock por depósito** en los buscadores de artículos — HECHA en 0.19.0 (D-46): sugerencias con el stock de cada depósito y ventana «ver lista» con una columna por depósito (`BuscadorArticulos::stockDe`, `stock-articulo.js`).
 4. **Ticket de cambio** — HECHA en 0.20.0 (D-47; sale de presupuestos y de facturas): `parametros.ticket_cambio` («habilita modo ticket de cambio», Tablas → Parámetros); ticket PDF sin importes con código/QR `PR-X-0004-00000012` (`Cambios/TicketCambioPdf`);
    Facturación → Cambio de mercadería (`/cambios`, permiso `cambios.hacer`): se lee el código o el número, se elige qué devuelve y qué se lleva y **solo se cobra la diferencia**. El cambio es un comprobante interno `CM` (letra X, `ctact.tico` 5, `subdiario.cambio_de`, `estadistica.linea_origen`): devuelve stock, saca stock, no es fiscal.
-5. **Modo Kiosco**: parámetro «habilitar modo Kiosco», permiso por rol, productos en tarjetas con su stock, carrito siempre visible, al finalizar genera un presupuesto y usa el mismo pago — pendiente.
+5. **Modo Kiosco** — HECHA en 0.22.0 (D-50): `parametros.kiosco` («Habilitar modo Kiosco»), permiso `kiosco.usar` por rol (Roles → Kiosco), `/kiosco` con tarjetas de productos (stock por depósito, rubros, pistola) y carrito siempre visible (localStorage); «Cobrar» arma un presupuesto (`origen = kiosco`) y sigue el flujo de «Cómo se paga» del presupuesto; `/kiosco/emitir` solo emite presupuestos del kiosco. **Con esto el pedido de mostrador está completo.**
 
-## Varias formas de pago y presupuestos sin IVA (Hernán, 18/11/2026, versión 0.21.0)
+## Varias formas de pago y presupuestos sin IVA (Hernán, 18/11/2026, versión 0.22.0)
 
 - **Varias formas de pago** (D-49, reemplaza D-04): «Cómo se paga» admite hasta 8 líneas (forma, importe, recibido, cheque) que suman el total; una línea puede ser cuenta corriente (queda como deuda; el crédito se controla sobre esa parte);
   una fila de `caja` por línea; vuelto por línea. `ComprobantesService::resolverPagos` (también lo usa el cambio de mercadería), `views/comprobantes/_pago.php`, `pago.js`. `subdiario.forma_pago` queda 2 si algo quedó a cuenta, y

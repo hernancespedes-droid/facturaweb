@@ -353,6 +353,36 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok(/Cambio X 0004-\d{8}/.test(cp) && cp.includes('DAR VUELTO AL CLIENTE: $ 100,00') && cp.includes('DEVUELVE'), 'cambio: se hace, cobra solo la diferencia y recuerda el vuelto');
     await page.goto(BASE + '/stock?q=e2e-001');
     ok((await page.content()).includes('E2E-001'), 'cambio: el stock refleja el cambio');
+
+    // ---- modo Kiosco: tarjetas con stock, carrito siempre visible y cobro como presupuesto
+    await page.goto(BASE + '/kiosco');
+    await page.waitForSelector('.k-tarjeta');
+    const tar = page.locator('.k-tarjeta', { hasText: 'E2E-001' });
+    ok((await tar.textContent()).includes('Stock'), 'kiosco: cada tarjeta muestra su stock');
+    await tar.click();
+    await tar.click();
+    ok((await page.inputValue('.k-linea .k-cant')) === '2', 'kiosco: tocar la tarjeta suma de a uno en el carrito');
+    await page.click('.k-linea button[aria-label="Una más"]');
+    ok((await page.textContent('[data-total]')).includes('3.703,50'), 'kiosco: el total se actualiza al instante (3 × 1.234,50)');
+    await page.locator('.k-tarjeta', { hasText: 'E2E-ABONO' }).click();
+    ok((await page.locator('.k-linea').count()) === 2, 'kiosco: el carrito muestra los dos productos');
+    await page.click('.k-linea:nth-child(2) button[aria-label^="Sacar"]');
+    ok((await page.locator('.k-linea').count()) === 1, 'kiosco: se saca un producto del carrito');
+    await page.reload();
+    await page.waitForSelector('.k-linea');
+    ok((await page.inputValue('.k-linea .k-cant')) === '3', 'kiosco: el carrito se conserva al recargar');
+    await page.setViewportSize({ width: 390, height: 844 });
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'kiosco: en el celular no se desborda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'kiosco-celular.png') });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.screenshot({ path: path.join(CAPTURAS, 'kiosco.png') });
+    await Promise.all([page.waitForNavigation(), page.click('[data-cobrar]')]);
+    const revK = await page.textContent('body');
+    ok(revK.includes('Cómo se paga') && revK.includes('Volver al kiosco') && revK.includes('Presupuesto X'), 'kiosco: al cobrar arma un presupuesto y pide cómo se paga');
+    await page.check('input[name=forma_pago][value="1"]');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    ok(page.url().includes('/kiosco?hecho='), 'kiosco: al emitir vuelve al kiosco');
+    ok((await page.textContent('body')).includes('Venta registrada') && (await page.locator('.k-linea').count()) === 0, 'kiosco: avisa la venta hecha y el carrito queda vacío');
     execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_stock.php'), 'off']);
     // grillas: orden por columna (servidor con páginas, navegador sin páginas), Excel y alto que entra en la pantalla
     await page.goto(BASE + '/comprobantes?cliente=E2E');

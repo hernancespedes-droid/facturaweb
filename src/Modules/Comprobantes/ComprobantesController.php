@@ -119,9 +119,10 @@ final class ComprobantesController
      * @param array<string,mixed> $cbte el 'cbte' de armar() @param array<string,mixed> $datos lo cargado en el formulario (sin el pago)
      * @param array<string,string> $errores errores del pago @param array<string,mixed> $pagoCargado lo que se había elegido de pago
      */
-    private static function pantallaRevisar(array $cbte, array $datos, array $errores = [], array $pagoCargado = [], int $status = 200): Response
+    public static function pantallaRevisar(array $cbte, array $datos, array $errores = [], array $pagoCargado = [], int $status = 200): Response
     {
         $pdo = Db::pdo();
+        $kiosco = ($datos['origen'] ?? '') === 'kiosco'; // venta del modo Kiosco: emite y vuelve por sus propias rutas
         $pagar = !Tipos::credito($cbte['tipo']) && empty($cbte['solo_subdiario']);
         if ($pagar) { // el pago se elige acá: no viaja en lo cargado (las notas de crédito sí conservan su elección)
             $datos = array_diff_key($datos, array_flip(self::CAMPOS_PAGO));
@@ -130,6 +131,7 @@ final class ComprobantesController
             'title' => ($cbte['presupuesto'] ?? null) ? 'Facturar presupuesto' : 'Revisar ' . Tipos::titulo($cbte['tipo'], $cbte['letra']), 'nav' => 'comprobantes_' . strtolower($cbte['tipo']),
             'c' => $cbte, 'etiquetaArca' => Arca::etiqueta(), 'datos' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'operacion' => bin2hex(random_bytes(16)),
             'errores' => $errores, 'pagoCargado' => $pagoCargado, 'puedeCredito' => Auth::puede('comprobantes.credito'),
+            'urlEmitir' => url($kiosco ? '/kiosco/emitir' : '/comprobantes'), 'urlVolver' => $kiosco ? url('/kiosco') : null,
             'pagar' => $pagar,
             'formas' => $pdo->query('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE tipo IN (1, 2, 3, 5, 6, 10) ORDER BY tipo, descripcion')->fetchAll(),
             'bancos' => $pdo->query('SELECT codigo, descripcion FROM bancos ORDER BY descripcion')->fetchAll(),
@@ -180,6 +182,9 @@ final class ComprobantesController
             ? 'Ese comprobante ya se había emitido (no se emitió otro).'
             : Tipos::titulo($r['cbte']['tipo'], $r['cbte']['letra']) . ' ' . numero_cbte($r['cbte']['prefijo'], $e['numero']) . ($r['cbte']['tipo'] === 'PR' ? ' emitido.' : ' emitida.')
                 . (($e['vuelto'] ?? 0) > 0 ? ' DAR VUELTO AL CLIENTE: ' . plata_dec($e['vuelto']) . '.' : ''));
+        if (($datos['origen'] ?? '') === 'kiosco') { // vuelve al carrito, con el aviso de la venta hecha
+            return Response::redirect(url('/kiosco') . '?hecho=' . $e['id']);
+        }
         return Response::redirect(url('/comprobantes/' . $e['id']));
     }
 
