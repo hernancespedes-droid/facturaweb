@@ -28,7 +28,7 @@ final class CuentaCorrienteService
 {
     public const LETRA_RECIBO = 'X';
     private const CANAL = 'W';
-    public const TIPOS = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'ND' => 'Nota de débito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X', 'RC' => 'Recibo', 'AD' => 'Ajuste de débito', 'AC' => 'Ajuste de crédito'];
+    public const TIPOS = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'ND' => 'Nota de débito', 'PR' => 'Presupuesto', 'CM' => 'Cambio', 'NX' => 'Nota de crédito X', 'RC' => 'Recibo', 'AD' => 'Ajuste de débito', 'AC' => 'Ajuste de crédito'];
     public const AJUSTES = ['AD' => ['Ajuste de débito (aumenta la deuda)', 3], 'AC' => ['Ajuste de crédito (la disminuye)', 9]];
     public const ESTADOS_CHEQUE = ['' => 'En cartera', 'D' => 'Depositado', 'E' => 'Entregado a un tercero', 'R' => 'Rechazado'];
 

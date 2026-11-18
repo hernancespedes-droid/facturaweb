@@ -55,6 +55,11 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
 pero **no van al subdiario de IVA, al Libro IVA Digital, al portal ni al VFP**: todo lo fiscal que lee `subdiario` tiene que filtrar con `Tipos::sqlSoloFiscales()` (o `tipo NOT IN ('PR','NX')`).
 Un presupuesto genera **una sola** factura (`presupuesto_id` único) que va **solo al subdiario** (`solo_subdiario = 1`: sin caja, `ctact` ni stock). Ventas diarias: `Listados/VentasDiarias`. Detalle en el skill.
 
+## Cambio de mercadería (0.20.0)
+
+`CM` (Cambio, letra X) es otro comprobante **interno** (`Tipos::INTERNOS`, `Tipos::SQL_INTERNOS`): `Cambios/CambiosService` lo arma desde un presupuesto o una factura (ticket de cambio sin importes, `TicketCambioPdf`),
+devuelve y saca stock y cobra solo la diferencia (`ctact.tico` 5). Se enciende en Parámetros (`parametros.ticket_cambio`) y se habilita por rol con `cambios.hacer`. Todo lo fiscal que lee `subdiario` sigue filtrando con `Tipos::sqlSoloFiscales()`.
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.

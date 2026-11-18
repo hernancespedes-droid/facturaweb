@@ -16,6 +16,7 @@ $paginas = (int) ceil($total / max(1, $porPagina));
         <div class="acciones">
             <a class="btn" href="<?= e(url('/comprobantes/nuevo') . '?tipo=FC') ?>">+ Nueva factura</a>
             <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=PR') ?>">Presupuesto</a>
+            <?php if (\App\Modules\Cambios\CambiosService::habilitado() && puede('cambios.hacer')): ?><a class="btn btn-ghost" href="<?= e(url('/cambios')) ?>">Leer ticket de cambio</a><?php endif; ?>
             <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=NC') ?>">Nota de crédito</a>
             <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=ND') ?>">Nota de débito</a>
         </div>

@@ -41,19 +41,19 @@ final class CajaDiaria
         $pdo = Db::pdo();
         // Lo vendido: por tipo, y cuánto fue a cuenta corriente
         $st = $pdo->prepare("SELECT tipo, forma_pago, COUNT(*), COALESCE(SUM(neto), 0) FROM subdiario WHERE estado = '' AND solo_subdiario = 0 AND fecha BETWEEN ? AND ?
-            AND tipo IN ('FC', 'ND', 'PR', 'NC', 'NX') GROUP BY tipo, forma_pago");
+            AND tipo IN ('FC', 'ND', 'PR', 'CM', 'NC', 'NX') GROUP BY tipo, forma_pago");
         $st->execute([$d, $h]);
-        $v = ['facturas' => 0.0, 'presupuestos' => 0.0, 'notas_debito' => 0.0, 'notas_credito' => 0.0, 'cuenta_corriente' => 0.0, 'contado' => 0.0, 'comprobantes' => 0.0];
+        $v = ['facturas' => 0.0, 'presupuestos' => 0.0, 'cambios' => 0.0, 'notas_debito' => 0.0, 'notas_credito' => 0.0, 'cuenta_corriente' => 0.0, 'contado' => 0.0, 'comprobantes' => 0.0];
         foreach ($st->fetchAll(\PDO::FETCH_NUM) as [$tipo, $fp, $n, $suma]) {
             $suma = (float) $suma;
-            $clave = ['FC' => 'facturas', 'PR' => 'presupuestos', 'ND' => 'notas_debito'][$tipo] ?? 'notas_credito';
+            $clave = ['FC' => 'facturas', 'PR' => 'presupuestos', 'CM' => 'cambios', 'ND' => 'notas_debito'][$tipo] ?? 'notas_credito';
             $v[$clave] += $suma;
             $v['comprobantes'] += (int) $n;
             if (!Tipos::credito($tipo)) {
                 $v[(int) $fp === 2 ? 'cuenta_corriente' : 'contado'] += $suma;
             }
         }
-        $v['ventas_netas'] = Calculadora::r2($v['facturas'] + $v['presupuestos'] + $v['notas_debito'] - $v['notas_credito']);
+        $v['ventas_netas'] = Calculadora::r2($v['facturas'] + $v['presupuestos'] + $v['cambios'] + $v['notas_debito'] - $v['notas_credito']);
         foreach ($v as $k => $x) {
             $v[$k] = Calculadora::r2($x);
         }

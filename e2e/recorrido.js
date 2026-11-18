@@ -277,6 +277,46 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok(cab.includes('E2E SEGUNDO') && cab.includes('Total'), 'ventana «ver lista»: una columna de stock por depósito y el total');
     await page.screenshot({ path: path.join(CAPTURAS, 'lista-articulos-stock.png') });
     await page.keyboard.press('Escape');
+
+    // ---- ticket de cambio: presupuesto de contado, se lee el ticket y se cambia un producto cobrando solo la diferencia
+    await page.goto(BASE + '/comprobantes/nuevo?tipo=PR');
+    await page.fill('#cliente-q', 'CLIENTE E2E FINAL');
+    await page.waitForSelector('[data-cliente-lista] li');
+    await page.click('[data-cliente-lista] li');
+    await page.fill('[data-renglon] [data-articulo]', 'E2E-001');
+    await page.waitForSelector('#articulos-sugerencias li');
+    await page.click('#articulos-sugerencias li');
+    await page.fill('[data-renglon] [data-cantidad]', '2');
+    await page.fill('[data-renglon] [data-precio]', '100');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+    await page.check('input[name=forma_pago][value="1"]');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    const nroPr = (await page.textContent('h1')).match(/(\d{4}-\d{8})/)[1];
+    ok((await page.textContent('body')).includes('Ticket de cambio'), 'ticket de cambio: el presupuesto ofrece el ticket');
+    const ticket = await ctx.request.get(page.url().replace(/\/$/, '').replace(/(\/comprobantes\/)(\d+)$/, '/cambios/ticket/$2'));
+    ok(ticket.status() === 200 && (ticket.headers()['content-type'] || '').includes('pdf'), 'ticket de cambio: sale en PDF');
+    await page.goto(BASE + '/cambios');
+    await page.fill('[data-ticket]', 'PR-X-' + nroPr);
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Buscar")')]);
+    ok((await page.textContent('tbody')).includes('Presupuesto X'), 'ticket de cambio: se lee el código y aparece el presupuesto');
+    await Promise.all([page.waitForNavigation(), page.click('a:has-text("Hacer el cambio")')]);
+    await page.locator('[data-devolver]').first().fill('1');
+    await page.fill('[data-nuevo] [data-art]', 'E2E-ABONO');
+    await page.waitForSelector('.sugerencias:not([hidden]) li');
+    await page.click('.sugerencias:not([hidden]) li');
+    const dif = await page.textContent('[data-t-dif]');
+    ok(dif.includes('900,00'), 'cambio: la diferencia es lo que lleva (1.000) menos lo que devuelve (100)');
+    ok(await page.isVisible('[data-pago]'), 'cambio: con diferencia pide cómo se paga');
+    await page.check('input[name=forma_pago][value="1"]');
+    await page.fill('[data-recibido]', '1.000');
+    ok((await page.textContent('[data-vuelto-aviso]')).includes('100,00'), 'cambio: avisa el vuelto');
+    await page.screenshot({ path: path.join(CAPTURAS, 'cambio.png'), fullPage: true });
+    page.once('dialog', (d) => d.accept()); // confirma el cambio
+    await Promise.all([page.waitForNavigation(), page.click('[data-hacer]')]);
+    const cp = await page.textContent('body');
+    ok(/Cambio X 0004-\d{8}/.test(cp) && cp.includes('DAR VUELTO AL CLIENTE: $ 100,00') && cp.includes('DEVUELVE'), 'cambio: se hace, cobra solo la diferencia y recuerda el vuelto');
+    await page.goto(BASE + '/stock?q=e2e-001');
+    ok((await page.content()).includes('E2E-001'), 'cambio: el stock refleja el cambio');
     execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_stock.php'), 'off']);
     // grillas: orden por columna (servidor con páginas, navegador sin páginas), Excel y alto que entra en la pantalla
     await page.goto(BASE + '/comprobantes?cliente=E2E');
