@@ -8,7 +8,7 @@
   if (!raiz) return;
   var q = function (s) { return raiz.querySelector(s); };
   var CLAVE = 'facturaweb.kiosco.carrito';
-  var estado = { items: [], cliente: { codigo: raiz.getAttribute('data-cliente-codigo') || '', nombre: raiz.getAttribute('data-cliente-nombre') || '' } };
+  var estado = { token: '', items: [], cliente: { codigo: raiz.getAttribute('data-cliente-codigo') || '', nombre: raiz.getAttribute('data-cliente-nombre') || '' } };
 
   function num(txt) {
     txt = String(txt || '').replace(/[\s$]/g, '');
@@ -24,19 +24,40 @@
   function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; }
 
   // ---- carrito guardado en el navegador (si no se puede, funciona igual en memoria)
+  function nuevoToken() {
+    var a = new Uint8Array(16);
+    (window.crypto || window.msCrypto).getRandomValues(a);
+    return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
   function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(estado)); } catch (e) {} }
   function cargarGuardado() {
-    if (raiz.getAttribute('data-hecho') === '1') { try { localStorage.removeItem(CLAVE); } catch (e) {} return; } // venta hecha: carrito vacío
+    if (raiz.getAttribute('data-hecho') === '1') { try { localStorage.removeItem(CLAVE); } catch (e) {} return; } // venta hecha: carrito vacío (y venta nueva)
     try {
       var g = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+      if (g && typeof g.token === 'string' && /^[0-9a-f]{32}$/.test(g.token)) estado.token = g.token;
       if (g && Array.isArray(g.items)) { estado.items = g.items.filter(function (x) { return x && x.codigo && x.cantidad > 0; }); if (g.cliente && g.cliente.codigo) estado.cliente = g.cliente; }
     } catch (e) {}
+  }
+
+  // ---- reservas de stock (D-51): lo que está en el carrito queda reservado a nombre de quien vende hasta que se cobra; los demás puestos lo ven reservado
+  var reservas = null, estadosRes = {};
+  function iniciarReservas() {
+    if (raiz.getAttribute('data-stock') !== '1' || !window.Reservas) return;
+    reservas = window.Reservas.crear({ url: raiz.getAttribute('data-url-reservar'), csrfNombre: raiz.getAttribute('data-csrf-nombre'), csrf: raiz.getAttribute('data-csrf'), token: estado.token, origen: 'kiosco',
+      alEstado: function (est) {
+        estadosRes = {};
+        est.forEach(function (e) { estadosRes[e.clave] = e; });
+        render(true);
+      } });
+  }
+  function reservar() {
+    if (reservas) reservas.sync(estado.items.map(function (x) { return { articulo: x.codigo, cantidad: String(x.cantidad) }; }));
   }
 
   // ---- carrito
   var lineas = q('[data-lineas]');
   function totalCarrito() { return r2(estado.items.reduce(function (a, x) { return a + x.cantidad * num(x.precio); }, 0)); }
-  function render() {
+  function render(soloEstados) {
     lineas.innerHTML = '';
     estado.items.forEach(function (x, i) {
       var f = el('div', 'k-linea');
@@ -58,7 +79,8 @@
       ctl.appendChild(el('span', 'k-linea-precio muted small', '× ' + fmt(num(x.precio))));
       ctl.appendChild(el('b', 'k-linea-sub', fmt(r2(x.cantidad * num(x.precio)))));
       f.appendChild(ctl);
-      if (x.controla && x.stock !== null && x.cantidad > x.stock) f.appendChild(el('small', 'k-aviso', 'Hay ' + cant(x.stock) + ' en stock (se vende igual).'));
+      var er = estadosRes[x.codigo];
+      if (er && window.StockArticulo) { var t = window.StockArticulo.estadoReserva(er); f.appendChild(el('small', 'k-aviso' + (t.mal ? '' : ' k-ok'), t.txt)); }
       lineas.appendChild(f);
     });
     var n = estado.items.reduce(function (a, x) { return a + x.cantidad; }, 0);
@@ -66,9 +88,11 @@
     q('[data-vacio]').hidden = estado.items.length > 0;
     q('[data-total]').textContent = fmt(totalCarrito());
     q('[data-cobrar]').disabled = estado.items.length === 0 || !estado.cliente.codigo;
+    var hayFalta = Object.keys(estadosRes).some(function (k) { return estadosRes[k].falta > 0 && estado.items.some(function (x) { return x.codigo === k; }); });
+    q('[data-reserva-aviso]').hidden = !hayFalta;
     q('[data-cliente-nombre]').textContent = estado.cliente.nombre || 'Elegí el cliente';
   }
-  function cambio() { guardar(); render(); }
+  function cambio() { guardar(); render(); reservar(); }
   function agregar(a) {
     var ya = estado.items.filter(function (x) { return x.codigo === a.codigo; })[0];
     if (ya) ya.cantidad = r2(ya.cantidad + (a.cantidad && a.cantidad > 0 ? a.cantidad : 1));
@@ -77,7 +101,9 @@
     cambio();
     lineas.scrollTop = lineas.scrollHeight;
   }
-  q('[data-vaciar]').addEventListener('click', function () { if (estado.items.length && window.confirm('¿Vaciar el carrito?')) { estado.items = []; cambio(); } });
+  q('[data-vaciar]').addEventListener('click', function () {
+    if (estado.items.length && window.confirm('¿Vaciar el carrito?')) { estado.items = []; estadosRes = {}; cambio(); if (reservas) reservas.liberar(raiz.getAttribute('data-url-liberar')); }
+  });
 
   // ---- cliente (por omisión el consumidor final; el usuario elige otro de la lista)
   var cajaCli = q('[data-cliente-caja]'), inpCli = q('[data-cliente-q]'), listaCli = q('[data-cliente-lista]'), timerCli = null;
@@ -110,6 +136,7 @@
     Array.prototype.slice.call(f.querySelectorAll('[data-dato]')).forEach(function (e) { e.remove(); });
     function campo(nombre, valor) { var i = document.createElement('input'); i.type = 'hidden'; i.name = nombre; i.value = valor; i.setAttribute('data-dato', ''); f.appendChild(i); }
     campo('cliente', estado.cliente.codigo);
+    campo('reserva', estado.token);
     var suc = q('[data-sucursal]'); if (suc) campo('sucursal', suc.value);
     estado.items.forEach(function (x, i) {
       campo('items[' + i + '][articulo]', x.codigo);
@@ -124,7 +151,13 @@
   var cont = q('[data-tarjetas]'), buscar = q('[data-buscar]'), masBtn = q('[data-ver-mas]'), sinRes = q('[data-sin-resultados]');
   var vista = { q: '', rubro: '', pagina: 1, pedido: 0 };
   function tarjeta(a) {
-    var b = el('button', 'k-tarjeta'); b.type = 'button';
+    var b = el('div', 'k-tarjeta'); b.setAttribute('role', 'button'); b.tabIndex = 0;
+    if (a.foto) { // foto del producto (con zoom): la lupa amplía sin agregar al carrito
+      var f = el('span', 'k-foto'), im = el('img'); im.src = a.foto; im.alt = a.descripcion; im.loading = 'lazy'; f.appendChild(im);
+      var z = el('button', 'k-zoom', '🔍'); z.type = 'button'; z.title = 'Ampliar la foto'; z.setAttribute('aria-label', 'Ampliar la foto de ' + a.descripcion);
+      z.setAttribute('data-ampliar-src', a.foto_grande || a.foto); z.setAttribute('data-titulo', a.descripcion);
+      f.appendChild(z); b.appendChild(f);
+    }
     var sin = window.StockArticulo && window.StockArticulo.sinStock(a);
     if (sin) b.className += ' sin-stock';
     b.appendChild(el('span', 'k-cod', a.codigo));
@@ -133,12 +166,13 @@
     var st = window.StockArticulo ? window.StockArticulo.texto(a) : '';
     if (st) b.appendChild(el('span', 'k-stock' + (sin ? ' sin' : ''), sin ? 'Sin stock' : st));
     b.addEventListener('click', function () { agregar(a); });
+    b.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); agregar(a); } });
     return b;
   }
   function cargar(mas) {
     var n = ++vista.pedido;
     if (!mas) vista.pagina = 1;
-    var url = raiz.getAttribute('data-url-articulos') + '?q=' + encodeURIComponent(vista.q) + '&rubro=' + encodeURIComponent(vista.rubro) + '&pagina=' + vista.pagina;
+    var url = raiz.getAttribute('data-url-articulos') + '?reserva=' + estado.token + '&q=' + encodeURIComponent(vista.q) + '&rubro=' + encodeURIComponent(vista.rubro) + '&pagina=' + vista.pagina;
     fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
       if (n !== vista.pedido) return;
       if (!mas) cont.innerHTML = '';
@@ -156,7 +190,7 @@
     ev.preventDefault();
     var t = buscar.value.trim();
     if (!t) return;
-    fetch(raiz.getAttribute('data-url-articulos') + '?exacto=1&q=' + encodeURIComponent(t), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+    fetch(raiz.getAttribute('data-url-articulos') + '?reserva=' + estado.token + '&exacto=1&q=' + encodeURIComponent(t), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
       if (d.items.length === 1) { agregar(d.items[0]); buscar.value = ''; vista.q = ''; cargar(false); }
       else { vista.q = t; cargar(false); }
     });
@@ -177,6 +211,10 @@
   if (rubros.length) { chips.appendChild(chip('Todos', '')); rubros.forEach(function (r) { chips.appendChild(chip(r.descripcion, r.codigo)); }); chips.firstChild.classList.add('activo'); }
 
   cargarGuardado();
+  if (!estado.token) estado.token = nuevoToken();
+  guardar();
+  iniciarReservas();
   render();
+  reservar();
   cargar(false);
 })();

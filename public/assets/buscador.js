@@ -64,7 +64,8 @@
   }
   function buscar(inp, exacto) {
     var n = ++pedido;
-    return fetch(inp.getAttribute('data-buscador-url') + '?' + (exacto ? 'exacto=1&' : '') + 'q=' + encodeURIComponent(inp.value.trim()), { credentials: 'same-origin' })
+    var base = inp.getAttribute('data-buscador-url');
+    return fetch(base + (base.indexOf('?') < 0 ? '?' : '&') + (exacto ? 'exacto=1&' : '') + 'q=' + encodeURIComponent(inp.value.trim()), { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (arr) { return n === pedido ? arr : null; });
   }

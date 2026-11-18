@@ -24,6 +24,32 @@ foreach (S::campos() as $campo => $def) {
 </div>
 <?php if (isset($errores['general'])): ?><div class="alerta alerta-error"><?= e($errores['general']) ?></div><?php endif; ?>
 
+<?php if ($a !== null): ?>
+<section class="card" id="foto">
+    <h2>Foto</h2>
+    <div class="foto-articulo">
+        <?php if ($foto !== null): ?>
+            <a href="<?= e($foto['grande']) ?>" data-ampliar title="Tocá para ampliar y hacer zoom"><img src="<?= e($foto['chica']) ?>" alt="<?= e($a['descripcion']) ?>" class="foto-previa"></a>
+        <?php else: ?>
+            <p class="muted">Este artículo todavía no tiene foto.</p>
+        <?php endif; ?>
+        <?php if ($puedeEditar): ?>
+            <form method="post" action="<?= e(url('/articulos/foto') . '?' . http_build_query(['codigo' => $a['codigo']])) ?>" enctype="multipart/form-data" class="toolbar">
+                <?= csrf_field() ?>
+                <label class="field"><span><?= $foto !== null ? 'Cambiar la foto' : 'Subir una foto' ?> (JPG, PNG o WEBP, hasta 8 MB)</span>
+                    <input type="file" name="foto" accept="image/*" required></label>
+                <button class="btn" type="submit">Subir foto</button>
+            </form>
+            <?php if ($foto !== null): ?>
+                <form method="post" action="<?= e(url('/articulos/foto/quitar') . '?' . http_build_query(['codigo' => $a['codigo']])) ?>">
+                    <?= csrf_field() ?>
+                    <button class="btn btn-ghost" type="submit">Quitar la foto</button>
+                </form>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
 <form method="post" action="<?= e($a === null ? url('/articulos') : C::urlFicha((string) $a['codigo'])) ?>" class="card form" novalidate>
     <?= csrf_field() ?>
     <?php foreach ($grupos as $grupo => $campos): ?>

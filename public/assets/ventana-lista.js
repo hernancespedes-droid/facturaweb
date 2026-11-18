@@ -13,6 +13,13 @@
     articulos: {
       titulo: 'Buscar artículo', placeholder: 'Filtrar por código, SKU, código de barras o parte de la descripción',
       columnas: [
+        { rotulo: 'Foto', valor: function () { return ''; }, nodo: function (a) {
+          if (!a.foto) return null;
+          var b = document.createElement('button'); b.type = 'button'; b.className = 'va-foto'; b.title = 'Ampliar la foto'; b.setAttribute('aria-label', 'Ampliar la foto de ' + a.descripcion);
+          b.setAttribute('data-ampliar-src', a.foto_grande || a.foto); b.setAttribute('data-titulo', a.descripcion);
+          var i = document.createElement('img'); i.src = a.foto; i.alt = a.descripcion; i.loading = 'lazy'; b.appendChild(i);
+          return b;
+        } },
         { rotulo: 'Código', valor: function (a) { return a.codigo; } },
         { rotulo: 'Descripción', valor: function (a) { return a.descripcion; } },
         { rotulo: 'SKU / EAN', valor: function (a) { return [a.sku, a.ean13].filter(Boolean).join(' · '); }, chica: true },
@@ -49,7 +56,7 @@
   function elegir(x) { var cb = cfg.alElegir; dlg.close(); if (cb) cb(x); }
   function cargar() {
     var n = ++pedido;
-    fetch(cfg.url + '?listar=1&pagina=' + estado.pagina + '&q=' + encodeURIComponent(estado.q), { credentials: 'same-origin' })
+    fetch(cfg.url + (cfg.url.indexOf('?') < 0 ? '?' : '&') + 'listar=1&pagina=' + estado.pagina + '&q=' + encodeURIComponent(estado.q), { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (n !== pedido) return;
@@ -63,7 +70,8 @@
         d.items.forEach(function (x) {
           var tr = document.createElement('tr'); tr.className = 'va-fila'; tr.tabIndex = 0;
           cols.forEach(function (c) {
-            var td = document.createElement('td'); td.textContent = c.valor(x) || '';
+            var td = document.createElement('td');
+            if (c.nodo) { var nodo = c.nodo(x); if (nodo) td.appendChild(nodo); } else td.textContent = c.valor(x) || '';
             if (c.num) td.className = 'num'; if (c.chica) td.setAttribute('data-chica', '');
             tr.appendChild(td);
           });

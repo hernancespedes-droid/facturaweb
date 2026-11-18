@@ -15,6 +15,24 @@ $disc = $c['letra'] === 'A';
     </div>
 </div>
 
+<?php if (!empty($c['stock_faltantes'])): ?>
+<section class="card alerta-stock" id="autorizacion-stock">
+    <h2>Stock no disponible</h2>
+    <ul class="list small">
+        <?php foreach ($c['stock_faltantes'] as $f): ?><li><?= e($f['mensaje']) ?></li><?php endforeach; ?>
+    </ul>
+    <?php if (isset($errores['stock'])): ?><div class="alerta alerta-error" role="alert"><?= nl2br(e($errores['stock'])) ?></div><?php endif; ?>
+    <p class="small">Venderlo igual necesita la <b>autorización de un supervisor</b>. Queda registrada con su nombre.</p>
+    <?php if (puede('stock.autorizar')): ?>
+        <label class="check"><input type="checkbox" name="autoriza_yo" form="form-emitir" value="1" <?= !empty($pagoCargado['autoriza_yo']) ? 'checked' : '' ?>> <b>Autorizo vender de todos modos</b> (lo autorizo yo)</label>
+        <p class="small muted">O que lo autorice otro supervisor con su usuario y su clave:</p>
+    <?php endif; ?>
+    <div class="grid-2">
+        <label class="field"><span>Usuario que autoriza</span><input name="autoriza_usuario" form="form-emitir" value="<?= e((string) ($pagoCargado['autoriza_usuario'] ?? '')) ?>" autocomplete="off"></label>
+        <label class="field"><span>Su clave</span><input type="password" name="autoriza_clave" form="form-emitir" autocomplete="new-password"></label>
+    </div>
+</section>
+<?php endif; ?>
 <?php if (!empty($c['advertencias'])): ?>
 <div class="alerta alerta-info" role="status"><b>Stock:</b> <?= e(implode(' · ', $c['advertencias'])) ?></div>
 <?php endif; ?>

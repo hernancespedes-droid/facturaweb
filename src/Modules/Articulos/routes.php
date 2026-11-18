@@ -11,4 +11,8 @@ return function (Router $r): void {
     $r->post('/articulos', Guard::permiso('articulos.editar', [C::class, 'crear']));
     $r->get('/articulos/ficha', Guard::permiso('articulos.ver', [C::class, 'ver']));
     $r->post('/articulos/ficha', Guard::permiso('articulos.editar', [C::class, 'actualizar']));
+    // Foto del artículo: la ven todos los que trabajan con artículos (tarjetas del kiosco, buscadores, fichas); subirla o quitarla es de quien edita
+    $r->get('/articulos/foto', Guard::algun(['articulos.ver', 'comprobantes.ver', 'comprobantes.emitir', 'kiosco.usar', 'cambios.hacer', 'stock.ver'], [C::class, 'foto']));
+    $r->post('/articulos/foto', Guard::permiso('articulos.editar', [C::class, 'subirFoto']));
+    $r->post('/articulos/foto/quitar', Guard::permiso('articulos.editar', [C::class, 'quitarFoto']));
 };

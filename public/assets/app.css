@@ -522,11 +522,17 @@ a[data-ampliar]:hover img.mini { border-color: var(--brand); }
 .ventana-cab { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .ventana-cab h2 { margin: 0; }
 .cargar-mano { margin: 10px 0 0; }
-.visor { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 92vh; }
-.visor::backdrop { background: rgba(0, 0, 0, .82); }
-.visor img { display: block; max-width: 96vw; max-height: 86vh; object-fit: contain; border-radius: 8px; background: #000; }
-.visor-cerrar { position: absolute; top: 8px; right: 8px; }
-.visor p { margin: 6px 0 0; color: #fff; text-align: center; font-size: .9rem; }
+.visor { border: 0; padding: 0; background: transparent; width: min(96vw, 1100px); max-width: 96vw; max-height: 94vh; overflow: visible; color: #fff; }
+.visor::backdrop { background: rgba(0, 0, 0, .86); }
+.visor-barra { display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 8px; }
+.visor-barra b { min-width: 4rem; text-align: center; }
+.visor-lienzo { overflow: hidden; width: 100%; height: min(78vh, 900px); border-radius: 8px; background: #000; touch-action: none; display: flex; align-items: center; justify-content: center; cursor: zoom-in; }
+.visor-lienzo.con-zoom { cursor: grab; }
+.visor-lienzo img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center center; user-select: none; -webkit-user-drag: none; will-change: transform; }
+.visor p { margin: 6px 0 0; color: #fff; text-align: center; font-size: .85rem; }
+.foto-articulo { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+.foto-articulo .foto-previa { max-height: 220px; margin: 0; cursor: zoom-in; border: 1px solid var(--border, #d6dbe6); }
+
 
 /* ---------- Tema claro (botón Dark/Light del encabezado; lo elige cada usuario en su navegador) ---------- */
 :root { color-scheme: dark; }
@@ -1180,3 +1186,14 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
   .kiosco-carrito > p.small { display: none; }
   .kiosco-tarjetas { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
+.k-ok { color: var(--ok, #1c7c4f); }
+.reserva-estado { display: block; }
+.alerta-stock { border-left: 4px solid var(--error, #c0392b); }
+
+/* Fotos de los artículos: tarjetas del kiosco y listas */
+.k-foto { position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; background: #eef1f6; margin-bottom: 4px; }
+.k-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.k-zoom { position: absolute; top: 6px; right: 6px; border: 0; border-radius: 999px; width: 32px; height: 32px; cursor: zoom-in; background: rgba(255, 255, 255, .88); font-size: 1rem; line-height: 1; }
+.k-zoom:hover, .k-zoom:focus-visible { background: #fff; box-shadow: 0 0 0 2px var(--brand, #2f6bff); }
+.va-foto { border: 0; padding: 0; background: none; cursor: zoom-in; line-height: 0; }
+.va-foto img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border, #d6dbe6); }

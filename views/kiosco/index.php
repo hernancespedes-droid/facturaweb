@@ -11,7 +11,8 @@ use App\Modules\Comprobantes\Tipos;
 <div class="kiosco" data-kiosco
      data-url-articulos="<?= e(url('/kiosco/articulos')) ?>" data-url-cliente="<?= e(url('/kiosco/buscar-cliente')) ?>"
      data-cliente-codigo="<?= e((string) ($cliente['codigo'] ?? '')) ?>" data-cliente-nombre="<?= e((string) ($cliente['razon_social'] ?? '')) ?>"
-     data-hecho="<?= $hecho !== null ? '1' : '0' ?>" data-rubros="<?= e((string) json_encode($rubros, JSON_UNESCAPED_UNICODE)) ?>">
+     data-hecho="<?= $hecho !== null ? '1' : '0' ?>" data-url-reservar="<?= e(url('/stock/reservar')) ?>" data-url-liberar="<?= e(url('/stock/liberar')) ?>"
+     data-csrf-nombre="<?= e(\App\Core\Csrf::CAMPO) ?>" data-csrf="<?= e(\App\Core\Csrf::token()) ?>" data-stock="<?= \App\Modules\Stock\StockService::activo() ? '1' : '0' ?>" data-rubros="<?= e((string) json_encode($rubros, JSON_UNESCAPED_UNICODE)) ?>">
     <section class="kiosco-catalogo">
         <div class="page-head"><div><p class="eyebrow">Facturación</p><h1>Kiosco</h1></div></div>
         <?php if ($hecho !== null): ?>
@@ -55,6 +56,7 @@ use App\Modules\Comprobantes\Tipos;
         <?php elseif (count($sucursales) === 1): ?>
             <input type="hidden" data-sucursal value="<?= e((string) array_key_first($sucursales)) ?>">
         <?php endif; ?>
+        <div class="alerta alerta-warn small" data-reserva-aviso hidden role="status">Hay productos reservados por otro puesto o sin stock suficiente: para venderlos igual, al cobrar hace falta la autorización de un supervisor.</div>
         <p class="kiosco-total">Total <b data-total>$ 0,00</b></p>
         <div class="acciones">
             <button type="button" class="btn kiosco-cobrar" data-cobrar disabled>Cobrar</button>
@@ -66,4 +68,5 @@ use App\Modules\Comprobantes\Tipos;
     <form method="post" action="<?= e(url('/kiosco/cobrar')) ?>" data-form-cobrar hidden><?= csrf_field() ?></form>
 </div>
 <script src="<?= e(asset('assets/stock-articulo.js')) ?>" defer></script>
+<script src="<?= e(asset('assets/reservas.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/kiosco.js')) ?>" defer></script>

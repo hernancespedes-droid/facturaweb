@@ -51,7 +51,7 @@ abstract class ComprobantesTestCase extends DbTestCase
 
     private function limpiarFacturacion(): void
     {
-        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact', 'cobra', 'imputaciones', 'cobra_retenciones'] as $t) {
+        foreach (['subdiario', 'iva', 'estadistica', 'caja', 'ctact', 'cobra', 'imputaciones', 'cobra_retenciones', 'stock_autorizaciones', 'stock_reservas'] as $t) {
             Db::pdo()->exec("DELETE FROM `{$t}`");
         }
     }
@@ -65,10 +65,22 @@ abstract class ComprobantesTestCase extends DbTestCase
         ];
     }
 
-    /** Valida y emite; falla la prueba si hay errores. @return array{id:int,numero:int,repetido:bool} */
-    protected function emitir(array $pedido, ?string $operacion = null, bool $credito = false): array
+    /** Un supervisor (rol Administrador) que autoriza las ventas sin stock disponible. */
+    protected function supervisorId(): int
     {
-        $r = $this->svc->armar($pedido, $credito);
+        $id = Db::pdo()->prepare("SELECT id FROM usuarios WHERE usuario = 't_sup_auto'");
+        $id->execute();
+        $v = $id->fetchColumn();
+        return $v !== false ? (int) $v : $this->crearUsuario('t_sup_auto', 'admin');
+    }
+
+    /**
+     * Valida y emite; falla la prueba si hay errores. Si el stock no alcanza, la venta sale autorizada por un supervisor (salvo que $autorizado sea false:
+     * las pruebas de stock arman a mano). @return array{id:int,numero:int,repetido:bool}
+     */
+    protected function emitir(array $pedido, ?string $operacion = null, bool $credito = false, bool $autorizado = true): array
+    {
+        $r = $this->svc->armar($autorizado ? $pedido + ['autoriza_yo' => '1'] : $pedido, $credito, $autorizado ? $this->supervisorId() : 0);
         $this->assertSame([], $r['errores'], 'sin errores de validación');
         return $this->svc->emitir($r['cbte'], $operacion ?? bin2hex(random_bytes(16)), 0);
     }

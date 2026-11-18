@@ -332,27 +332,97 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('dialog[data-abrir-sola]').forEach(function (v) { v.showModal(); });
   }
 
-  // Fotos que se amplían: a[data-ampliar] abre la foto grande en un visor (sin JavaScript, se abre en otra pestaña).
-  var visor = null;
+  // Fotos que se amplían: a[data-ampliar] (la miniatura enlaza a la foto grande) o [data-ampliar-src] (una foto o botón dentro de otro elemento clickeable,
+  // como las tarjetas del kiosco: se amplía en vez de elegir). El visor hace ZOOM: rueda del mouse, pellizco con dos dedos, botones + / − / 100 %, doble clic o doble
+  // toque para acercar y volver, y arrastrar para mover la foto acercada. Se cierra con Esc, con ✕ o tocando afuera. Sin JavaScript, el enlace abre la foto en otra pestaña.
+  var visor = null, vz = { esc: 1, x: 0, y: 0 }, punteros = {}, distIni = 0, escIni = 1;
+  function aplicarZoom() {
+    var img = visor.querySelector('img');
+    // sin acercar no hay nada que mover: se centra
+    if (vz.esc <= 1.001) { vz.x = 0; vz.y = 0; }
+    img.style.transform = 'translate(' + vz.x + 'px, ' + vz.y + 'px) scale(' + vz.esc + ')';
+    visor.querySelector('[data-zoom-nivel]').textContent = Math.round(vz.esc * 100) + ' %';
+    visor.querySelector('.visor-lienzo').classList.toggle('con-zoom', vz.esc > 1.001);
+  }
+  function zoomEn(factor, cx, cy) {
+    var lienzo = visor.querySelector('.visor-lienzo').getBoundingClientRect();
+    var nueva = Math.max(1, Math.min(8, vz.esc * factor));
+    var k = nueva / vz.esc;
+    // el punto bajo el cursor queda quieto: (cx, cy) relativo al centro del lienzo
+    var ox = (cx === undefined ? 0 : cx - lienzo.left - lienzo.width / 2), oy = (cy === undefined ? 0 : cy - lienzo.top - lienzo.height / 2);
+    vz.x = ox - (ox - vz.x) * k;
+    vz.y = oy - (oy - vz.y) * k;
+    vz.esc = nueva;
+    aplicarZoom();
+  }
+  function crearVisor() {
+    visor = document.createElement('dialog');
+    visor.className = 'visor';
+    visor.innerHTML = '<div class="visor-barra"><button type="button" class="btn btn-sm" data-zoom-menos aria-label="Alejar">−</button><b data-zoom-nivel>100 %</b>' +
+      '<button type="button" class="btn btn-sm" data-zoom-mas aria-label="Acercar">+</button><button type="button" class="btn btn-sm" data-zoom-reset>100 %</button>' +
+      '<button type="button" class="btn btn-sm visor-cerrar" aria-label="Cerrar">✕</button></div>' +
+      '<div class="visor-lienzo"><img alt="" draggable="false"></div><p></p>';
+    document.body.appendChild(visor);
+    var lienzo = visor.querySelector('.visor-lienzo');
+    visor.querySelector('.visor-cerrar').addEventListener('click', function () { visor.close(); });
+    visor.querySelector('[data-zoom-mas]').addEventListener('click', function () { zoomEn(1.5); });
+    visor.querySelector('[data-zoom-menos]').addEventListener('click', function () { zoomEn(1 / 1.5); });
+    visor.querySelector('[data-zoom-reset]').addEventListener('click', function () { vz.esc = 1; aplicarZoom(); });
+    visor.addEventListener('click', function (ev) { if (ev.target === visor) visor.close(); }); // tocar afuera cierra
+    lienzo.addEventListener('wheel', function (ev) { ev.preventDefault(); zoomEn(ev.deltaY < 0 ? 1.2 : 1 / 1.2, ev.clientX, ev.clientY); }, { passive: false });
+    lienzo.addEventListener('dblclick', function (ev) { if (vz.esc > 1.001) { vz.esc = 1; aplicarZoom(); } else { zoomEn(2.5, ev.clientX, ev.clientY); } });
+    // arrastrar (un dedo/mouse) y pellizcar (dos dedos)
+    lienzo.addEventListener('pointerdown', function (ev) {
+      lienzo.setPointerCapture(ev.pointerId);
+      punteros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+      var ids = Object.keys(punteros);
+      if (ids.length === 2) { distIni = Math.hypot(punteros[ids[0]].x - punteros[ids[1]].x, punteros[ids[0]].y - punteros[ids[1]].y); escIni = vz.esc; }
+    });
+    lienzo.addEventListener('pointermove', function (ev) {
+      var p = punteros[ev.pointerId];
+      if (!p) return;
+      var ids = Object.keys(punteros);
+      if (ids.length >= 2) {
+        punteros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        var d = Math.hypot(punteros[ids[0]].x - punteros[ids[1]].x, punteros[ids[0]].y - punteros[ids[1]].y);
+        if (distIni > 0) {
+          var cx = (punteros[ids[0]].x + punteros[ids[1]].x) / 2, cy = (punteros[ids[0]].y + punteros[ids[1]].y) / 2;
+          zoomEn((escIni * d / distIni) / vz.esc, cx, cy);
+        }
+      } else if (vz.esc > 1.001) {
+        vz.x += ev.clientX - p.x; vz.y += ev.clientY - p.y;
+        punteros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        aplicarZoom();
+      }
+    });
+    var soltar = function (ev) { delete punteros[ev.pointerId]; distIni = 0; };
+    lienzo.addEventListener('pointerup', soltar);
+    lienzo.addEventListener('pointercancel', soltar);
+    visor.addEventListener('keydown', function (ev) {
+      if (ev.key === '+' || ev.key === '=') zoomEn(1.5);
+      else if (ev.key === '-') zoomEn(1 / 1.5);
+      else if (ev.key === '0') { vz.esc = 1; aplicarZoom(); }
+    });
+  }
+  window.ampliarFoto = function (src, titulo) {
+    if (typeof HTMLDialogElement === 'undefined') { window.open(src, '_blank', 'noopener'); return; }
+    if (!visor) crearVisor();
+    vz = { esc: 1, x: 0, y: 0 }; punteros = {};
+    var img = visor.querySelector('img');
+    img.src = src;
+    img.alt = titulo || '';
+    visor.querySelector('p').textContent = (titulo ? titulo + ' · ' : '') + 'Rueda o pellizco para acercar · arrastrá para mover · doble toque para ampliar';
+    aplicarZoom();
+    visor.showModal();
+  };
   document.addEventListener('click', function (ev) {
-    // a[data-ampliar] (la miniatura enlaza a la foto grande) o [data-ampliar-src] (una foto dentro de otro enlace,
-    // como las tarjetas de Consulta: se amplía en vez de abrir la ficha).
     var a = ev.target.closest('a[data-ampliar], [data-ampliar-src]');
     if (!a || typeof HTMLDialogElement === 'undefined') return;
     ev.preventDefault();
-    if (!visor) {
-      visor = document.createElement('dialog');
-      visor.className = 'visor';
-      visor.innerHTML = '<button type="button" class="btn btn-sm visor-cerrar" aria-label="Cerrar">✕</button><img alt=""><p></p>';
-      document.body.appendChild(visor);
-      visor.addEventListener('click', function () { visor.close(); });
-    }
+    ev.stopPropagation();
     var img = a.tagName === 'IMG' ? a : a.querySelector('img');
-    visor.querySelector('img').src = a.getAttribute('data-ampliar-src') || a.href;
-    visor.querySelector('img').alt = img ? img.alt : '';
-    visor.querySelector('p').textContent = (img ? img.alt + ' · ' : '') + 'Tocá para cerrar';
-    visor.showModal();
-  });
+    window.ampliarFoto(a.getAttribute('data-ampliar-src') || a.href, a.getAttribute('data-titulo') || (img ? img.alt : ''));
+  }, true);
 
   // Botón Dark/Light: fondo oscuro (el de siempre) o blanco. Se guarda en una cookie de este navegador (un año).
   document.querySelectorAll('[data-tema-cambiar]').forEach(function (b) {
