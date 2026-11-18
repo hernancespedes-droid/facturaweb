@@ -1,0 +1,91 @@
+<?php
+use App\Modules\Comprobantes\Tipos;
+use App\Modules\Listados\CajaDiaria;
+
+/** @var array<string,string> $f */
+/** @var array<string,mixed> $r resumen */
+/** @var array<int,array<string,mixed>> $filas */
+/** @var int $total */
+/** @var int $pagina */
+/** @var int $porPagina */
+$u = url('/listados/caja-diaria');
+$link = static fn (int $p) => $u . '?' . http_build_query(['pagina' => $p] + $f);
+$paginas = (int) ceil($total / max(1, $porPagina));
+$m = static fn ($v) => number_format((float) $v, 2, ',', '.');
+$p = static fn ($v) => '$ ' . number_format((float) $v, 2, ',', '.');
+$v = $r['ventas'];
+$ef = $r['efectivo'];
+$tipoMonto = static fn (int $t): float => (float) ($r['por_tipo'][$t] ?? 0.0);
+$otros = $r['total_cobrado'] - $tipoMonto(1) - $tipoMonto(3) - $tipoMonto(10) - $tipoMonto(5);
+?>
+<div class="page-head">
+    <div><p class="eyebrow">Listados</p><h1>Caja diaria</h1></div>
+</div>
+
+<form method="get" action="<?= e($u) ?>" class="toolbar filtros">
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <button class="btn btn-ghost" type="submit">Ver</button>
+</form>
+
+<h2>Lo cobrado (entró a la caja)</h2>
+<section class="card resumen-fila" aria-label="Cobrado">
+    <div><span class="muted small">Total cobrado</span><b><?= e($p($r['total_cobrado'])) ?></b></div>
+    <div><span class="muted small">Efectivo (neto en caja)</span><b><?= e($p($tipoMonto(1))) ?></b></div>
+    <div><span class="muted small">Tarjeta</span><b><?= e($p($tipoMonto(3))) ?></b></div>
+    <div><span class="muted small">Billeteras virtuales</span><b><?= e($p($tipoMonto(10))) ?></b></div>
+    <div><span class="muted small">Cheques</span><b><?= e($p($tipoMonto(5))) ?></b></div>
+    <?php if (abs($otros) > 0.004): ?><div><span class="muted small">Otros (tickets, dólares…)</span><b><?= e($p($otros)) ?></b></div><?php endif; ?>
+</section>
+<p class="small muted">Efectivo: se recibieron <b><?= e($p($ef['recibido'])) ?></b>, se dieron <b><?= e($p($ef['vuelto'])) ?></b> de vuelto y quedan <b><?= e($p($ef['neto'])) ?></b> en caja.</p>
+
+<h2>Lo vendido</h2>
+<section class="card resumen-fila" aria-label="Vendido">
+    <div><span class="muted small">Ventas netas</span><b><?= e($p($v['ventas_netas'])) ?></b></div>
+    <div><span class="muted small">Facturado en cuenta corriente</span><b><?= e($p($v['cuenta_corriente'])) ?></b></div>
+    <div><span class="muted small">Vendido de contado</span><b><?= e($p($v['contado'])) ?></b></div>
+    <div><span class="muted small">Facturas</span><b><?= e($p($v['facturas'])) ?></b></div>
+    <div><span class="muted small">Presupuestos</span><b><?= e($p($v['presupuestos'])) ?></b></div>
+    <?php if ($v['notas_debito'] > 0): ?><div><span class="muted small">Notas de débito</span><b><?= e($p($v['notas_debito'])) ?></b></div><?php endif; ?>
+    <?php if ($v['notas_credito'] > 0): ?><div><span class="muted small">Notas de crédito (restan)</span><b>− <?= e($p($v['notas_credito'])) ?></b></div><?php endif; ?>
+</section>
+
+<h2>Cobrado por forma de pago</h2>
+<?php if ($r['cobrado'] === []): ?>
+    <p class="muted vacio">No hay cobros en ese período.</p>
+<?php else: ?>
+    <div class="table-wrap"><table class="table table-cards">
+        <thead><tr><th>Forma de pago</th><th>Tipo</th><th class="num">Ventas de contado</th><th class="num">Recibos</th><th class="num">Recibido</th><th class="num">Vuelto</th><th class="num">Total en caja</th></tr></thead>
+        <tbody>
+        <?php foreach ($r['cobrado'] as $c): ?>
+            <tr><td data-label="Forma de pago"><?= e($c['descripcion']) ?></td><td data-label="Tipo"><?= e(CajaDiaria::etiquetaTipo((int) $c['tipo'])) ?></td>
+                <td data-label="Ventas de contado" class="num"><?= e($m($c['ventas'])) ?></td><td data-label="Recibos" class="num"><?= e($m($c['recibos'])) ?></td>
+                <td data-label="Recibido" class="num"><?= e($m($c['recibido'])) ?></td><td data-label="Vuelto" class="num"><?= e($m($c['vuelto'])) ?></td>
+                <td data-label="Total en caja" class="num"><b><?= e($m($c['total'])) ?></b></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+        <tfoot><tr><th colspan="6">Total cobrado</th><th class="num"><?= e($m($r['total_cobrado'])) ?></th></tr></tfoot>
+    </table></div>
+<?php endif; ?>
+
+<h2>Movimientos</h2>
+<?php if ($filas === []): ?>
+    <p class="muted vacio">No hay movimientos de caja.</p>
+<?php else: ?>
+    <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
+    <div class="table-wrap"><table class="table table-cards">
+        <thead><tr><?= th_orden('Fecha', 'fecha', $f, $u) ?><?= th_orden('Comprobante', 'comprobante', $f, $u) ?><?= th_orden('Cliente', 'cliente', $f, $u) ?><?= th_orden('Forma de pago', 'forma', $f, $u) ?><?= th_orden('Importe', 'importe', $f, $u, true) ?><?= th_orden('Vuelto', 'vuelto', $f, $u, true) ?></tr></thead>
+        <tbody>
+        <?php foreach ($filas as $x): $esRecibo = $x['cobra_id'] !== null; ?>
+            <tr><td data-label="Fecha" class="nw"><?= e(date('d/m/Y', (int) strtotime($x['fecha']))) ?></td>
+                <td data-label="Comprobante" class="nw"><?php if ($esRecibo): ?><a href="<?= e(url('/recibos/' . (int) $x['cobra_id'])) ?>">Recibo X <?= e(sprintf('%04d-%08d', $x['prefijo'], $x['numero'])) ?></a>
+                    <?php elseif ($x['subdiario_id'] !== null): ?><a href="<?= e(url('/comprobantes/' . (int) $x['subdiario_id'])) ?>"><?= e(Tipos::titulo($x['tipo'], $x['letra']) . ' ' . sprintf('%04d-%08d', $x['prefijo'], $x['numero'])) ?></a>
+                    <?php else: ?><?= e($x['tipo'] . ' ' . $x['letra'] . ' ' . sprintf('%04d-%08d', $x['prefijo'], $x['numero'])) ?><?php endif; ?></td>
+                <td data-label="Cliente"><?= e((string) $x['razon_social']) ?></td>
+                <td data-label="Forma de pago"><?= e($x['forma']) ?></td>
+                <td data-label="Importe" class="num"><b><?= e($m($x['p_importe'])) ?></b></td>
+                <td data-label="Vuelto" class="num"><?= (float) $x['p_vuelto'] > 0 ? e($m($x['p_vuelto'])) : '' ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table></div>
+<?php endif; ?>

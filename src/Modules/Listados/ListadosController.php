@@ -23,6 +23,22 @@ final class ListadosController
         return $f;
     }
 
+    /** Caja diaria para el dueño: lo vendido, lo facturado a cuenta corriente y lo cobrado por forma de pago (hoy por omisión). */
+    public static function cajaDiaria(Request $req, array $params): Response
+    {
+        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'orden'])));
+        if (!array_key_exists('desde', $req->query)) {
+            $f['desde'] = $f['hasta'] = date('d/m/Y');
+        }
+        $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
+        $por = Configuracion::porPagina();
+        $m = CajaDiaria::movimientos($f, $pagina, $por);
+        return Response::html(View::render('listados/caja_diaria', [
+            'title' => 'Caja diaria', 'nav' => 'caja_diaria', 'f' => $f, 'r' => CajaDiaria::resumen($f), 'filas' => $m['filas'], 'total' => $m['total'],
+            'pagina' => $pagina, 'porPagina' => $por,
+        ]));
+    }
+
     /** Ventas diarias: presupuestos y facturas cobrados o a cuenta corriente, mezclados (por omisión, lo de hoy). Excel: el genérico de las grillas. */
     public static function ventasDiarias(Request $req, array $params): Response
     {
