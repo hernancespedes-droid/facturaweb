@@ -64,7 +64,7 @@ final class ImpresionController
         $d = ComprobanteImpreso::datos($h, $emisor);
         $titulo = Tipos::titulo($h['tipo'], $h['letra']) . ' ' . $d['numero'];
         $texto = "Estimado cliente:\r\n\r\nAdjuntamos la {$titulo} del " . $d['fecha'] . " por " . plata_dec($h['neto']) . ".\r\n\r\n"
-            . (\App\Modules\Portal\PortalService::activo() ? 'Podés ver y descargar todos tus comprobantes en ' . url_absoluta(url('/portal')) . " (entrás con este mismo mail, sin contraseña).\r\n\r\n" : '')
+            . (\App\Modules\Portal\PortalService::activo() && !Tipos::interno((string) $h['tipo']) ? 'Podés ver y descargar todos tus comprobantes en ' . url_absoluta(url('/portal')) . " (entrás con este mismo mail, sin contraseña).\r\n\r\n" : '')
             . "Saludos,\r\n" . ($emisor['empresa'] ?? '') . "\r\n";
         $error = Mailer::enviar(explode('; ', $mails), $titulo . ' - ' . ($emisor['empresa'] ?? ''), $texto, [$d['nombre_archivo'] => ComprobantePdf::generar($d)]);
         if ($error !== null) {

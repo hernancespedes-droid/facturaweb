@@ -23,6 +23,22 @@ final class ListadosController
         return $f;
     }
 
+    /** Ventas diarias: presupuestos y facturas cobrados o a cuenta corriente, mezclados (por omisión, lo de hoy). Excel: el genérico de las grillas. */
+    public static function ventasDiarias(Request $req, array $params): Response
+    {
+        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'tipo', 'forma', 'cliente', 'orden'])));
+        if (!array_key_exists('desde', $req->query)) {
+            $f['desde'] = $f['hasta'] = date('d/m/Y');
+        }
+        $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
+        $por = Configuracion::porPagina();
+        $r = VentasDiarias::listar($f, $pagina, $por);
+        return Response::html(View::render('listados/ventas_diarias', [
+            'title' => 'Ventas diarias', 'nav' => 'ventas_diarias', 'f' => $f, 'filas' => $r['filas'], 'total' => $r['total'],
+            'totales' => $r['totales'], 'pagina' => $pagina, 'porPagina' => $por,
+        ]));
+    }
+
     public static function ivaVentas(Request $req, array $params): Response
     {
         $f = self::filtros($req);

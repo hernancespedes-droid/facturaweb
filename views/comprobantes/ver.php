@@ -23,6 +23,14 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
     <div class="acciones">
         <a class="btn" href="<?= e(url('/comprobantes/' . $h['fe_clave'] . '/imprimir')) ?>" target="_blank" rel="noopener">Imprimir</a>
         <a class="btn btn-ghost" href="<?= e(url('/comprobantes/' . $h['fe_clave'] . '/pdf')) ?>" target="_blank" rel="noopener">PDF</a>
+        <?php if ($puedeEmitir && $h['tipo'] === 'PR' && $h['estado'] === ''): ?>
+            <?php if ($h['factura_generada'] === null && $h['notas'] === []): ?>
+                <a class="btn" href="<?= e(url('/comprobantes/' . $h['fe_clave'] . '/facturar')) ?>">Generar factura</a>
+            <?php endif; ?>
+            <?php if ($porAcreditar > 0): ?>
+                <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=NX&desde=' . $h['fe_clave']) ?>">Hacer contrapartida (nota de crédito X)</a>
+            <?php endif; ?>
+        <?php endif; ?>
         <?php if ($puedeEmitir && in_array($h['tipo'], ['FC', 'ND'], true) && $porAcreditar > 0): ?>
             <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=NC&desde=' . $h['fe_clave']) ?>">Hacer nota de crédito</a>
             <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=ND&desde=' . $h['fe_clave']) ?>">Hacer nota de débito</a>
@@ -30,7 +38,12 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
     </div>
 </div>
 
-<?php if (!$conCae): ?><div class="alerta alerta-info small">Comprobante interno: no tiene CAE de ARCA, no tiene validez fiscal.</div>
+<?php if (\App\Modules\Comprobantes\Tipos::interno($h['tipo'])): ?><div class="alerta alerta-info small"><?= $h['tipo'] === 'PR'
+    ? 'Presupuesto: no es una factura ni va al subdiario de IVA. Descuenta stock y se cobra o va a cuenta corriente.' . ($h['factura_generada'] === null ? ' Se puede generar una factura, una sola vez.' : '')
+    : 'Contrapartida de un presupuesto: repone el stock y deja saldo a favor del cliente. No es fiscal.' ?></div>
+<?php elseif ((int) $h['solo_subdiario'] === 1): ?><div class="alerta alerta-info small">Este comprobante sale de un presupuesto: va <b>solo al subdiario</b>. No toca caja, cuenta corriente ni stock (ya los movió el presupuesto).</div>
+<?php endif; ?>
+<?php if (!$conCae && !\App\Modules\Comprobantes\Tipos::interno($h['tipo'])): ?><div class="alerta alerta-info small">Comprobante interno: no tiene CAE de ARCA, no tiene validez fiscal.</div>
 <?php elseif ((int) $h['es_prueba'] === 1): ?><div class="alerta alerta-warn small">Comprobante de <b>prueba</b> (<?= e($h['fe_entorno'] === 'S' ? 'ARCA simulado' : 'homologación de ARCA') ?>): el CAE no tiene validez fiscal.</div><?php endif; ?>
 
 <section class="card">
@@ -43,6 +56,12 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
             <div><dt>Corrige</dt><dd><a href="<?= e(url('/comprobantes/' . $h['asociado_clave'])) ?>"><?= e(Tipos::titulo($h['fe_tipocbte_asoc'], $h['letra']) . ' ' . numero_cbte($h['prefijo'], $h['fe_nrocbte_asoc'])) ?></a></dd></div>
         <?php elseif ($h['fe_nrocbte_asoc'] > 0): ?>
             <div><dt>Corrige</dt><dd><?= e(Tipos::titulo($h['fe_tipocbte_asoc'], $h['letra']) . ' ' . numero_cbte($h['prefijo'], $h['fe_nrocbte_asoc'])) ?></dd></div>
+        <?php endif; ?>
+        <?php if ($h['factura_generada'] !== null): ?>
+            <div><dt>Factura generada</dt><dd><a href="<?= e(url('/comprobantes/' . $h['factura_generada']['fe_clave'])) ?>"><?= e(Tipos::titulo($h['factura_generada']['tipo'], $h['factura_generada']['letra']) . ' ' . numero_visible($h['factura_generada'])) ?></a></dd></div>
+        <?php endif; ?>
+        <?php if ($h['presupuesto_origen'] !== null): ?>
+            <div><dt>Sale del presupuesto</dt><dd><a href="<?= e(url('/comprobantes/' . $h['presupuesto_origen']['fe_clave'])) ?>"><?= e(Tipos::titulo('PR', 'X') . ' ' . numero_visible($h['presupuesto_origen'])) ?></a></dd></div>
         <?php endif; ?>
         <?php if ($h['observaciones']): ?><div><dt>Observaciones</dt><dd><?= e($h['observaciones']) ?></dd></div><?php endif; ?>
         <?php if ($h['orden_compra']): ?><div><dt>Orden de compra</dt><dd><?= e($h['orden_compra']) ?></dd></div><?php endif; ?>
@@ -93,6 +112,23 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
 <?php endif; ?>
 
 <?php if ($puedeEmitir): ?>
+    <?php
+    $nroTxt = numero_visible($h);
+    $waTexto = 'Hola' . (($razon !== '') ? ' ' . $razon : '') . '! Te paso el ' . $titulo . ' ' . $nroTxt . ' del ' . fecha($h['fecha']) . ' por ' . plata_dec($h['neto'])
+        . '.' . (($emisor['empresa'] ?? '') !== '' ? ' ' . $emisor['empresa'] : '');
+    $nombrePdf = preg_replace('/[^A-Za-z0-9._-]+/', '_', $titulo . '_' . $nroTxt) . '.pdf';
+    ?>
+    <section class="card" id="whatsapp">
+        <h2>Enviar por WhatsApp</h2>
+        <div class="toolbar" data-compartir data-texto="<?= e($waTexto) ?>" data-pdf="<?= e(url('/comprobantes/' . $h['fe_clave'] . '/pdf')) ?>" data-nombre="<?= e($nombrePdf) ?>">
+            <label class="field"><span>WhatsApp del cliente (con código de área)</span>
+                <input type="tel" value="<?= e($cli['telefono'] ?? '') ?>" maxlength="30" placeholder="11 2345 6789" data-wa-numero></label>
+            <button class="btn" type="button" data-wa-abrir>Abrir WhatsApp</button>
+            <button class="btn btn-ghost" type="button" data-wa-compartir hidden>Compartir el PDF</button>
+        </div>
+        <p class="small muted">«Abrir WhatsApp» escribe el mensaje; el PDF se adjunta a mano (bajalo con el botón PDF). En el celular, «Compartir el PDF» lo manda directo por WhatsApp.</p>
+    </section>
+    <script src="<?= e(asset('assets/compartir.js')) ?>" defer></script>
     <section class="card" id="mail">
         <h2>Enviar por mail</h2>
         <?php if (!\App\Core\Mailer::configurado()): ?>

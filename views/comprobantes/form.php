@@ -14,7 +14,9 @@ use App\Modules\Comprobantes\Tipos;
 /** @var float $deuda */
 $err = static fn (string $k): string => isset($errores[$k]) ? '<small class="field-error">' . nl2br(e($errores[$k])) . '</small>' : '';
 $v = static fn (string $k, string $d = ''): string => (string) ($datos[$k] ?? $d);
-$nombre = Tipos::NOMBRES[$tipo];
+$nombre = $tipo === 'NX' ? 'Nota de crédito' : Tipos::NOMBRES[$tipo];
+$interno = Tipos::interno($tipo);
+$credito = Tipos::credito($tipo);
 $items = array_values((array) ($datos['items'] ?? []));
 while (count($items) < 3) {
     $items[] = [];
@@ -40,7 +42,11 @@ $hoyIso = date('Y-m-d');
 </div>
 
 <?php foreach ($errorGeneral as $mensaje): ?><div class="alerta alerta-error" role="alert"><?= nl2br(e($mensaje)) ?></div><?php endforeach; ?>
-<?php if ($modoArca !== 'interno' && $electronicas === []): ?>
+<?php if ($interno): ?>
+    <div class="alerta alerta-info small"><?= $tipo === 'PR'
+        ? 'El presupuesto <b>no se factura en ARCA</b> ni va al subdiario: es una venta interna (letra X). Descuenta stock y se cobra o va a cuenta corriente. Después se puede generar una factura, una sola vez.'
+        : 'Contrapartida de un presupuesto (como una nota de crédito): repone el stock y deja saldo a favor del cliente. No es fiscal.' ?></div>
+<?php elseif ($modoArca !== 'interno' && $electronicas === []): ?>
     <div class="alerta alerta-warn">ARCA está en modo <b><?= e($modoArca) ?></b> pero ninguna sucursal tiene tildada "Factura electrónica": los comprobantes salen internos. Se tilda en Tablas → Sucursales.</div>
 <?php endif; ?>
 <?php if ($sinSucursal): ?><div class="alerta alerta-error">No hay ninguna sucursal con punto de venta: cargala en Tablas → Sucursales.</div><?php endif; ?>
@@ -70,10 +76,10 @@ $hoyIso = date('Y-m-d');
         </div>
     </div>
 
-    <?php if ($tipo !== 'FC'): ?>
-        <label class="field<?= isset($errores['asociado']) ? ' has-error' : '' ?>" for="asociado"><span>Comprobante que se corrige *</span>
+    <?php if (in_array($tipo, ['NC', 'ND', 'NX'], true)): ?>
+        <label class="field<?= isset($errores['asociado']) ? ' has-error' : '' ?>" for="asociado"><span><?= $tipo === 'NX' ? 'Presupuesto que se corrige *' : 'Comprobante que se corrige *' ?></span>
             <select id="asociado" name="asociado" data-asociado>
-                <option value="">Elegí la factura o nota de débito</option>
+                <option value=""><?= $tipo === 'NX' ? 'Elegí el presupuesto' : 'Elegí la factura o nota de débito' ?></option>
                 <?php foreach ($asociables as $a): ?>
                     <option value="<?= e($a['fe_clave']) ?>" data-letra="<?= e($a['letra']) ?>" <?= $v('asociado') === (string) $a['fe_clave'] ? 'selected' : '' ?>>
                         <?= e(Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a) . ' del ' . fecha($a['fecha']) . ' · ' . plata($a['neto'])) ?></option>
@@ -82,7 +88,7 @@ $hoyIso = date('Y-m-d');
     <?php endif; ?>
 
     <div class="grid-2">
-        <?php if ($tipo === 'FC' && count($sucursales) > 1): ?>
+        <?php if (in_array($tipo, ['FC', 'PR'], true) && count($sucursales) > 1): ?>
             <label class="field" for="sucursal"><span>Sucursal (punto de venta)</span>
                 <select id="sucursal" name="sucursal">
                     <?php foreach ($sucursales as $s): ?>
@@ -99,7 +105,7 @@ $hoyIso = date('Y-m-d');
         </fieldset>
     </div>
 
-    <?php if ($tipo !== 'NC'): ?>
+    <?php if (!$credito): ?>
         <div class="grid-2" data-contado hidden>
             <label class="field<?= isset($errores['fpago']) ? ' has-error' : '' ?>" for="fpago"><span>Se paga con</span>
                 <select id="fpago" name="fpago" data-fpago>
@@ -157,6 +163,7 @@ $hoyIso = date('Y-m-d');
     </div>
 
     <h2>Otros datos</h2>
+    <?php if (!$interno): ?>
     <div class="grid-2">
         <label class="field<?= isset($errores['concepto']) ? ' has-error' : '' ?>"><span>Concepto</span>
             <select name="concepto" data-concepto>
@@ -173,6 +180,7 @@ $hoyIso = date('Y-m-d');
         <label class="field<?= isset($errores['vto_pago']) ? ' has-error' : '' ?>"><span>Vencimiento del pago</span>
             <input type="date" name="vto_pago" value="<?= e($v('vto_pago', $hoyIso)) ?>"><?= $err('vto_pago') ?></label>
     </div>
+    <?php endif; ?>
     <div class="grid-2">
         <label class="field<?= isset($errores['descuento']) ? ' has-error' : '' ?>"><span>Descuento general (%)</span>
             <input name="descuento" value="<?= e($v('descuento')) ?>" inputmode="decimal" data-decimales="2" data-descuento><?= $err('descuento') ?></label>

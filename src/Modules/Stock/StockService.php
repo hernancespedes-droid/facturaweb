@@ -18,7 +18,7 @@ use PDO;
  */
 final class StockService
 {
-    public const ORIGENES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'INGRESO' => 'Ingreso', 'EGRESO' => 'Egreso', 'AJUSTE' => 'Ajuste', 'TRANSF' => 'Transferencia'];
+    public const ORIGENES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X', 'INGRESO' => 'Ingreso', 'EGRESO' => 'Egreso', 'AJUSTE' => 'Ajuste', 'TRANSF' => 'Transferencia'];
 
     private PDO $pdo;
 
@@ -130,11 +130,11 @@ final class StockService
      */
     public function porComprobante(string $tipo, int $subdiarioId, array $items, ?int $usuarioId): void
     {
-        if (!self::activo() || !in_array($tipo, ['FC', 'NC'], true)) {
+        if (!self::activo() || !in_array($tipo, ['FC', 'NC', 'PR', 'NX'], true)) {
             return;
         }
         $dep = $this->depositoPrincipal();
-        $signo = $tipo === 'FC' ? -1.0 : 1.0;
+        $signo = in_array($tipo, ['FC', 'PR'], true) ? -1.0 : 1.0; // la factura y el presupuesto descuentan; las notas de crédito reponen
         $ctrl = $this->pdo->prepare('SELECT controla_stock FROM articulos WHERE codigo = ?');
         // Se ordena por artículo para que dos facturas simultáneas bloqueen las filas en el mismo orden (sin deadlocks).
         $acum = [];
@@ -163,7 +163,7 @@ final class StockService
      */
     public function advertencias(string $tipo, array $items): array
     {
-        if (!self::activo() || $tipo !== 'FC') {
+        if (!self::activo() || !in_array($tipo, ['FC', 'PR'], true)) {
             return [];
         }
         $dep = $this->depositoPrincipal();

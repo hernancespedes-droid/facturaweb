@@ -166,6 +166,48 @@ async function factura(page, precio) {
     await page.goto(BASE + '/cuenta-corriente/cliente/' + codigo);
     ok((await page.textContent('body')).includes('815,00'), 'imputador: la deuda queda en 815,00');
 
+    // ---- Presupuesto: se carga como una factura (letra X), se cobra o va a cuenta corriente y genera UNA factura solo al subdiario
+    await page.goto(BASE + '/comprobantes/nuevo?tipo=PR&cliente=' + codigo);
+    ok((await page.textContent('h1')).includes('Presupuesto'), 'presupuesto: abre el formulario');
+    ok((await page.textContent('[data-letra-titulo]')).trim() === 'X', 'presupuesto: letra X');
+    ok(await page.locator('[data-concepto]').count() === 0, 'presupuesto: no pide concepto de ARCA');
+    const rp = page.locator('[data-renglon]').nth(0);
+    await rp.locator('[data-descripcion]').fill('Presupuesto E2E');
+    await rp.locator('[data-cantidad]').fill('2');
+    await rp.locator('[data-precio]').fill('121');
+    ok((await page.textContent('[data-t-total]')).includes('242,00'), 'presupuesto: el precio lleva el IVA incluido (2 x 121 = 242)');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+    ok((await page.textContent('body')).includes('no va a ARCA ni al subdiario'), 'presupuesto: la revisión aclara que no es fiscal');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    const prUrl = page.url();
+    ok(/\/comprobantes\/\d+$/.test(prUrl), 'presupuesto: se emite');
+    let cp = await page.textContent('body');
+    ok(cp.includes('Presupuesto X') && cp.includes('Generar factura') && cp.includes('WhatsApp') && cp.includes('Enviar por mail'), 'presupuesto: botones de facturar, WhatsApp y mail');
+    const pdfPr = await ctx.request.get(prUrl + '/pdf');
+    ok(pdfPr.status() === 200 && (pdfPr.headers()['content-type'] || '').includes('pdf'), 'presupuesto: sale en PDF');
+    await page.screenshot({ path: path.join(CAPTURAS, 'presupuesto-ver.png'), fullPage: true });
+    await page.goto(BASE + '/cuenta-corriente/cliente/' + codigo);
+    ok((await page.textContent('body')).includes('Presupuesto'), 'presupuesto: está en la cuenta corriente del cliente');
+    await page.goto(BASE + '/recibos/nuevo?cliente=' + codigo);
+    ok((await page.locator('tr:has-text("Presupuesto") [data-marca]').count()) === 1, 'presupuesto: se puede cobrar con un recibo como una factura');
+    await page.goto(prUrl);
+    await Promise.all([page.waitForNavigation(), page.click('a:has-text("Generar factura")')]);
+    ok((await page.textContent('body')).includes('solo al subdiario'), 'presupuesto: la factura va solo al subdiario');
+    await page.screenshot({ path: path.join(CAPTURAS, 'presupuesto-facturar.png'), fullPage: true });
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    cp = await page.textContent('body');
+    ok(cp.includes('Sale del presupuesto') && cp.includes('solo al subdiario'), 'presupuesto: la factura queda ligada al presupuesto');
+    await page.goto(prUrl);
+    cp = await page.textContent('body');
+    ok(cp.includes('Factura generada') && !cp.includes('Generar factura'), 'presupuesto: ya no se puede facturar otra vez');
+    await page.goto(BASE + '/listados/ventas-diarias');
+    cp = await page.textContent('body');
+    ok(cp.includes('Presupuesto X') && cp.includes('Ventas diarias'), 'ventas diarias: muestra el presupuesto');
+    ok(!cp.includes('Factura A 0004') || (cp.match(/Factura A 0004/g) || []).length <= 2, 'ventas diarias: la factura del presupuesto no se repite');
+    await page.screenshot({ path: path.join(CAPTURAS, 'ventas-diarias.png'), fullPage: true });
+    await page.goto(BASE + '/listados/iva-ventas');
+    ok(!(await page.textContent('body')).includes('Presupuesto X'), 'presupuesto: no está en el subdiario de IVA');
+
     // ---- Excel
     const xl = await ctx.request.get(BASE + '/cuenta-corriente?excel=1');
     ok(xl.status() === 200 && (xl.headers()['content-type'] || '').includes('spreadsheetml'), 'el resumen de deuda se baja en Excel');
@@ -190,7 +232,7 @@ async function factura(page, precio) {
     const movil = await browser.newContext({ ...devices['Pixel 7'] });
     const p2 = await movil.newPage();
     await login(p2, 'e2e_admin');
-    for (const [ruta, nombre] of [['/cuenta-corriente', 'Cuenta corriente'], ['/cuenta-corriente/cliente/' + codigo, 'el extracto'], ['/recibos/nuevo?cliente=' + codigo, 'el formulario de recibo'], ['/cheques', 'Cheques'], ['/recibos', 'Recibos']]) {
+    for (const [ruta, nombre] of [['/cuenta-corriente', 'Cuenta corriente'], ['/cuenta-corriente/cliente/' + codigo, 'el extracto'], ['/recibos/nuevo?cliente=' + codigo, 'el formulario de recibo'], ['/cheques', 'Cheques'], ['/recibos', 'Recibos'], ['/listados/ventas-diarias', 'Ventas diarias'], ['/comprobantes/nuevo?tipo=PR', 'el presupuesto']]) {
       await p2.goto(BASE + ruta);
       ok(await sinDesborde(p2), 'celular: ' + nombre + ' no se desborda');
     }

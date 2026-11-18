@@ -15,6 +15,7 @@ $paginas = (int) ceil($total / max(1, $porPagina));
     <?php if (puede('comprobantes.emitir')): ?>
         <div class="acciones">
             <a class="btn" href="<?= e(url('/comprobantes/nuevo') . '?tipo=FC') ?>">+ Nueva factura</a>
+            <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=PR') ?>">Presupuesto</a>
             <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=NC') ?>">Nota de crédito</a>
             <a class="btn btn-ghost" href="<?= e(url('/comprobantes/nuevo') . '?tipo=ND') ?>">Nota de débito</a>
         </div>
@@ -47,7 +48,7 @@ $paginas = (int) ceil($total / max(1, $porPagina));
                     <td data-label="Comprobante" class="nw"><a href="<?= e(url('/comprobantes/' . $c['fe_clave'])) ?>"><b><?= e(Tipos::titulo($c['tipo'], $c['letra'])) ?></b> <?= e(numero_visible($c)) ?></a></td>
                     <td data-label="Cliente"><?= e($c['razon_social']) ?> <small class="muted">(<?= e($c['cliente']) ?>)</small></td>
                     <td data-label="Pago"><?= (int) $c['forma_pago'] === 2 ? 'Cta. cte.' : 'Contado' ?></td>
-                    <td data-label="Total" class="nw"><?= $c['tipo'] === 'NC' ? '−' : '' ?><?= e(plata_dec($c['neto'])) ?></td>
+                    <td data-label="Total" class="nw"><?= in_array($c['tipo'], ['NC', 'NX'], true) ? '−' : '' ?><?= e(plata_dec($c['neto'])) ?></td>
                     <td data-label="Estado"><span class="badge <?= e($estadoClase) ?>"><?= e($estadoTxt) ?></span></td>
                 </tr>
             <?php endforeach; ?>

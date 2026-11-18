@@ -63,8 +63,15 @@ $disc = $c['letra'] === 'A';
 
 <?php if ($c['electronica']): ?>
     <div class="alerta alerta-info small">Al emitir se pide el <b>CAE a ARCA</b> (<?= e($etiquetaArca) ?>) y el comprobante toma el número que dé ARCA. Si ARCA no lo autoriza, no se graba nada.</div>
+<?php elseif (!empty($c['interno'])): ?>
+    <div class="alerta alerta-info small"><?= $c['tipo'] === 'PR'
+        ? 'El presupuesto <b>no va a ARCA ni al subdiario</b>: tiene numeración propia (letra X) y descuenta stock.'
+        : 'La nota de crédito X <b>no va a ARCA ni al subdiario</b>: repone el stock y deja saldo a favor del cliente.' ?></div>
 <?php else: ?>
     <div class="alerta alerta-info small">Este comprobante queda como <b>interno, sin CAE ni validez fiscal</b>, con numeración propia (<?= e($etiquetaArca) ?>).</div>
+<?php endif; ?>
+<?php if (!empty($c['presupuesto'])): ?>
+    <div class="alerta alerta-warn small">Factura generada desde el presupuesto: va <b>solo al subdiario</b> (sin caja, sin cuenta corriente y sin stock) y <b>un presupuesto se factura una sola vez</b>.</div>
 <?php endif; ?>
 
 <div class="actions">
@@ -74,9 +81,13 @@ $disc = $c['letra'] === 'A';
         <input type="hidden" name="operacion" value="<?= e($operacion) ?>">
         <button class="btn" type="submit" data-un-solo-envio>Emitir <?= e(Tipos::titulo($c['tipo'], $c['letra'])) ?></button>
     </form>
+    <?php if (!empty($c['presupuesto'])): ?>
+        <a class="btn btn-ghost" href="<?= e(url('/comprobantes/' . (int) $c['presupuesto'])) ?>">Volver al presupuesto</a>
+    <?php else: ?>
     <form method="post" action="<?= e(url('/comprobantes/editar')) ?>" class="inline">
         <?= csrf_field() ?>
         <input type="hidden" name="datos" value="<?= e($datos) ?>">
         <button class="btn btn-ghost" type="submit">Volver a editar</button>
     </form>
+    <?php endif; ?>
 </div>

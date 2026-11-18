@@ -126,7 +126,7 @@ final class PortalService
     {
         $nro = \App\Modules\Comprobantes\Tipos::sqlNumeroVisible('s');
         $sql = "SELECT s.fe_clave, s.fecha, s.tipo, s.letra, s.prefijo, {$nro} AS numero, s.neto, s.fe_ccae
-                FROM subdiario s WHERE s.cliente = ? AND s.estado = '' AND s.es_prueba = 0";
+                FROM subdiario s WHERE s.cliente = ? AND s.estado = '' AND s.es_prueba = 0 AND s.tipo NOT IN ('PR', 'NX')";
         $p = [$cliente];
         if ($anio !== null) {
             $sql .= ' AND s.fecha BETWEEN ? AND ?';
@@ -140,7 +140,7 @@ final class PortalService
     /** @return int[] años con comprobantes del cliente (el más nuevo primero) */
     public function anios(int $cliente): array
     {
-        $st = $this->pdo->prepare("SELECT DISTINCT YEAR(fecha) FROM subdiario WHERE cliente = ? AND estado = '' AND es_prueba = 0 ORDER BY 1 DESC");
+        $st = $this->pdo->prepare("SELECT DISTINCT YEAR(fecha) FROM subdiario WHERE cliente = ? AND estado = '' AND es_prueba = 0 AND tipo NOT IN ('PR', 'NX') ORDER BY 1 DESC");
         $st->execute([$cliente]);
         return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
     }
@@ -148,7 +148,7 @@ final class PortalService
     /** ¿El comprobante es de ese cliente y se puede ver en el portal? */
     public function puedeVer(int $feClave, int $cliente): bool
     {
-        $st = $this->pdo->prepare("SELECT 1 FROM subdiario WHERE fe_clave = ? AND cliente = ? AND estado = '' AND es_prueba = 0");
+        $st = $this->pdo->prepare("SELECT 1 FROM subdiario WHERE fe_clave = ? AND cliente = ? AND estado = '' AND es_prueba = 0 AND tipo NOT IN ('PR', 'NX')");
         $st->execute([$feClave, $cliente]);
         return $st->fetchColumn() !== false;
     }

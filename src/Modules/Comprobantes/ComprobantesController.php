@@ -53,7 +53,7 @@ final class ComprobantesController
         }
         return Response::html(View::render('comprobantes/ver', [
             'title' => Tipos::titulo($h['tipo'], $h['letra']) . ' ' . numero_visible($h), 'nav' => 'comprobantes',
-            'h' => $h, 'emisor' => $svc->emisor(), 'porAcreditar' => $h['tipo'] === 'NC' ? 0.0 : $svc->porAcreditar($h),
+            'h' => $h, 'emisor' => $svc->emisor(), 'porAcreditar' => Tipos::credito($h['tipo']) ? 0.0 : $svc->porAcreditar($h),
             'puedeEmitir' => Auth::puede('comprobantes.emitir'),
         ]));
     }
@@ -69,9 +69,9 @@ final class ComprobantesController
         }
         $datos = ['tipo' => $tipo, 'forma_pago' => '2', 'items' => [], 'concepto' => (string) \App\Modules\Configuracion\Configuracion::entero('comprobantes.concepto_defecto', 1)];
         $desde = (int) ($req->query['desde'] ?? 0);
-        if ($desde > 0 && $tipo !== 'FC') {
+        if ($desde > 0 && in_array($tipo, ['NC', 'ND', 'NX'], true)) {
             $origen = $svc->obtener($desde);
-            if ($origen === null || !in_array($origen['tipo'], ['FC', 'ND'], true) || $origen['estado'] !== '') {
+            if ($origen === null || !in_array($origen['tipo'], $tipo === 'NX' ? ['PR'] : ['FC', 'ND'], true) || $origen['estado'] !== '') {
                 return new Response(404);
             }
             $porCodigo = [];
@@ -133,6 +133,9 @@ final class ComprobantesController
         } catch (\InvalidArgumentException) {
             Session::flash('error', 'La pantalla de revisión venció. Revisá el comprobante de nuevo.');
             return Response::redirect(url('/comprobantes/nuevo'));
+        } catch (PresupuestoYaFacturado $ex) {
+            Session::flash('error', $ex->getMessage());
+            return Response::redirect(url('/comprobantes/' . (int) ($r['cbte']['presupuesto'] ?? 0)));
         } catch (AutorizacionRechazada $ex) { // ARCA dijo que no: no se grabó nada, se vuelve al formulario con el motivo
             return self::form($svc, $datos, ['arca' => $ex->getMessage()], 422);
         } catch (ArcaSinRespuesta $ex) {
@@ -143,8 +146,30 @@ final class ComprobantesController
         }
         Session::flash($e['repetido'] ? 'info' : 'ok', $e['repetido']
             ? 'Ese comprobante ya se había emitido (no se emitió otro).'
-            : Tipos::titulo($r['cbte']['tipo'], $r['cbte']['letra']) . ' ' . numero_cbte($r['cbte']['prefijo'], $e['numero']) . ' emitida.');
+            : Tipos::titulo($r['cbte']['tipo'], $r['cbte']['letra']) . ' ' . numero_cbte($r['cbte']['prefijo'], $e['numero']) . ($r['cbte']['tipo'] === 'PR' ? ' emitido.' : ' emitida.'));
         return Response::redirect(url('/comprobantes/' . $e['id']));
+    }
+
+    /** Factura que sale de un presupuesto: se arma con sus datos y se pasa directo a revisar (no se edita). Solo una vez por presupuesto. */
+    public static function facturarPresupuesto(Request $req, array $params): Response
+    {
+        $svc = new ComprobantesService();
+        $id = (int) $params['id'];
+        $p = $svc->presupuestoParaFacturar($id);
+        if (is_string($p)) {
+            Session::flash('error', $p);
+            return Response::redirect(url('/comprobantes/' . $id));
+        }
+        $datos = $svc->entradaDesdePresupuesto($p);
+        $r = $svc->armar($datos, Auth::puede('comprobantes.credito'));
+        if (!$r['ok']) {
+            Session::flash('error', implode(' ', $r['errores']));
+            return Response::redirect(url('/comprobantes/' . $id));
+        }
+        return Response::html(View::render('comprobantes/revisar', [
+            'title' => 'Facturar presupuesto', 'nav' => 'comprobantes', 'c' => $r['cbte'], 'etiquetaArca' => Arca::etiqueta(),
+            'datos' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'operacion' => bin2hex(random_bytes(16)),
+        ]));
     }
 
     // ------------------------------------------------------------------ buscadores (JSON)
@@ -200,7 +225,7 @@ final class ComprobantesController
     public static function asociables(Request $req, array $params): Response
     {
         $out = [];
-        foreach ((new ComprobantesService())->asociables((int) ($req->query['cliente'] ?? 0)) as $a) {
+        foreach ((new ComprobantesService())->asociables((int) ($req->query['cliente'] ?? 0), strtoupper((string) ($req->query['tipo'] ?? 'NC'))) as $a) {
             $out[] = ['id' => (int) $a['fe_clave'], 'letra' => $a['letra'], 'texto' => Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a)
                 . ' del ' . fecha($a['fecha']) . ' · ' . plata($a['neto'])];
         }
@@ -232,14 +257,16 @@ final class ComprobantesController
         $asociables = [];
         if (ctype_digit((string) ($datos['cliente'] ?? '')) && (int) $datos['cliente'] > 0) {
             $cliente = (new ClientesService())->obtener((int) $datos['cliente']);
-            if ($cliente !== null && $tipo !== 'FC') {
-                $asociables = $svc->asociables((int) $cliente['codigo']);
+            if ($cliente !== null && in_array($tipo, ['NC', 'ND', 'NX'], true)) {
+                $asociables = $svc->asociables((int) $cliente['codigo'], $tipo);
             }
         }
         $emisor = $svc->emisor();
         // Letra prevista: la de la factura que se corrige, o la que sale de la condición del emisor y del cliente
         $letra = '';
-        if ($tipo !== 'FC') {
+        if (Tipos::interno($tipo)) {
+            $letra = Tipos::LETRA_INTERNA;
+        } elseif ($tipo !== 'FC') {
             foreach ($asociables as $a) {
                 if ((string) $a['fe_clave'] === (string) ($datos['asociado'] ?? '')) {
                     $letra = (string) $a['letra'];

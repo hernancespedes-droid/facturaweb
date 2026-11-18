@@ -19,6 +19,7 @@ return function (Router $r): void {
     $r->get('/comprobantes/buscar-articulo', Guard::permiso($emitir, [C::class, 'buscarArticulo']));
     $r->get('/comprobantes/asociables', Guard::permiso($emitir, [C::class, 'asociables']));
     $r->get('/comprobantes/{id}', Guard::permiso($ver, [C::class, 'ver']));
+    $r->get('/comprobantes/{id}/facturar', Guard::permiso($emitir, [C::class, 'facturarPresupuesto']));
     $r->get('/comprobantes/{id}/imprimir', Guard::permiso($ver, [I::class, 'imprimir']));
     $r->get('/comprobantes/{id}/pdf', Guard::permiso($ver, [I::class, 'pdf']));
     $r->post('/comprobantes/{id}/mail', Guard::permiso($emitir, [I::class, 'mail']));

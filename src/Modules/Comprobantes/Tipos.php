@@ -6,9 +6,15 @@ namespace App\Modules\Comprobantes;
 /** Tipos de comprobante, letras y sus códigos (los de sucursales, de cta. cte. y de ARCA). */
 final class Tipos
 {
-    public const NOMBRES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'ND' => 'Nota de débito'];
-    /** tico de ctact: 1 factura, 2 nota de débito, 8 nota de crédito. */
-    private const TICO = ['FC' => 1, 'ND' => 2, 'NC' => 8];
+    public const NOMBRES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'ND' => 'Nota de débito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X'];
+    /**
+     * Comprobantes internos (no fiscales, letra X): el presupuesto y su contrapartida. No van al subdiario de IVA, ni al Libro IVA Digital,
+     * ni se piden a ARCA, ni viajan al VFP. PR actúa como una factura (stock, caja, cuenta corriente); NX como una nota de crédito.
+     */
+    public const INTERNOS = ['PR', 'NX'];
+    public const LETRA_INTERNA = 'X';
+    /** tico de ctact: 1 factura, 2 nota de débito, 4 presupuesto, 8 nota de crédito, 10 nota de crédito X (los créditos son >= 7). */
+    private const TICO = ['FC' => 1, 'ND' => 2, 'PR' => 4, 'NC' => 8, 'NX' => 10];
     /** Código ARCA de la letra: factura A=1, B=6, C=11; la nota de débito suma 1 y la de crédito 2. */
     private const BASE_AFIP = ['A' => 1, 'B' => 6, 'C' => 11];
     private const DESPLAZAMIENTO = ['FC' => 0, 'ND' => 1, 'NC' => 2];
@@ -36,6 +42,25 @@ final class Tipos
         return isset(self::NOMBRES[$tipo]);
     }
 
+    /** Presupuesto o su contrapartida (no fiscales). */
+    public static function interno(string $tipo): bool
+    {
+        return in_array($tipo, self::INTERNOS, true);
+    }
+
+    /** Nota de crédito (fiscal o X): no cobra, deja saldo a favor y repone stock. */
+    public static function credito(string $tipo): bool
+    {
+        return $tipo === 'NC' || $tipo === 'NX';
+    }
+
+    /** Condición SQL para dejar afuera los internos. $a = alias de subdiario. */
+    public static function sqlSoloFiscales(string $a = ''): string
+    {
+        $p = $a === '' ? '' : $a . '.';
+        return "{$p}tipo NOT IN ('PR', 'NX')";
+    }
+
     public static function tico(string $tipo): int
     {
         return self::TICO[$tipo];
@@ -43,7 +68,7 @@ final class Tipos
 
     public static function titulo(string $tipo, string $letra): string
     {
-        return self::NOMBRES[$tipo] . ' ' . $letra;
+        return $tipo === 'NX' ? self::NOMBRES['NX'] : self::NOMBRES[$tipo] . ' ' . $letra;
     }
 
     public static function tipoAfip(string $tipo, string $letra): int
@@ -75,6 +100,9 @@ final class Tipos
     /** Columna de sucursales con el último número usado de ese tipo y letra, o null si no existe (ej. nota de débito E). */
     public static function columnaNumerador(string $tipo, string $letra): ?string
     {
+        if ($letra === self::LETRA_INTERNA) {
+            return ['PR' => 'ultimo_presupuesto', 'NX' => 'ultima_nc_x'][$tipo] ?? null;
+        }
         $base = ['FC' => 'ultima_factura_', 'NC' => 'ultima_nc_', 'ND' => 'ultima_nd_'][$tipo] ?? null;
         return $base !== null && isset(self::BASE_AFIP[$letra]) ? $base . strtolower($letra) : null;
     }
