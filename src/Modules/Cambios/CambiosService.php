@@ -254,25 +254,25 @@ final class CambiosService
             $err['nuevos'] = 'Lo que se lleva (' . plata($totNue) . ') vale menos que lo que se devuelve (' . plata($totDev) . '): faltan ' . plata(-$dif) . '. Sumá productos hasta igualar; para devolver dinero se hace una nota de crédito.';
         }
 
-        // Cómo se paga la diferencia
+        // Cómo se paga la diferencia: una o varias formas de pago (como en las ventas); a cuenta corriente solo si el cliente tiene crédito
         $forma = null;
-        $pago = null;
+        $pagos = null;
         $excede = false;
         $cliente = $o['cliente'];
         if ($dif > 0.004 && !isset($err['devolver']) && !isset($err['nuevos'])) {
-            $forma = (int) ($in['forma_pago'] ?? 0);
-            if (!in_array($forma, [1, 2], true)) {
+            if (trim((string) ($in['forma_pago'] ?? '')) === '' && trim((string) ($in['fpago'] ?? '')) === '' && !$svc->hayLineasDePago($in['pagos'] ?? null)) {
                 $err['forma_pago'] = 'Elegí cómo se paga la diferencia: contado o cuenta corriente.';
-            } elseif ($forma === 1) {
-                $pago = $svc->validarPago($in, $err);
-                if ($pago !== null && !isset($err['fpago'])) {
-                    $pago = $svc->aplicarVuelto($pago, $dif, $in, $err);
-                }
-            } elseif ($cliente !== [] && ($ex = $svc->creditoExcedido($cliente, $dif)) !== null) {
-                $excede = true;
-                if (!($puedeExcederCredito && ($in['excede_ok'] ?? '') === '1')) {
-                    $err['credito'] = 'La diferencia excede el crédito del cliente (límite ' . plata($ex['limite']) . ', deuda actual ' . plata($ex['deuda']) . '). '
-                        . ($puedeExcederCredito ? 'Tildá "Autorizo exceder el crédito" para hacer el cambio.' : 'Pedile a un administrador que lo autorice.');
+            } else {
+                $pagos = $svc->resolverPagos($in, $dif, $err);
+                if ($pagos !== null) {
+                    $forma = $pagos['cuenta'] > 0.004 ? 2 : 1;
+                    if ($pagos['cuenta'] > 0.004 && $cliente !== [] && ($ex = $svc->creditoExcedido($cliente, $pagos['cuenta'])) !== null) {
+                        $excede = true;
+                        if (!($puedeExcederCredito && ($in['excede_ok'] ?? '') === '1')) {
+                            $err['credito'] = 'La diferencia a cuenta corriente excede el crédito del cliente (límite ' . plata($ex['limite']) . ', deuda actual ' . plata($ex['deuda']) . '). '
+                                . ($puedeExcederCredito ? 'Tildá "Autorizo exceder el crédito" para hacer el cambio.' : 'Pedile a un administrador que lo autorice.');
+                        }
+                    }
                 }
             }
         }
@@ -286,7 +286,7 @@ final class CambiosService
         return ['ok' => true, 'errores' => [], 'cambio' => [
             'original' => $h, 'cliente' => $cliente, 'sucursal' => (int) $h['sucursal'], 'prefijo' => (int) $h['prefijo'], 'fecha' => date('Y-m-d'),
             'devueltos' => $devueltos, 'nuevos' => $nuevos, 'devuelto_total' => $totDev, 'nuevo_total' => $totNue, 'diferencia' => max(0.0, $dif),
-            'forma_pago' => $forma, 'pago' => $pago, 'excede_credito' => $excede, 'observaciones' => $obs,
+            'forma_pago' => $forma, 'pagos' => $pagos['lineas'] ?? [], 'pago_cuenta' => $pagos['cuenta'] ?? 0.0, 'vuelto' => $pagos['vuelto'] ?? 0.0, 'excede_credito' => $excede, 'observaciones' => $obs,
         ]];
     }
 
@@ -389,20 +389,24 @@ final class CambiosService
 
             $vuelto = 0.0;
             if ($dif > 0.004) {
-                $pago = $c['pago'];
                 $ccCodigo = $this->pdo->query('SELECT codigo FROM forma_de_pagos WHERE tipo = 6 ORDER BY id LIMIT 1')->fetchColumn() ?: 'CC';
-                $this->insertar('caja', [
-                    'subdiario_id' => $id, 'fecha' => $c['fecha'], 'tipo' => 'CM', 'letra' => 'X', 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $c['sucursal'],
-                    'prefijo' => $c['prefijo'], 'comprobante' => $numero, 'cliente' => $h['cliente'], 'p_fpago' => $forma === 2 ? $ccCodigo : $pago['codigo'],
-                    'p_nro' => $pago['nro'] ?? null, 'p_fecvto' => $forma === 2 ? $c['fecha'] : ($pago['vencimiento'] ?? null), 'p_banco' => (int) ($pago['banco'] ?? 0),
-                    'p_importe' => $dif, 'a_pagar' => $dif, 'actualizacion' => $ahora,
-                    'p_recibido' => $forma === 1 ? ($pago['recibido'] ?? $dif) : null, 'p_vuelto' => $pago['vuelto'] ?? 0,
-                ]);
-                $vuelto = (float) ($pago['vuelto'] ?? 0);
-                if ($forma === 2) {
+                $cuenta = 0.0;
+                foreach ($c['pagos'] as $pago) { // una fila de caja por forma de pago
+                    $esCuenta = (int) $pago['tipo'] === 6;
+                    $cuenta += $esCuenta ? (float) $pago['importe'] : 0.0;
+                    $vuelto += (float) ($pago['vuelto'] ?? 0);
+                    $this->insertar('caja', [
+                        'subdiario_id' => $id, 'fecha' => $c['fecha'], 'tipo' => 'CM', 'letra' => 'X', 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $c['sucursal'],
+                        'prefijo' => $c['prefijo'], 'comprobante' => $numero, 'cliente' => $h['cliente'], 'p_fpago' => $esCuenta ? $ccCodigo : $pago['codigo'],
+                        'p_nro' => $pago['nro'] ?? null, 'p_fecvto' => $esCuenta ? $c['fecha'] : ($pago['vencimiento'] ?? null), 'p_banco' => (int) ($pago['banco'] ?? 0),
+                        'p_importe' => $pago['importe'], 'a_pagar' => $pago['importe'], 'actualizacion' => $ahora,
+                        'p_recibido' => $esCuenta ? null : ($pago['recibido'] ?? $pago['importe']), 'p_vuelto' => $pago['vuelto'] ?? 0,
+                    ]);
+                }
+                if ($cuenta > 0.004) {
                     $this->insertar('ctact', [
                         'subdiario_id' => $id, 'cliente' => $h['cliente'], 'fecha' => $c['fecha'], 'tipo' => 'CM', 'tico' => Tipos::tico('CM'), 'letra' => 'X', 'sucursal' => $c['sucursal'],
-                        'prefijo' => $c['prefijo'], 'numero' => $numero, 'neto' => $dif, 'descuento' => 0, 'saldo' => $dif, 'vencimiento' => $c['fecha'],
+                        'prefijo' => $c['prefijo'], 'numero' => $numero, 'neto' => $cuenta, 'descuento' => 0, 'saldo' => $cuenta, 'vencimiento' => $c['fecha'],
                         'valor_dolar' => (new ComprobantesService())->cotizacionDolar($c['fecha']), 'actualizacion' => $ahora,
                     ]);
                 }

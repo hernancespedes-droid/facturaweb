@@ -24,7 +24,7 @@ $m = static fn ($v) => number_format((float) $v, 2, ',', '.');
         <?php foreach (['PR' => 'Solo presupuestos', 'FC' => 'Solo facturas', 'CM' => 'Cambios', 'NX' => 'Notas de crédito X', 'NC' => 'Notas de crédito'] as $k => $t): ?><option value="<?= $k ?>" <?= ($f['tipo'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select>
     <select name="forma" aria-label="Forma de pago"><option value="">Contado y cuenta corriente</option>
         <option value="contado" <?= ($f['forma'] ?? '') === 'contado' ? 'selected' : '' ?>>Solo contado</option>
-        <option value="cuenta" <?= ($f['forma'] ?? '') === 'cuenta' ? 'selected' : '' ?>>Solo cuenta corriente</option></select>
+        <option value="cuenta" <?= ($f['forma'] ?? '') === 'cuenta' ? 'selected' : '' ?>>Con cuenta corriente (total o parte)</option></select>
     <input type="search" name="cliente" value="<?= e($f['cliente'] ?? '') ?>" placeholder="Cliente, código o CUIT" aria-label="Cliente">
     <button class="btn btn-ghost" type="submit">Ver</button>
 </form>
@@ -48,7 +48,8 @@ $m = static fn ($v) => number_format((float) $v, 2, ',', '.');
                 <td data-label="Comprobante" class="nw"><a href="<?= e(url('/comprobantes/' . (int) $r['fe_clave'])) ?>"><?= e(Tipos::titulo($r['tipo'], $r['letra']) . ' ' . sprintf('%04d-%08d', $r['prefijo'], $r['numero'])) ?></a>
                     <?= (int) $r['es_prueba'] === 1 ? '<span class="chip">prueba</span>' : '' ?></td>
                 <td data-label="Cliente"><?= e((string) $r['razon_social']) ?></td>
-                <td data-label="Forma de pago"><?= (int) $r['forma_pago'] === 2 ? 'Cuenta corriente' : 'Contado' . ($r['medio'] !== null && $r['medio'] !== '' ? ' · ' . e($r['medio']) : '') ?></td>
+                <?php $cc = (float) $r['cuenta']; $neto = abs((float) $r['total']); $medio = (string) ($r['medio'] ?? ''); ?>
+                <td data-label="Forma de pago"><?= e($cc < 0.004 ? 'Contado' . ($medio !== '' ? ' · ' . $medio : '') : ($cc >= $neto - 0.004 ? 'Cuenta corriente' : 'Mixto: ' . ($medio !== '' ? $medio . ' + ' : '') . 'cuenta corriente')) ?></td>
                 <td data-label="Total" class="num"><b><?= e($m($r['total'])) ?></b></td></tr>
         <?php endforeach; ?>
         </tbody>

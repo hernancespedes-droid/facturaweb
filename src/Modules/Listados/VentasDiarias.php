@@ -22,6 +22,8 @@ final class VentasDiarias
     public const TIPOS = ['FC', 'PR', 'CM', 'NC', 'NX'];
     private const ORDEN = ['fecha' => 's.fecha', 'numero' => 's.tipo, s.letra, s.prefijo, numero', 'cliente' => 'razon_social', 'pago' => 's.forma_pago', 'total' => 'total'];
     private const SIGNO = "IF(s.tipo IN ('NC', 'NX'), -1, 1)";
+    /** Lo que de cada comprobante quedó a cuenta corriente (una venta puede ser mixta); en las notas de crédito, todo o nada según su forma de pago. */
+    private const CC = "IF(s.tipo IN ('NC', 'NX'), IF(s.forma_pago = 2, s.neto, 0), COALESCE((SELECT SUM(k.p_importe) FROM caja k JOIN forma_de_pagos f ON f.codigo = k.p_fpago WHERE k.subdiario_id = s.fe_clave AND f.tipo = 6), 0))";
 
     /** @param array<string,string> $f desde, hasta, tipo, forma (contado|cuenta), cliente @return array{0:string,1:array<int,mixed>} */
     private static function filtro(array $f): array
@@ -41,9 +43,9 @@ final class VentasDiarias
             $p[] = $f['tipo'];
         }
         if (($f['forma'] ?? '') === 'contado') {
-            $w[] = 's.forma_pago = 1';
+            $w[] = self::CC . ' < 0.004';
         } elseif (($f['forma'] ?? '') === 'cuenta') {
-            $w[] = 's.forma_pago = 2';
+            $w[] = self::CC . ' > 0.004';
         }
         $cli = trim((string) ($f['cliente'] ?? ''));
         if ($cli !== '') {
@@ -70,16 +72,16 @@ final class VentasDiarias
         $pdo = Db::pdo();
         $sg = self::SIGNO;
         $base = 'FROM subdiario s LEFT JOIN clientes c ON c.codigo = s.cliente' . $where;
-        $st = $pdo->prepare("SELECT COUNT(*), COALESCE(SUM(s.neto * {$sg}), 0), COALESCE(SUM(IF(s.forma_pago = 1, s.neto * {$sg}, 0)), 0),
-                COALESCE(SUM(IF(s.forma_pago = 2, s.neto * {$sg}, 0)), 0), COALESCE(SUM(IF(s.tipo IN ('PR', 'NX'), s.neto * {$sg}, 0)), 0),
+        $st = $pdo->prepare("SELECT COUNT(*), COALESCE(SUM(s.neto * {$sg}), 0), COALESCE(SUM((s.neto - " . self::CC . ") * {$sg}), 0),
+                COALESCE(SUM(" . self::CC . " * {$sg}), 0), COALESCE(SUM(IF(s.tipo IN ('PR', 'NX'), s.neto * {$sg}, 0)), 0),
                 COALESCE(SUM(IF(s.tipo IN ('FC', 'NC'), s.neto * {$sg}, 0)), 0) {$base}");
         $st->execute($p);
         $t = $st->fetch(\PDO::FETCH_NUM);
         $nro = Tipos::sqlNumeroVisible('s');
         $desde = max(0, ($pagina - 1) * $porPagina);
-        $st = $pdo->prepare("SELECT s.fe_clave, s.fecha, s.tipo, s.letra, s.prefijo, {$nro} AS numero, s.fe_ccae, s.es_prueba, s.forma_pago, s.neto * {$sg} AS total,
+        $st = $pdo->prepare("SELECT s.fe_clave, s.fecha, s.tipo, s.letra, s.prefijo, {$nro} AS numero, s.fe_ccae, s.es_prueba, s.forma_pago, s.neto * {$sg} AS total, " . self::CC . " AS cuenta,
                 COALESCE(s.cliente_razon_social, c.razon_social) AS razon_social,
-                (SELECT f.descripcion FROM caja k LEFT JOIN forma_de_pagos f ON f.codigo = k.p_fpago WHERE k.subdiario_id = s.fe_clave ORDER BY k.fe_clave LIMIT 1) AS medio
+                (SELECT GROUP_CONCAT(DISTINCT f.descripcion ORDER BY f.descripcion SEPARATOR ' + ') FROM caja k LEFT JOIN forma_de_pagos f ON f.codigo = k.p_fpago WHERE k.subdiario_id = s.fe_clave AND f.tipo <> 6) AS medio
             {$base} ORDER BY " . Orden::sql(self::ORDEN, (string) ($f['orden'] ?? ''), 's.fecha DESC, s.fe_clave DESC') . " LIMIT {$porPagina} OFFSET {$desde}");
         $st->execute($p);
         return ['filas' => $st->fetchAll(), 'total' => (int) $t[0], 'totales' => [

@@ -15,6 +15,8 @@
   var lista = form.querySelector('[data-cliente-lista]');
   var info = form.querySelector('[data-cliente-info]');
   var letra = form.getAttribute('data-letra') || '';
+  var sinIva = form.getAttribute('data-sin-iva') === '1'; // «Presupuestos sin IVA»: el precio es el final, no se calcula IVA
+  function sinImpuesto() { return letra === 'C' || sinIva; }
   var siguiente = cuerpo.querySelectorAll('[data-renglon]').length;
 
   // ---- números (formato argentino: 1.234,56)
@@ -40,6 +42,7 @@
     if (letra === 'A') { ley.textContent = 'Factura A: los precios van sin IVA (netos); el IVA se suma al total.'; th.textContent = 'Precio neto'; }
     else if (letra === 'B') { ley.textContent = 'Factura B: los precios van con el IVA incluido.'; th.textContent = 'Precio con IVA'; }
     else if (letra === 'C') { ley.textContent = 'Factura C: los precios son finales, sin IVA discriminado.'; th.textContent = 'Precio final'; }
+    else if (letra === 'X' && sinIva) { ley.textContent = 'Presupuesto sin IVA: los precios son finales, no se calcula IVA (la alícuota de cada renglón solo se usa si después se factura).'; th.textContent = 'Precio final'; }
     else if (letra === 'X') { ley.textContent = 'Comprobante X (no fiscal): los precios van con el IVA incluido.'; th.textContent = 'Precio con IVA'; }
     else { ley.textContent = 'Elegí el cliente para saber si es A, B o C.'; th.textContent = 'Precio'; }
     recalcular();
@@ -57,7 +60,7 @@
       var precio = num(tr.querySelector('[data-precio]').value);
       var celda = tr.querySelector('[data-importe]');
       if (isNaN(cant) || isNaN(precio)) { celda.textContent = '—'; return; }
-      var alic = letra === 'C' ? 0 : parseFloat(tr.querySelector('[data-alicuota] option:checked').getAttribute('data-pct') || '0');
+      var alic = sinImpuesto() ? 0 : parseFloat(tr.querySelector('[data-alicuota] option:checked').getAttribute('data-pct') || '0');
       var importe = r2(cant * precio);
       var con = r2(importe * factor);
       celda.textContent = fmt(importe);
@@ -72,7 +75,7 @@
       var g = grupos[k], n, iva;
       if (letra === 'A') { n = g.despues; iva = g.alic > 0 ? r2(n * g.alic / 100) : 0; }
       else { n = g.alic > 0 ? r2(g.despues / (1 + g.alic / 100)) : g.despues; iva = g.alic > 0 ? r2(g.despues - n) : 0; }
-      if (letra === 'C') { neto = r2(neto + n); }
+      if (sinImpuesto()) { neto = r2(neto + n); }
       else if (g.alic > 0) { neto = r2(neto + n); ivaTotal = r2(ivaTotal + iva); if (letra === 'A') filas += '<div><span>IVA ' + g.alic.toLocaleString('es-AR') + ' %</span><b>' + fmt(iva) + '</b></div>'; }
       else { exento = r2(exento + n); }
     });
@@ -135,7 +138,7 @@
         sel.innerHTML = '<option value="">' + (tipo === 'NX' ? 'Elegí el presupuesto' : 'Elegí la factura o nota de débito') + '</option>';
         arr.forEach(function (a) {
           var o = document.createElement('option');
-          o.value = a.id; o.textContent = a.texto; o.setAttribute('data-letra', a.letra);
+          o.value = a.id; o.textContent = a.texto; o.setAttribute('data-letra', a.letra); o.setAttribute('data-sin-iva', a.sin_iva ? '1' : '0');
           sel.appendChild(o);
         });
         actualizarLetra('');
@@ -154,6 +157,7 @@
   var asoc = form.querySelector('[data-asociado]');
   if (asoc) asoc.addEventListener('change', function () {
     var o = asoc.options[asoc.selectedIndex];
+    sinIva = !!o && o.getAttribute('data-sin-iva') === '1';
     actualizarLetra(o ? o.getAttribute('data-letra') || '' : '');
   });
 

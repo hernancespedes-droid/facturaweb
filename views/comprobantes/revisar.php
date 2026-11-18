@@ -42,7 +42,7 @@ $disc = $c['letra'] === 'A';
             <tr><td data-label="Descripción"><?= e($it['descripcion']) ?><?= ($it['texto'] ?? '') !== '' ? '<div class="small muted pre-linea">' . e($it['texto']) . '</div>' : '' ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
                 <td data-label="Cantidad"><?= e(numero($it['cantidad'], 3)) ?></td>
                 <td data-label="Precio" class="nw"><?= e(numero($it['precio'], 4)) ?></td>
-                <td data-label="IVA"><?= $c['letra'] === 'C' ? '—' : ($it['exento'] ? 'Exento' : e(numero($it['alicuota']) . ' %')) ?></td>
+                <td data-label="IVA"><?= $c['letra'] === 'C' || !empty($c['sin_iva']) ? '—' : ($it['exento'] ? 'Exento' : e(numero($it['alicuota']) . ' %')) ?></td>
                 <td data-label="Importe" class="nw"><?= e(plata_dec($it['importe'])) ?></td></tr>
         <?php endforeach; ?>
         </tbody>

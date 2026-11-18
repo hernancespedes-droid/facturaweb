@@ -198,7 +198,7 @@ final class ComprobantesTest extends ComprobantesTestCase
     public function testFallaALaMitadNoDejaNadaGrabadoNiConsumeNumero(): void
     {
         $r = $this->svc->armar($this->pedido(['forma_pago' => '1', 'fpago' => 'EF', 'cliente' => '990002']));
-        $r['cbte']['pago']['codigo'] = 'XXXX'; // revienta el INSERT de caja (VARCHAR 2), cuando ya se grabaron la cabecera, el IVA y los renglones
+        $r['cbte']['pagos'][0]['codigo'] = 'XXXX'; // revienta el INSERT de caja (VARCHAR 2), cuando ya se grabaron la cabecera, el IVA y los renglones
         try {
             $this->svc->emitir($r['cbte'], bin2hex(random_bytes(16)), 0);
             $this->fail('tenía que fallar');

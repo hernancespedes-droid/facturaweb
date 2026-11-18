@@ -1133,3 +1133,9 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 
 /* Cambio de mercadería */
 input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: inline-block; }
+
+/* Varias formas de pago */
+.pago-linea { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; padding: 10px 0; border-bottom: 1px solid var(--border, #d6dbe6); }
+.pago-linea > .field { flex: 1 1 180px; min-width: 0; margin: 0; }
+.pago-linea .pago-cheque { flex: 1 1 100%; }
+.pago-linea .pago-quitar { flex: 0 0 auto; }

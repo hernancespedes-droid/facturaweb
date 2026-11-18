@@ -57,7 +57,7 @@ final class PagoAlFinalTest extends ComprobantesTestCase
     {
         $r = $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'EF', 'recibido' => '300']));
         $this->assertSame([], $r['errores']);
-        $this->assertSame(58.0, $r['cbte']['pago']['vuelto']);
+        $this->assertSame(58.0, $r['cbte']['pagos'][0]['vuelto']);
         $e = $this->svc->emitir($r['cbte'], bin2hex(random_bytes(16)), 0);
         $this->assertSame(58.0, $e['vuelto']);
         $c = $this->fila('SELECT p_importe, p_recibido, p_vuelto FROM caja WHERE subdiario_id = ?', [$e['id']]);
@@ -83,7 +83,7 @@ final class PagoAlFinalTest extends ComprobantesTestCase
         $this->assertSame([], $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'TJ', 'recibido' => '242']))['errores'], 'justo sí');
         // el ABM: si se tilda «acepta vuelto» en la forma de pago, se da vuelto
         Db::pdo()->exec("UPDATE forma_de_pagos SET acepta_vuelto = 1 WHERE codigo = 'TJ'");
-        $this->assertSame(58.0, $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'TJ', 'recibido' => '300']))['cbte']['pago']['vuelto']);
+        $this->assertSame(58.0, $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'TJ', 'recibido' => '300']))['cbte']['pagos'][0]['vuelto']);
         Db::pdo()->exec("UPDATE forma_de_pagos SET acepta_vuelto = 0 WHERE codigo = 'EF'");
         $this->assertStringContainsString('no acepta vuelto', $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'EF', 'recibido' => '300']))['errores']['recibido']);
     }
@@ -93,6 +93,93 @@ final class PagoAlFinalTest extends ComprobantesTestCase
         $e = $this->emitir($this->conPago(['forma_pago' => '1', 'fpago' => 'BV']));
         $this->assertSame('BV', $this->fila('SELECT p_fpago FROM caja WHERE subdiario_id = ?', [$e['id']])['p_fpago']);
         $this->assertSame('Billetera virtual', \App\Modules\Tablas\Definiciones::TIPOS_PAGO[10]);
+    }
+
+    public function testVariasFormasDePagoSumanElTotalYCadaUnaVaAUnaFilaDeCaja(): void
+    {
+        // 242 = 100 en efectivo (entrega 150: vuelto 50) + 142 con tarjeta
+        $r = $this->svc->armar($this->conPago(['pagos' => [
+            ['fpago' => 'EF', 'importe' => '100', 'recibido' => '150'], ['fpago' => 'TJ', 'importe' => '142']]]));
+        $this->assertSame([], $r['errores']);
+        $this->assertSame([1, 242.0, 0.0, 50.0], [$r['cbte']['forma_pago'], $r['cbte']['pago_contado'], $r['cbte']['pago_cuenta'], $r['cbte']['vuelto']]);
+        $e = $this->svc->emitir($r['cbte'], bin2hex(random_bytes(16)), 0);
+        $this->assertSame(50.0, $e['vuelto']);
+        $filas = Db::pdo()->prepare('SELECT p_fpago, p_importe, p_recibido, p_vuelto FROM caja WHERE subdiario_id = ? ORDER BY fe_clave');
+        $filas->execute([$e['id']]);
+        $caja = $filas->fetchAll();
+        $this->assertSame([['EF', '100.00', '150.00', '50.00'], ['TJ', '142.00', '142.00', '0.00']], array_map('array_values', $caja), 'una fila de caja por forma de pago');
+        $this->assertSame(0, (int) Db::pdo()->query('SELECT COUNT(*) FROM ctact')->fetchColumn(), 'todo cobrado: nada a cuenta corriente');
+        $this->assertSame('Mixto: EFECTIVO $ 100,00 (recibido $ 150,00, vuelto $ 50,00) · TARJETA $ 142,00', forma_pago_texto($this->svc->obtener($e['id'])));
+    }
+
+    public function testParteAlContadoYParteACuentaCorriente(): void
+    {
+        $r = $this->svc->armar($this->conPago(['pagos' => [['fpago' => 'EF', 'importe' => '100'], ['fpago' => 'CC', 'importe' => '142']]]));
+        $this->assertSame([], $r['errores']);
+        $this->assertSame([2, 100.0, 142.0], [$r['cbte']['forma_pago'], $r['cbte']['pago_contado'], $r['cbte']['pago_cuenta']]);
+        $e = $this->svc->emitir($r['cbte'], bin2hex(random_bytes(16)), 0);
+        $ct = $this->fila('SELECT neto, saldo, tico FROM ctact WHERE subdiario_id = ?', [$e['id']]);
+        $this->assertSame(['142.00', '142.00', 1], [$ct['neto'], $ct['saldo'], (int) $ct['tico']], 'a cuenta corriente va solo la parte que quedó debiendo');
+        $this->assertSame(142.0, $this->svc->deudaCliente(990001));
+        $this->assertSame(2, (int) $this->fila('SELECT COUNT(*) AS n FROM caja WHERE subdiario_id = ?', [$e['id']])['n']);
+        // la caja diaria separa lo cobrado de lo facturado a cuenta corriente
+        $res = \App\Modules\Listados\CajaDiaria::resumen(['desde' => date('d/m/Y'), 'hasta' => date('d/m/Y')]);
+        $this->assertSame([142.0, 100.0, 100.0], [$res['ventas']['cuenta_corriente'], $res['ventas']['contado'], $res['total_cobrado']]);
+        // y Ventas diarias la muestra como mixta, con sus partes
+        $vd = \App\Modules\Listados\VentasDiarias::listar(['desde' => date('d/m/Y'), 'hasta' => date('d/m/Y')], 1, 50);
+        $this->assertSame([100.0, 142.0], [$vd['totales']['contado'], $vd['totales']['cuenta']]);
+        $this->assertSame(1, \App\Modules\Listados\VentasDiarias::listar(['desde' => date('d/m/Y'), 'hasta' => date('d/m/Y'), 'forma' => 'cuenta'], 1, 50)['total']);
+        $this->assertSame(0, \App\Modules\Listados\VentasDiarias::listar(['desde' => date('d/m/Y'), 'hasta' => date('d/m/Y'), 'forma' => 'contado'], 1, 50)['total']);
+        // el crédito se controla sobre la parte a cuenta corriente
+        Db::pdo()->exec('UPDATE clientes SET credito = 200 WHERE codigo = 990001');
+        $sobra = $this->svc->armar($this->conPago(['pagos' => [['fpago' => 'EF', 'importe' => '100'], ['fpago' => 'CC', 'importe' => '142']]]));
+        $this->assertTrue(isset($sobra['errores']['credito']), '142 + la deuda de 142 pasan el límite de 200');
+        $this->assertSame([], $this->svc->armar($this->conPago(['pagos' => [['fpago' => 'EF', 'importe' => '200'], ['fpago' => 'CC', 'importe' => '42']]]))['errores'], 'la parte a cuenta es de 42 (142 + 42 = 184): no pasa el límite');
+    }
+
+    public function testErroresDeVariasFormasDePago(): void
+    {
+        $e = fn (array $pagos, array $extra = []) => $this->svc->armar($this->conPago(['pagos' => $pagos] + $extra))['errores'];
+        $this->assertStringContainsString('Faltan $ 42,00', $e([['fpago' => 'EF', 'importe' => '100'], ['fpago' => 'TJ', 'importe' => '100']])['pagos']);
+        $this->assertStringContainsString('Se pasan', $e([['fpago' => 'EF', 'importe' => '200'], ['fpago' => 'TJ', 'importe' => '100']])['pagos']);
+        $this->assertStringContainsString('Cargá el importe de cada forma de pago', $e([['fpago' => 'EF', 'importe' => ''], ['fpago' => 'TJ', 'importe' => '100']])['pagos']);
+        $this->assertStringContainsString('Forma de pago 2: El cliente entregó menos', $e([['fpago' => 'TJ', 'importe' => '142'], ['fpago' => 'EF', 'importe' => '100', 'recibido' => '50']])['pagos']);
+        $this->assertStringContainsString('no acepta vuelto', $e([['fpago' => 'TJ', 'importe' => '142', 'recibido' => '200'], ['fpago' => 'EF', 'importe' => '100']])['pagos']);
+        $this->assertStringContainsString('número del cheque', $e([['fpago' => 'CH', 'importe' => '142'], ['fpago' => 'EF', 'importe' => '100']])['pagos']);
+        $this->assertStringContainsString('Elegí cómo se paga', $e([['fpago' => 'ZZ', 'importe' => '242'], ['fpago' => 'EF', 'importe' => '0']])['pagos']);
+        $nueve = array_fill(0, 9, ['fpago' => 'EF', 'importe' => '10']);
+        $this->assertStringContainsString('Hasta 8', $e($nueve)['pagos']);
+        // con forma_pago = 2 se ignora lo demás: todo a cuenta corriente
+        $todo = $this->svc->armar($this->conPago(['forma_pago' => '2', 'pagos' => [['fpago' => 'EF', 'importe' => '10']]]));
+        $this->assertSame([], $todo['errores']);
+        $this->assertSame([2, 0.0, 242.0], [$todo['cbte']['forma_pago'], $todo['cbte']['pago_contado'], $todo['cbte']['pago_cuenta']]);
+        // la forma de pago única de antes (fpago) sigue valiendo y no acepta la cuenta corriente como forma
+        $this->assertTrue(isset($this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'CC']))['errores']['fpago']));
+    }
+
+    public function testRevisionYEmisionPorHttpConVariasFormasDePago(): void
+    {
+        $this->loginComo($this->crearUsuario('t_op_vp', 'operador'));
+        $p = $this->pedido();
+        unset($p['forma_pago']);
+        $rev = $this->post('/comprobantes/revisar', $p);
+        $this->assertStringContainsString('Agregar otra forma de pago', $rev->body);
+        $this->assertStringContainsString('name="pagos[0][fpago]"', $rev->body);
+        preg_match('/name="datos" value="([^"]*)"/', $rev->body, $m);
+        $datos = html_entity_decode($m[1], ENT_QUOTES);
+        $op = bin2hex(random_bytes(16));
+        // no suman: vuelve a la revisión con lo elegido
+        $mal = $this->post('/comprobantes', ['datos' => $datos, 'operacion' => $op, 'forma_pago' => '1', 'pagos' => [['fpago' => 'EF', 'importe' => '100'], ['fpago' => 'TJ', 'importe' => '50']]]);
+        $this->assertSame(422, $mal->status);
+        $this->assertStringContainsString('Faltan', $mal->body);
+        $this->assertStringContainsString('value="100"', $mal->body, 'conserva lo ya cargado');
+        $this->assertSame(0, (int) Db::pdo()->query('SELECT COUNT(*) FROM subdiario')->fetchColumn());
+        $ok = $this->post('/comprobantes', ['datos' => $datos, 'operacion' => $op, 'forma_pago' => '1', 'pagos' => [['fpago' => 'EF', 'importe' => '100', 'recibido' => '150'], ['fpago' => 'TJ', 'importe' => '142']]]);
+        $this->assertSame(302, $ok->status);
+        $id = (int) Db::pdo()->query('SELECT fe_clave FROM subdiario')->fetchColumn();
+        $ver = $this->get('/comprobantes/' . $id);
+        $this->assertStringContainsString('Mixto: EFECTIVO', $ver->body);
+        $this->assertStringContainsString('DAR VUELTO AL CLIENTE: $ 50,00', $ver->body);
     }
 
     public function testRevisionPideElPagoYAvisaDelVuelto(): void

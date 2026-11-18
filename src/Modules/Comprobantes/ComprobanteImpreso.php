@@ -48,7 +48,7 @@ final class ComprobanteImpreso
         $items = [];
         foreach ($h['items'] as $it) {
             $items[] = ['descripcion' => (string) $it['observaciones'], 'texto' => trim((string) ($it['texto_impresion'] ?? '')), 'cantidad' => (float) $it['unidades'], 'precio' => (float) $it['precio'], 'importe' => (float) $it['total_item'],
-                'exento' => $letra !== 'C' && (float) $it['por_iva'] <= 0];
+                'exento' => $letra !== 'C' && !(int) ($h['sin_iva'] ?? 0) && (float) $it['por_iva'] <= 0];
         }
 
         $totales = [];
@@ -91,8 +91,7 @@ final class ComprobanteImpreso
             $aviso = 'COMPROBANTE DE PRUEBA (' . (($h['fe_entorno'] ?? '') === 'S' ? 'ARCA SIMULADO' : 'HOMOLOGACIÓN DE ARCA') . '): el CAE no tiene validez fiscal';
         }
 
-        $pago = (int) $h['forma_pago'] === 2 ? 'Cuenta corriente'
-            : 'Contado' . ($h['pagos'] !== [] ? ' - ' . ($h['pagos'][0]['fpago_descripcion'] ?? $h['pagos'][0]['p_fpago']) : '');
+        $pago = forma_pago_texto($h, ' - ');
 
         return [
             'logo' => \App\Modules\Configuracion\Logo::obtener(),

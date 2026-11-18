@@ -136,6 +136,22 @@ final class CambiosTest extends ComprobantesTestCase
         $this->assertTrue(isset($this->cambios->armar(['original' => '999999'])['errores']['original']));
     }
 
+    public function testLaDiferenciaSePuedePagarConVariasFormas(): void
+    {
+        $pr = $this->presupuesto();
+        Db::pdo()->exec("INSERT IGNORE INTO forma_de_pagos (codigo, descripcion, tipo) VALUES ('TJ', 'TARJETA', 3)");
+        // devuelve 1 (100) y se lleva 1 de T-ART2 (150): diferencia 50 = 20 en efectivo (entrega 50: vuelto 30) + 30 con tarjeta
+        $r = $this->cambios->armar($this->cambio($pr, '1', [['articulo' => 'T-ART2', 'cantidad' => '1', 'precio' => '150']],
+            ['pagos' => [['fpago' => 'EF', 'importe' => '20', 'recibido' => '50'], ['fpago' => 'TJ', 'importe' => '30']]]));
+        $this->assertSame([], $r['errores']);
+        $e = $this->cambios->emitir($r['cambio'], bin2hex(random_bytes(16)), 0);
+        $this->assertSame(30.0, $e['vuelto']);
+        $this->assertSame(2, (int) $this->fila('SELECT COUNT(*) AS n FROM caja WHERE subdiario_id = ?', [$e['id']])['n']);
+        $mal = $this->cambios->armar($this->cambio($pr, '1', [['articulo' => 'T-ART2', 'cantidad' => '1', 'precio' => '150']],
+            ['pagos' => [['fpago' => 'EF', 'importe' => '20'], ['fpago' => 'TJ', 'importe' => '10']]]));
+        $this->assertStringContainsString('Faltan', $mal['errores']['pagos']);
+    }
+
     public function testNoSeDevuelveDosVecesLoMismoNiSeRepiteElCambio(): void
     {
         $pr = $this->presupuesto();                                   // 2 unidades

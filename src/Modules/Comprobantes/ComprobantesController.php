@@ -112,7 +112,7 @@ final class ComprobantesController
     }
 
     /** Campos de «cómo se paga»: se piden en la pantalla de revisión (con el total a la vista) y se suman a lo cargado antes de emitir. */
-    private const CAMPOS_PAGO = ['forma_pago', 'fpago', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'excede_ok'];
+    private const CAMPOS_PAGO = ['forma_pago', 'fpago', 'pagos', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'excede_ok'];
 
     /**
      * Pantalla de revisión: el comprobante calculado y, si se cobra (factura, nota de débito, presupuesto), cómo se paga.
@@ -131,7 +131,7 @@ final class ComprobantesController
             'c' => $cbte, 'etiquetaArca' => Arca::etiqueta(), 'datos' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'operacion' => bin2hex(random_bytes(16)),
             'errores' => $errores, 'pagoCargado' => $pagoCargado, 'puedeCredito' => Auth::puede('comprobantes.credito'),
             'pagar' => $pagar,
-            'formas' => $pdo->query('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE tipo IN (1, 2, 3, 5, 10) ORDER BY tipo, descripcion')->fetchAll(),
+            'formas' => $pdo->query('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE tipo IN (1, 2, 3, 5, 6, 10) ORDER BY tipo, descripcion')->fetchAll(),
             'bancos' => $pdo->query('SELECT codigo, descripcion FROM bancos ORDER BY descripcion')->fetchAll(),
         ]), $status);
     }
@@ -149,7 +149,7 @@ final class ComprobantesController
         $r = $svc->armar($datos, Auth::puede('comprobantes.credito'));
         if (!$r['ok']) {
             // Si solo falla lo del pago, se vuelve a la revisión (con el total y lo ya elegido) en vez de al formulario
-            $soloPago = ['forma_pago', 'fpago', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'credito'];
+            $soloPago = ['forma_pago', 'fpago', 'pagos', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'credito'];
             if ($pagoCargado !== [] && array_diff(array_keys($r['errores']), $soloPago) === []) {
                 $base = $svc->armar(array_diff_key($datos, array_flip(self::CAMPOS_PAGO)), Auth::puede('comprobantes.credito'));
                 if ($base['ok']) {
@@ -256,7 +256,7 @@ final class ComprobantesController
     {
         $out = [];
         foreach ((new ComprobantesService())->asociables((int) ($req->query['cliente'] ?? 0), strtoupper((string) ($req->query['tipo'] ?? 'NC'))) as $a) {
-            $out[] = ['id' => (int) $a['fe_clave'], 'letra' => $a['letra'], 'texto' => Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a)
+            $out[] = ['id' => (int) $a['fe_clave'], 'letra' => $a['letra'], 'sin_iva' => (int) $a['sin_iva'], 'texto' => Tipos::titulo($a['tipo'], $a['letra']) . ' ' . numero_visible($a)
                 . ' del ' . fecha($a['fecha']) . ' · ' . plata($a['neto'])];
         }
         return Response::json($out);
@@ -292,6 +292,13 @@ final class ComprobantesController
             }
         }
         $emisor = $svc->emisor();
+        // Presupuesto sin IVA: la marca de Configuración (para la contrapartida, la del presupuesto elegido)
+        $sinIva = $tipo === 'PR' && Configuracion::activo('presupuestos.sin_iva');
+        foreach ($asociables as $a) {
+            if ($tipo === 'NX' && (string) $a['fe_clave'] === (string) ($datos['asociado'] ?? '') && (int) $a['sin_iva'] === 1) {
+                $sinIva = true;
+            }
+        }
         // Letra prevista: la de la factura que se corrige, o la que sale de la condición del emisor y del cliente
         $letra = '';
         if (Tipos::interno($tipo)) {
@@ -308,7 +315,7 @@ final class ComprobantesController
         }
         return Response::html(View::render('comprobantes/form', [
             'title' => Tipos::NOMBRES[$tipo] ?? 'Comprobante', 'nav' => 'comprobantes_' . strtolower($tipo),
-            'tipo' => $tipo, 'datos' => $datos, 'errores' => $errores, 'cliente' => $cliente, 'asociables' => $asociables,
+            'tipo' => $tipo, 'datos' => $datos, 'errores' => $errores, 'cliente' => $cliente, 'asociables' => $asociables, 'sinIva' => $sinIva,
             'sucursales' => $svc->sucursales(), 'alicuotas' => $pdo->query('SELECT codigo, descripcion, porcentaje FROM tasas_iva ORDER BY porcentaje DESC')->fetchAll(),
             'vendedores' => $pdo->query('SELECT codigo, descripcion FROM vendedores ORDER BY descripcion')->fetchAll(),
             'condiciones' => $pdo->query('SELECT codigo, descripcion FROM condicionpago ORDER BY descripcion')->fetchAll(),

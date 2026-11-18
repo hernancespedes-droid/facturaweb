@@ -277,6 +277,28 @@ if (!function_exists('estado_comprobante')) {
     }
 }
 
+if (!function_exists('forma_pago_texto')) {
+    /**
+     * Cómo se pagó un comprobante, a partir de sus filas de caja (obtener()['pagos']): «Contado · EFECTIVO», «Cuenta corriente» o, con varias formas,
+     * «Mixto: EFECTIVO $ 100,00 · TARJETA $ 142,00». Con vuelto agrega lo recibido y el vuelto.
+     *
+     * @param array<string,mixed> $h comprobante de ComprobantesService::obtener() @param string $sep separador (' - ' en los PDF, que no llevan el punto medio)
+     */
+    function forma_pago_texto(array $h, string $sep = ' · '): string
+    {
+        $pagos = $h['pagos'] ?? [];
+        if ($pagos === []) {
+            return (int) $h['forma_pago'] === 2 ? 'Cuenta corriente' : 'Contado';
+        }
+        $etq = static fn (array $p): string => (int) ($p['fpago_tipo'] ?? 0) === 6 ? 'Cuenta corriente' : (string) ($p['fpago_descripcion'] ?? $p['p_fpago']);
+        $vuelto = static fn (array $p): string => (float) $p['p_vuelto'] > 0 ? ' (recibido ' . plata_dec($p['p_recibido']) . ', vuelto ' . plata_dec($p['p_vuelto']) . ')' : '';
+        if (count($pagos) === 1) {
+            return (int) ($pagos[0]['fpago_tipo'] ?? 0) === 6 ? 'Cuenta corriente' : 'Contado' . $sep . $etq($pagos[0]) . $vuelto($pagos[0]);
+        }
+        return 'Mixto: ' . implode($sep, array_map(static fn (array $p) => $etq($p) . ' ' . plata_dec($p['p_importe']) . $vuelto($p), $pagos));
+    }
+}
+
 if (!function_exists('icono_lista')) {
     /** Botón de ícono (lupa con renglones) para abrir la ventana «ver lista» de un buscador. $que = 'artículos' o 'clientes'. */
     function icono_lista(string $atributo, string $que): string

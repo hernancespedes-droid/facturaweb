@@ -43,7 +43,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
 </div>
 
 <?php if (\App\Modules\Comprobantes\Tipos::interno($h['tipo'])): ?><div class="alerta alerta-info small"><?= $h['tipo'] === 'PR'
-    ? 'Presupuesto: no es una factura ni va al subdiario de IVA. Descuenta stock y se cobra o va a cuenta corriente.' . ($h['factura_generada'] === null ? ' Se puede generar una factura, una sola vez.' : '')
+    ? 'Presupuesto' . ((int) $h['sin_iva'] === 1 ? ' sin IVA (no calcula IVA: el precio es el final)' : '') . ': no es una factura ni va al subdiario de IVA. Descuenta stock y se cobra o va a cuenta corriente.' . ($h['factura_generada'] === null ? ' Se puede generar una factura, una sola vez.' : '')
     : ($h['tipo'] === 'CM' ? 'Cambio de mercadería: lo devuelto volvió al stock, lo que se llevó salió, y el total es solo la diferencia cobrada. No es fiscal.'
         : 'Contrapartida de un presupuesto: repone el stock y deja saldo a favor del cliente. No es fiscal.') ?></div>
 <?php elseif ((int) $h['solo_subdiario'] === 1): ?><div class="alerta alerta-info small">Este comprobante sale de un presupuesto: va <b>solo al subdiario</b>. No toca caja, cuenta corriente ni stock (ya los movió el presupuesto).</div>
@@ -56,7 +56,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
         <div><dt>Cliente</dt><dd><a href="<?= e(url('/clientes/' . $h['cliente'])) ?>"><?= e($razon) ?></a> <span class="muted">(<?= e($h['cliente']) ?>)</span></dd></div>
         <div><dt>CUIT</dt><dd><?= e(cuit_texto($h['cuit_cliente']) ?: 'sin CUIT') ?></dd></div>
         <?php if (!empty($h['cliente_domicilio'] ?? $cli['domicilio'] ?? '')): ?><div><dt>Domicilio</dt><dd><?= e(trim(($h['cliente_domicilio'] ?? $cli['domicilio'] ?? '') . ' ' . ($h['cliente_localidad'] ?? $cli['localidad'] ?? ''))) ?></dd></div><?php endif; ?>
-        <div><dt>Forma de pago</dt><dd><?= (int) $h['forma_pago'] === 2 ? 'Cuenta corriente' : 'Contado' . ($h['pagos'] !== [] ? ' · ' . e($h['pagos'][0]['fpago_descripcion'] ?? $h['pagos'][0]['p_fpago']) : '') . ($h['pagos'] !== [] && (float) $h['pagos'][0]['p_vuelto'] > 0 ? ' · recibido ' . e(plata_dec($h['pagos'][0]['p_recibido'])) . ', vuelto ' . e(plata_dec($h['pagos'][0]['p_vuelto'])) : '') ?></dd></div>
+        <div><dt>Forma de pago</dt><dd><?= e(forma_pago_texto($h)) ?></dd></div>
         <?php if ($h['asociado_clave'] !== null): ?>
             <div><dt>Corrige</dt><dd><a href="<?= e(url('/comprobantes/' . $h['asociado_clave'])) ?>"><?= e(Tipos::titulo($h['fe_tipocbte_asoc'], $h['letra']) . ' ' . numero_cbte($h['prefijo'], $h['fe_nrocbte_asoc'])) ?></a></dd></div>
         <?php elseif ($h['fe_nrocbte_asoc'] > 0): ?>
@@ -90,7 +90,7 @@ $descImporte = \App\Modules\Comprobantes\ComprobanteImpreso::descuento($h);
             <tr><td data-label="Descripción" class="pre-linea"><?= e($it['observaciones']) ?><?= trim((string) ($it['texto_impresion'] ?? '')) !== '' ? '<div class="small muted pre-linea">' . e($it['texto_impresion']) . '</div>' : '' ?><?= $it['articulo'] ? ' <small class="muted">' . e($it['articulo']) . '</small>' : '' ?></td>
                 <td data-label="Cantidad"><?= e(numero($it['unidades'], 3)) ?></td>
                 <td data-label="Precio" class="nw"><?= e(numero($it['precio'], 4)) ?></td>
-                <td data-label="IVA"><?= $h['letra'] === 'C' ? '—' : ((float) $it['por_iva'] > 0 ? e(numero($it['por_iva']) . ' %') : 'Exento') ?></td>
+                <td data-label="IVA"><?= $h['letra'] === 'C' || (int) $h['sin_iva'] === 1 ? '—' : ((float) $it['por_iva'] > 0 ? e(numero($it['por_iva']) . ' %') : 'Exento') ?></td>
                 <td data-label="Importe" class="nw"><?= e(plata_dec($it['total_item'])) ?></td></tr>
         <?php endforeach; ?>
         <?php if ($h['items'] === []): ?><tr><td colspan="5" class="muted">Este comprobante no tiene renglones cargados.</td></tr><?php endif; ?>

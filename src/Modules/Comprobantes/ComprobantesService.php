@@ -146,6 +146,9 @@ final class ComprobantesService
         }
         // Lo que sale de un presupuesto (la factura y sus notas) va solo al subdiario: sin caja, cuenta corriente ni stock
         $solo = $presupuesto !== null || (is_array($asoc) && (int) ($asoc['solo_subdiario'] ?? 0) === 1);
+        // DECISIÓN D-48 (pedido de Hernán, 18/11): con la marca «Presupuestos sin IVA» (Configuración) el presupuesto no calcula IVA sobre el valor de los productos
+        // (el precio es el final, como una factura C); la contrapartida hereda lo del presupuesto. Cada presupuesto guarda cómo se hizo (subdiario.sin_iva).
+        $sinIva = ($tipo === 'PR' && Configuracion::activo('presupuestos.sin_iva')) || ($tipo === 'NX' && is_array($asoc) && (int) ($asoc['sin_iva'] ?? 0) === 1);
 
         // Sucursal: la de la factura asociada, o la elegida
         $sucs = $this->sucursales();
@@ -205,16 +208,16 @@ final class ComprobantesService
         // DECISIÓN D-43 (Claude, a confirmar por Hernán): en facturas, notas de débito y presupuestos la forma de pago NO se pide en el formulario: se
         // pide al terminar la venta, en la pantalla de revisión, con el total a la vista. Mientras no llega forma_pago el comprobante queda con el
         // pago pendiente (armar() valida todo lo demás) y emitir() no lo graba. Las notas de crédito conservan su elección en el formulario.
+        // DECISIÓN D-49 (pedido de Hernán, 18/11): se puede pagar con varias formas de pago a la vez (efectivo + tarjeta, cheque + billetera, y hasta una parte a cuenta
+        // corriente); tienen que sumar el total. Se validan con el total ya calculado (resolverPagos, más abajo).
         $necesitaPago = !Tipos::credito($tipo) && !$solo;
-        $pagoPendiente = $necesitaPago && trim((string) ($in['forma_pago'] ?? '')) === '';
-        $formaPago = $pagoPendiente ? 0 : (int) ($in['forma_pago'] ?? 0);
-        if (!$pagoPendiente && !in_array($formaPago, [1, 2], true)) {
+        $hayPago = trim((string) ($in['forma_pago'] ?? '')) !== '' || $this->hayLineasDePago($in['pagos'] ?? null);
+        $pagoPendiente = $necesitaPago && !$hayPago;
+        $formaPago = $pagoPendiente || $necesitaPago ? 0 : (int) ($in['forma_pago'] ?? 0);
+        if (!$necesitaPago && !in_array($formaPago, [1, 2], true)) {
             $err['forma_pago'] = 'Elegí contado o cuenta corriente.';
         }
-        $pago = null;
-        if ($formaPago === 1 && !Tipos::credito($tipo) && !$solo) {
-            $pago = $this->validarPago($in, $err);
-        }
+        $pagos = null;
 
         // DECISIÓN D-06 (Claude, a confirmar por Hernán): la fecha es siempre la de hoy, como el VFP (ARCA aceptaría hasta 5 días
         // atrás en productos y 10 en servicios, nunca antes del último comprobante aprobado). Para permitir otra fecha habría que
@@ -314,7 +317,12 @@ final class ComprobantesService
         // Cálculo
         $calc = null;
         if ($letra !== '' && $items !== []) {
-            $calc = Calculadora::calcular($letra, $items, $desc);
+            $calc = Calculadora::calcular($sinIva ? 'C' : $letra, $items, $desc);
+            if ($sinIva) { // sin IVA discriminado, pero cada renglón conserva su alícuota (se usa si después se factura)
+                foreach ($calc['items'] as $i => $it) {
+                    $calc['items'][$i]['alicuota'] = (float) $items[$i]['alicuota'];
+                }
+            }
             if ($calc['total'] <= 0) {
                 $err['items'] = trim(($err['items'] ?? '') . "\nEl total del comprobante tiene que ser mayor que cero.");
             } elseif ($calc['total'] > Calculadora::MAX_IMPORTE) {
@@ -322,9 +330,17 @@ final class ComprobantesService
             }
         }
 
-        // Vuelto: si el cliente entrega de más y la forma de pago lo acepta (efectivo), la diferencia es el vuelto que hay que darle
-        if ($pago !== null && $calc !== null && !isset($err['fpago']) && !isset($err['items'])) {
-            $pago = $this->aplicarVuelto($pago, $calc['total'], $in, $err);
+        // Cómo se paga: una o varias formas de pago que suman el total (con vuelto si se entrega de más en una que lo acepta)
+        $cuentaPago = 0.0;
+        $fp = trim((string) ($in['forma_pago'] ?? ''));
+        if ($necesitaPago && !$pagoPendiente && $fp !== '' && !in_array($fp, ['1', '2'], true) && !$this->hayLineasDePago($in['pagos'] ?? null)) {
+            $err['forma_pago'] = 'Elegí contado o cuenta corriente.';
+        } elseif ($necesitaPago && !$pagoPendiente && $calc !== null && !isset($err['items'])) {
+            $pagos = $this->resolverPagos($in, $calc['total'], $err);
+            if ($pagos !== null) {
+                $cuentaPago = $pagos['cuenta'];
+                $formaPago = $cuentaPago > 0.004 ? 2 : 1; // 2 si algo queda en cuenta corriente
+            }
         }
 
         // DECISIÓN D-01 (Claude, a confirmar por Hernán): una nota de crédito no puede superar lo que queda por acreditar de la
@@ -340,7 +356,7 @@ final class ComprobantesService
         // cada comprobante a cuenta corriente de un cliente con límite 0 pedía autorización de un supervisor. Se cambia en
         // Configuración (comprobantes.credito_cero_sin_limite): destildado, el límite 0 significa "no se le puede fiar".
         $excede = false;
-        if ($calc !== null && $cliente !== null && $formaPago === 2 && !Tipos::credito($tipo) && !$solo && ($ex = $this->creditoExcedido($cliente, $calc['total'])) !== null) {
+        if ($calc !== null && $cliente !== null && $necesitaPago && $cuentaPago > 0.004 && ($ex = $this->creditoExcedido($cliente, $cuentaPago)) !== null) {
             $excede = true;
             if (!($puedeExcederCredito && ($in['excede_ok'] ?? '') === '1')) {
                 $err['credito'] = 'El comprobante excede el crédito del cliente (límite ' . plata($ex['limite']) . ', deuda actual ' . plata($ex['deuda'])
@@ -369,12 +385,13 @@ final class ComprobantesService
         }
         return ['ok' => true, 'errores' => [], 'cbte' => [
             'tipo' => $tipo, 'letra' => $letra, 'fecha' => $fecha, 'sucursal' => $codSuc, 'prefijo' => (int) $suc['prefijo'],
-            'cliente' => $cliente, 'cond_arca' => $condArca, 'forma_pago' => $pagoPendiente ? null : $formaPago, 'pago' => $pago, 'pago_pendiente' => $pagoPendiente,
+            'cliente' => $cliente, 'cond_arca' => $condArca, 'forma_pago' => $pagoPendiente ? null : $formaPago, 'pagos' => $pagos['lineas'] ?? [], 'pago_contado' => $pagos['contado'] ?? 0.0, 'pago_cuenta' => $pagos['cuenta'] ?? 0.0,
+            'vuelto' => $pagos['vuelto'] ?? 0.0, 'pago_pendiente' => $pagoPendiente,
             'vendedor' => $vendedor, 'cond_pago' => $condPago, 'descuento' => $desc, 'observaciones' => $obs, 'orden_compra' => $oc,
             'email' => $mails, 'asociado' => is_array($asoc) ? $asoc : null, 'calculo' => $calc, 'excede_credito' => $excede,
             'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
             'concepto' => $concepto, 'serv_desde' => $servDesde, 'serv_hasta' => $servHasta, 'vto_pago' => $vtoPago,
-            'interno' => $interno, 'solo_subdiario' => $solo, 'presupuesto' => $presupuesto !== null ? (int) $presupuesto['fe_clave'] : null,
+            'interno' => $interno, 'sin_iva' => $sinIva, 'solo_subdiario' => $solo, 'presupuesto' => $presupuesto !== null ? (int) $presupuesto['fe_clave'] : null,
             'advertencias' => $solo ? [] : (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
         ]];
     }
@@ -436,7 +453,7 @@ final class ComprobantesService
         if ($feClave <= 0) {
             return $tipo === 'NX' ? 'Elegí el presupuesto que se corrige.' : 'Elegí el comprobante que se corrige (factura o nota de débito del cliente).';
         }
-        $st = $this->pdo->prepare('SELECT fe_clave, tipo, letra, sucursal, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, cliente, neto, estado, solo_subdiario FROM subdiario WHERE fe_clave = ?');
+        $st = $this->pdo->prepare('SELECT fe_clave, tipo, letra, sucursal, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, cliente, neto, estado, solo_subdiario, sin_iva FROM subdiario WHERE fe_clave = ?');
         $st->execute([$feClave]);
         $a = $st->fetch();
         if ($a === false) {
@@ -509,42 +526,137 @@ final class ComprobantesService
         return $deuda + $total > (float) $cliente['credito'] + 0.004 ? ['limite' => (float) $cliente['credito'], 'deuda' => $deuda] : null;
     }
 
-    /**
-     * DECISIÓN D-04 (Claude, a confirmar por Hernán): un solo medio de pago por comprobante (efectivo, tickets, tarjeta o cheque).
-     * El VFP tenía una pantalla de pagos mixtos (pagos_factu_ped) y cheques de terceros: eso va con las cobranzas (etapa 4).
-     *
-     * @param array<string,string> $err @return array<string,mixed>|null
-     */
-    public function validarPago(array $in, array &$err): ?array
+    /** ¿Vino al menos un renglón de pago cargado (forma de pago o importe)? */
+    public function hayLineasDePago(mixed $pagos): bool
     {
-        $cod = trim((string) ($in['fpago'] ?? ''));
-        $st = $this->pdo->prepare('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE codigo = ?');
-        $st->execute([$cod]);
-        $f = $st->fetch();
-        if ($f === false || !in_array((int) $f['tipo'], self::TIPOS_PAGO_CONTADO, true)) {
-            $err['fpago'] = 'Elegí cómo se paga (efectivo, tarjeta, cheque...).';
+        foreach ((array) $pagos as $p) {
+            if (is_array($p) && (trim((string) ($p['fpago'] ?? '')) !== '' || trim((string) ($p['importe'] ?? '')) !== '')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Cómo se paga, con el total ya calculado (D-49, antes un solo medio por D-04): una o varias formas de pago que tienen que sumar el total.
+     *  - forma_pago = 2: todo a cuenta corriente. Si no, pagos[][fpago, importe, recibido, nro, banco, vto] (o, de una sola forma, fpago/recibido/pago_nro/pago_banco/pago_vto).
+     *  - Con una sola forma de pago el importe puede quedar vacío (es el total). Una forma de tipo cuenta corriente deja ese importe como deuda del cliente.
+     *  - En efectivo (o la que acepte vuelto) se puede anotar lo recibido: si es más que el importe, la diferencia es el vuelto (D-44).
+     *
+     * @param array<string,string> $err
+     * @return array{lineas:array<int,array<string,mixed>>,contado:float,cuenta:float,vuelto:float}|null
+     */
+    public function resolverPagos(array $in, float $total, array &$err): ?array
+    {
+        $vacia = ['fpago' => '', 'importe' => '', 'recibido' => '', 'nro' => '', 'banco' => '', 'vto' => ''];
+        $entrada = [];
+        $simple = false; // de una sola forma de pago (los errores se marcan en sus campos)
+        $legacy = false; // forma de pago única con los campos fpago/recibido/pago_*: la cuenta corriente no es una forma válida (se elige forma_pago = 2)
+        $todoCuenta = trim((string) ($in['forma_pago'] ?? '')) === '2';
+        if ($todoCuenta) {
+            $entrada[] = ['fpago' => $this->codigoCuentaCorriente()] + $vacia;
+            $simple = true;
+        } else {
+            foreach ((array) ($in['pagos'] ?? []) as $p) {
+                if (is_array($p) && (trim((string) ($p['fpago'] ?? '')) !== '' || trim((string) ($p['importe'] ?? '')) !== '')) {
+                    $entrada[] = array_map(static fn ($v) => trim((string) $v), array_intersect_key($p, $vacia)) + $vacia;
+                }
+            }
+            if ($entrada === []) {
+                $entrada[] = ['fpago' => trim((string) ($in['fpago'] ?? '')), 'recibido' => trim((string) ($in['recibido'] ?? '')), 'nro' => trim((string) ($in['pago_nro'] ?? '')),
+                    'banco' => trim((string) ($in['pago_banco'] ?? '')), 'vto' => trim((string) ($in['pago_vto'] ?? ''))] + $vacia;
+                $simple = $legacy = true;
+            }
+        }
+        if (count($entrada) > 8) {
+            $err['pagos'] = 'Hasta 8 formas de pago por venta.';
             return null;
         }
-        $pago = ['codigo' => (string) $f['codigo'], 'descripcion' => (string) $f['descripcion'], 'tipo' => (int) $f['tipo'], 'acepta_vuelto' => (int) $f['acepta_vuelto'] === 1, 'nro' => null, 'banco' => 0, 'vencimiento' => null];
-        if ((int) $f['tipo'] === 5) {
-            $nro = trim((string) ($in['pago_nro'] ?? ''));
-            $banco = (int) ($in['pago_banco'] ?? 0);
-            $vto = Valida::fecha((string) ($in['pago_vto'] ?? ''));
-            $existeBanco = $banco > 0 && $this->existe('bancos', 'codigo', (string) $banco);
-            if ($nro === '' || mb_strlen($nro) > 20) {
-                $err['pago_nro'] = 'Completá el número del cheque.';
+        $varias = count($entrada) > 1;
+        $lineas = [];
+        $msgs = [];
+        $suma = $contado = $cuenta = $vuelto = 0.0;
+        $f = $this->pdo->prepare('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE codigo = ?');
+        foreach ($entrada as $n => $p) {
+            $pre = $varias ? 'Forma de pago ' . ($n + 1) . ': ' : '';
+            $e = [];
+            if ($todoCuenta) { // todo a cuenta corriente: no depende de que exista una forma de pago de ese tipo cargada
+                $fp = ['codigo' => $p['fpago'], 'descripcion' => 'CUENTA CORRIENTE', 'tipo' => 6, 'acepta_vuelto' => 0];
+            } else {
+                $f->execute([$p['fpago']]);
+                $fp = $f->fetch();
             }
-            if (!$existeBanco) {
-                $err['pago_banco'] = 'Elegí el banco del cheque.';
+            if ($fp === false || !in_array((int) $fp['tipo'], $legacy ? self::TIPOS_PAGO_CONTADO : [...self::TIPOS_PAGO_CONTADO, 6], true)) {
+                $e['fpago'] = 'Elegí cómo se paga (efectivo, tarjeta, cheque...).';
+                $this->volcarErrorPago($e, $pre, $simple, $err, $msgs);
+                continue;
             }
-            if ($vto === null) {
-                $err['pago_vto'] = 'Completá el vencimiento del cheque.';
+            $tipo = (int) $fp['tipo'];
+            if ($p['importe'] === '') {
+                $imp = $varias ? null : $total;
+                if ($imp === null) {
+                    $e['pagos'] = 'Cargá el importe de cada forma de pago.';
+                }
+            } else {
+                $imp = Valida::decimal($p['importe']);
+                if ($imp === null || $imp <= 0 || $imp > Calculadora::MAX_IMPORTE) {
+                    $e['pagos'] = 'El importe no es válido.';
+                    $imp = null;
+                }
             }
-            $pago['nro'] = $nro;
-            $pago['banco'] = $banco;
-            $pago['vencimiento'] = $vto;
+            $linea = ['codigo' => (string) $fp['codigo'], 'descripcion' => (string) $fp['descripcion'], 'tipo' => $tipo, 'acepta_vuelto' => (int) $fp['acepta_vuelto'] === 1,
+                'importe' => $imp !== null ? Calculadora::r2($imp) : 0.0, 'recibido' => null, 'vuelto' => 0.0, 'nro' => null, 'banco' => 0, 'vencimiento' => null];
+            if ($tipo === 5) { // cheque: número, banco y vencimiento
+                $vto = Valida::fecha($p['vto']);
+                if ($p['nro'] === '' || mb_strlen($p['nro']) > 20) {
+                    $e['pago_nro'] = 'Completá el número del cheque.';
+                }
+                if (!($p['banco'] !== '' && (int) $p['banco'] > 0 && $this->existe('bancos', 'codigo', (string) (int) $p['banco']))) {
+                    $e['pago_banco'] = 'Elegí el banco del cheque.';
+                }
+                if ($vto === null) {
+                    $e['pago_vto'] = 'Completá el vencimiento del cheque.';
+                }
+                $linea['nro'] = $p['nro'];
+                $linea['banco'] = (int) $p['banco'];
+                $linea['vencimiento'] = $vto;
+            }
+            if ($tipo !== 6 && $imp !== null && $e === []) {
+                $linea = $this->aplicarVuelto($linea, $linea['importe'], ['recibido' => $p['recibido']], $e);
+            }
+            if ($e !== []) {
+                $this->volcarErrorPago($e, $pre, $simple, $err, $msgs);
+            }
+            $suma += $linea['importe'];
+            $tipo === 6 ? $cuenta += $linea['importe'] : $contado += $linea['importe'];
+            $vuelto += $linea['vuelto'];
+            $lineas[] = $linea;
         }
-        return $pago;
+        if ($msgs !== []) {
+            $err['pagos'] = implode("\n", array_unique($msgs));
+        }
+        $suma = Calculadora::r2($suma);
+        if ($err === [] || (!isset($err['pagos']) && !isset($err['fpago']) && !isset($err['recibido']) && !isset($err['pago_nro']) && !isset($err['pago_banco']) && !isset($err['pago_vto']))) {
+            if (abs($suma - $total) > 0.004) {
+                $err['pagos'] = ($suma < $total ? 'Faltan ' . plata_dec($total - $suma) . ' para llegar al total' : 'Se pasan ' . plata_dec($suma - $total) . ' del total') . ' (las formas de pago suman ' . plata_dec($suma) . ' y la venta es de ' . plata_dec($total) . ').';
+            }
+        }
+        if (isset($err['pagos']) || isset($err['fpago']) || isset($err['recibido']) || isset($err['pago_nro']) || isset($err['pago_banco']) || isset($err['pago_vto'])) {
+            return null;
+        }
+        return ['lineas' => $lineas, 'contado' => Calculadora::r2($contado), 'cuenta' => Calculadora::r2($cuenta), 'vuelto' => Calculadora::r2($vuelto)];
+    }
+
+    /** Pasa los errores de un renglón de pago: en el campo (una sola forma de pago) o juntos en «pagos» (varias). @param array<string,string> $e @param array<string,string> $err @param string[] $msgs */
+    private function volcarErrorPago(array $e, string $pre, bool $simple, array &$err, array &$msgs): void
+    {
+        foreach ($e as $k => $m) {
+            if ($simple) {
+                $err[$k === 'pagos' ? 'fpago' : $k] = $m;
+            } else {
+                $msgs[] = $pre . $m;
+            }
+        }
     }
 
     private function existe(string $tabla, string $col, string $valor): bool
@@ -785,7 +897,7 @@ final class ComprobantesService
                 'creado_por' => $usuarioId > 0 ? $usuarioId : null, 'operacion' => $operacion,
                 'fe_concepto' => (int) ($cbte['concepto'] ?? 1), 'fe_serv_desde' => $cbte['serv_desde'] ?? null, 'fe_serv_hasta' => $cbte['serv_hasta'] ?? null,
                 'fe_vencimiento' => $cbte['vto_pago'] ?? null,
-                'presupuesto_id' => $presupuestoId, 'solo_subdiario' => $solo ? 1 : 0,
+                'presupuesto_id' => $presupuestoId, 'solo_subdiario' => $solo ? 1 : 0, 'sin_iva' => !empty($cbte['sin_iva']) ? 1 : 0,
             ] + ($arca === null
                 ? ['es_prueba' => Tipos::interno($tipo) ? 0 : 1, 'fe_entorno' => '']
                 : ['electronica' => 1, 'fe_nrocbte' => $numero, 'fe_ccae' => $arca['cae'], 'fe_dfecha' => $arca['fecha'], 'fe_dvtocae' => $arca['vence'],
@@ -815,24 +927,30 @@ final class ComprobantesService
                 (new \App\Modules\Stock\StockService($this->pdo))->porComprobante($tipo, $id, $c['items'], $usuarioId > 0 ? $usuarioId : null);
             }
 
-            // Cómo se paga: la nota de crédito no mueve caja (como el VFP)
+            // Cómo se paga: una fila de caja por cada forma de pago (la nota de crédito no mueve caja, como el VFP)
+            $cuenta = 0.0;
             if (!Tipos::credito($tipo) && !$solo) {
-                $pago = $cbte['pago'];
-                $this->insertar('caja', [
-                    'subdiario_id' => $id, 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $cbte['sucursal'],
-                    'prefijo' => $cbte['prefijo'], 'comprobante' => $numero, 'cliente' => $cli['codigo'],
-                    'p_fpago' => $cbte['forma_pago'] === 2 ? $this->codigoCuentaCorriente() : $pago['codigo'], 'p_nro' => $pago['nro'] ?? null,
-                    'p_fecvto' => $cbte['forma_pago'] === 2 ? $cbte['fecha'] : ($pago['vencimiento'] ?? null), 'p_banco' => (int) ($pago['banco'] ?? 0),
-                    'p_importe' => $c['total'], 'a_pagar' => $c['total'], 'actualizacion' => $ahora,
-                    'p_recibido' => $cbte['forma_pago'] === 1 ? ($pago['recibido'] ?? $c['total']) : null, 'p_vuelto' => $pago['vuelto'] ?? 0,
-                ]);
+                $ccCodigo = $this->codigoCuentaCorriente();
+                foreach ($cbte['pagos'] as $pago) {
+                    $esCuenta = (int) $pago['tipo'] === 6;
+                    $cuenta += $esCuenta ? (float) $pago['importe'] : 0.0;
+                    $this->insertar('caja', [
+                        'subdiario_id' => $id, 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $cbte['sucursal'],
+                        'prefijo' => $cbte['prefijo'], 'comprobante' => $numero, 'cliente' => $cli['codigo'],
+                        'p_fpago' => $esCuenta ? $ccCodigo : $pago['codigo'], 'p_nro' => $pago['nro'] ?? null,
+                        'p_fecvto' => $esCuenta ? $cbte['fecha'] : ($pago['vencimiento'] ?? null), 'p_banco' => (int) ($pago['banco'] ?? 0),
+                        'p_importe' => $pago['importe'], 'a_pagar' => $pago['importe'], 'actualizacion' => $ahora,
+                        'p_recibido' => $esCuenta ? null : ($pago['recibido'] ?? $pago['importe']), 'p_vuelto' => $pago['vuelto'] ?? 0,
+                    ]);
+                }
             }
-            // Cuenta corriente: la factura y la nota de débito generan deuda; la nota de crédito, saldo a favor
-            if ($cbte['forma_pago'] === 2 && !$solo) {
+            // Cuenta corriente: la factura, la nota de débito y el presupuesto generan deuda (solo la parte que quedó a cuenta); la nota de crédito, saldo a favor
+            $aCuenta = Tipos::credito($tipo) ? ($cbte['forma_pago'] === 2 ? $c['total'] : 0.0) : $cuenta;
+            if ($aCuenta > 0.004 && !$solo) {
                 $this->insertar('ctact', [
                     'subdiario_id' => $id, 'cliente' => $cli['codigo'], 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'tico' => Tipos::tico($tipo), 'letra' => $letra,
-                    'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'], 'numero' => $numero, 'neto' => $c['total'], 'descuento' => 0,
-                    'saldo' => $c['total'], 'vencimiento' => $cbte['fecha'], 'valor_dolar' => $this->cotizacionDolar($cbte['fecha']), 'actualizacion' => $ahora,
+                    'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'], 'numero' => $numero, 'neto' => $aCuenta, 'descuento' => 0,
+                    'saldo' => $aCuenta, 'vencimiento' => $cbte['fecha'], 'valor_dolar' => $this->cotizacionDolar($cbte['fecha']), 'actualizacion' => $ahora,
                 ]);
             }
             $this->pdo->prepare('UPDATE clientes SET ultima_compra = ? WHERE codigo = ?')->execute([$cbte['fecha'], $cli['codigo']]);
@@ -856,7 +974,7 @@ final class ComprobantesService
             $this->pdo->rollBack();
             throw $e;
         }
-        return ['id' => $id, 'numero' => $numero, 'repetido' => false, 'vuelto' => (float) (($cbte['pago']['vuelto'] ?? 0))];
+        return ['id' => $id, 'numero' => $numero, 'repetido' => false, 'vuelto' => (float) ($cbte['vuelto'] ?? 0)];
     }
 
     /** INSERT de una fila a partir de [columna => valor]; las columnas salen siempre del código. @param array<string,mixed> $fila */
@@ -909,7 +1027,7 @@ final class ComprobantesService
         $st = $this->pdo->prepare('SELECT * FROM iva WHERE subdiario_id = ? ORDER BY alicuota');
         $st->execute([$feClave]);
         $h['iva'] = $st->fetchAll();
-        $st = $this->pdo->prepare('SELECT c.*, f.descripcion AS fpago_descripcion FROM caja c LEFT JOIN forma_de_pagos f ON f.codigo = c.p_fpago
+        $st = $this->pdo->prepare('SELECT c.*, f.descripcion AS fpago_descripcion, f.tipo AS fpago_tipo FROM caja c LEFT JOIN forma_de_pagos f ON f.codigo = c.p_fpago
                                     WHERE c.subdiario_id = ? ORDER BY c.fe_clave');
         $st->execute([$feClave]);
         $h['pagos'] = $st->fetchAll();
@@ -1041,7 +1159,7 @@ final class ComprobantesService
     {
         $tipos = $para === 'NX' ? "'PR'" : "'FC', 'ND'";
         $st = $this->pdo->prepare(
-            "SELECT fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto FROM subdiario
+            "SELECT fe_clave, tipo, letra, prefijo, comprobante, fe_nrocbte, fe_ccae, fecha, neto, sin_iva FROM subdiario
               WHERE cliente = ? AND tipo IN ({$tipos}) AND estado = '' ORDER BY fecha DESC, comprobante DESC LIMIT 200"
         );
         $st->execute([$cliente]);

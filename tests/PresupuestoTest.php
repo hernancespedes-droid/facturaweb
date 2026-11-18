@@ -212,6 +212,78 @@ final class PresupuestoTest extends ComprobantesTestCase
         $this->assertSame(200, $this->get('/listados/ventas-diarias', ['excel' => 'grilla'])->status, 'Excel genérico de la grilla');
     }
 
+    private function sinIva(bool $si): void
+    {
+        Db::pdo()->exec("UPDATE configuracion SET valor = '" . ($si ? '1' : '0') . "' WHERE clave = 'presupuestos.sin_iva'");
+        \App\Modules\Configuracion\Configuracion::reset();
+    }
+
+    public function testPresupuestosSinIvaNoCalculanIvaYCadaUnoGuardaComoSeHizo(): void
+    {
+        try {
+            // marca apagada: el precio lleva IVA incluido y el IVA contenido se calcula (42 sobre 242)
+            $normal = $this->presupuesto();
+            $hn = $this->svc->obtener($normal['id']);
+            $this->assertSame([0, '42.00'], [(int) $hn['sin_iva'], $hn['iva_1']]);
+
+            $this->sinIva(true);
+            $pr = $this->presupuesto();
+            $h = $this->svc->obtener($pr['id']);
+            $this->assertSame([1, '242.00', '0.00', '0.00'], [(int) $h['sin_iva'], $h['neto'], $h['iva_1'], $h['neto_exento']], 'el total es el precio por la cantidad, sin IVA');
+            $this->assertCount(0, $h['iva'], 'no hay filas de IVA');
+            $this->assertSame([21.0, 0], [(float) $h['items'][0]['por_iva'], (int) $h['items'][0]['grabado'] === 1 ? 0 : 1], 'el renglón conserva su alícuota (por si después se factura)');
+            $this->assertSame('242.00', $h['items'][0]['total_item']);
+            $ct = $this->fila('SELECT neto FROM ctact WHERE subdiario_id = ?', [$pr['id']]);
+            $this->assertSame('242.00', $ct['neto']);
+            // el que ya estaba emitido no cambia
+            $this->assertSame('42.00', $this->svc->obtener($normal['id'])['iva_1']);
+
+            // descuento: se aplica igual, sin IVA
+            $d = $this->emitir($this->pedido(['tipo' => 'PR', 'descuento' => '10', 'items' => [['descripcion' => 'x', 'cantidad' => '1', 'precio' => '100', 'alicuota' => '21']]]));
+            $this->assertSame('90.00', $this->svc->obtener($d['id'])['neto']);
+
+            // la contrapartida hereda la marca del presupuesto, aunque después se apague
+            $this->sinIva(false);
+            $nx = $this->emitir(['tipo' => 'NX', 'cliente' => '990001', 'asociado' => (string) $pr['id'], 'forma_pago' => '2',
+                'items' => [['descripcion' => 'x', 'cantidad' => '1', 'precio' => '121', 'alicuota' => '21']]]);
+            $hx = $this->svc->obtener($nx['id']);
+            $this->assertSame([1, '121.00', '0.00'], [(int) $hx['sin_iva'], $hx['neto'], $hx['iva_1']]);
+            $nxNormal = $this->emitir(['tipo' => 'NX', 'cliente' => '990001', 'asociado' => (string) $normal['id'], 'forma_pago' => '2',
+                'items' => [['descripcion' => 'x', 'cantidad' => '1', 'precio' => '121', 'alicuota' => '21']]]);
+            $this->assertSame([0, '21.00'], [(int) $this->svc->obtener($nxNormal['id'])['sin_iva'], $this->svc->obtener($nxNormal['id'])['iva_1']], 'la de un presupuesto con IVA sigue con IVA');
+
+            // la factura que sale de un presupuesto sin IVA calcula el IVA que corresponde (el precio es el final)
+            $otro = $this->presupuesto();
+            $this->sinIva(true);
+            $sin = $this->presupuesto();
+            $cb = $this->svc->armar(['tipo' => 'FC', 'presupuesto' => (string) $sin['id']])['cbte'];
+            $this->assertSame(['A', 242.0, 100.0, 42.0], [$cb['letra'], $cb['calculo']['total'], (float) $cb['calculo']['items'][0]['precio'], $cb['calculo']['iva_total']], 'factura A: 242 = 200 neto + 42 de IVA');
+            $this->assertTrue($otro['id'] > 0);
+        } finally {
+            $this->sinIva(false);
+        }
+    }
+
+    public function testMarcaPresupuestosSinIvaEnConfiguracionYEnPantallas(): void
+    {
+        $this->loginComo($this->crearUsuario('t_adm_si', 'admin'));
+        $this->assertStringContainsString('Presupuestos sin IVA', $this->get('/configuracion')->body, 'la marca está en Sistema → Configuración');
+        try {
+            $this->assertStringNotContainsString('data-sin-iva="1"', $this->get('/comprobantes/nuevo', ['tipo' => 'PR'])->body);
+            $this->sinIva(true);
+            $f = $this->get('/comprobantes/nuevo', ['tipo' => 'PR'])->body;
+            $this->assertStringContainsString('data-sin-iva="1"', $f);
+            $this->assertStringContainsString('Presupuestos sin IVA', $f);
+            $pr = $this->presupuesto();
+            $ver = $this->get('/comprobantes/' . $pr['id']);
+            $this->assertStringContainsString('sin IVA (no calcula IVA', $ver->body);
+            $this->assertStringContainsString('<td data-label="IVA">—</td>', $ver->body);
+            $this->assertSame(200, $this->get('/comprobantes/' . $pr['id'] . '/pdf')->status);
+        } finally {
+            $this->sinIva(false);
+        }
+    }
+
     public function testPantallasImpresionYPermisos(): void
     {
         $pr = $this->presupuesto();
