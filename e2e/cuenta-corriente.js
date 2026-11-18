@@ -142,6 +142,30 @@ async function factura(page, precio) {
     await page.goto(BASE + '/cheques');
     ok(!(await page.textContent('body')).includes('55501'), 'el cheque ya no está');
 
+    // ---- Imputador en dos paneles: un ajuste de crédito de 1.000 se aplica a las facturas de a una
+    await page.goto(BASE + '/cuenta-corriente/ajuste?cliente=' + codigo);
+    await page.selectOption('[name="tipo"]', 'AC');
+    await page.fill('[name="importe"]', '1000');
+    await page.fill('[name="observaciones"]', 'Saldo a favor E2E');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Grabar ajuste")')]);
+    await page.goto(BASE + '/cuenta-corriente/imputar?cliente=' + codigo);
+    ok((await page.locator('[data-imputador] .imputador > section').count()) === 2, 'imputador: dos paneles (saldos a favor y deuda)');
+    ok(await page.locator('[data-imputar-btn]').isDisabled(), 'imputador: sin nada tildado no se puede imputar');
+    await page.locator('[data-marca-db]').nth(0).check({ force: true }).catch(() => {});
+    ok((await page.locator('[data-imp-db]').nth(0).inputValue()) === '', 'imputador: sin saldos a favor tildados no se cancela deuda');
+    await page.locator('[data-marca-cr]').nth(0).check();
+    ok((await page.textContent('[data-t-aimputar]')).includes('1.000,00'), 'imputador: tildar el saldo a favor suma el total a imputar');
+    await page.locator('[data-marca-db]').nth(0).check();
+    const impA = await page.locator('[data-imp-db]').nth(0).inputValue();
+    ok(impA.startsWith('1.000'), 'imputador: la factura se cancela hasta agotar lo que hay (1.000 de 1.210)');
+    ok((await page.textContent('[data-t-falta]')).includes('0,00') && await page.locator('[data-imputar-btn]').isEnabled(), 'imputador: queda en 0 y se habilita Imputar');
+    ok(await page.locator('[data-marca-db]').nth(1).isDisabled(), 'imputador: sin nada por imputar no deja tildar más deuda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'imputador.png'), fullPage: true });
+    await Promise.all([page.waitForNavigation(), page.click('[data-imputar-btn]')]);
+    ok((await page.textContent('body')).includes('Imputación hecha'), 'imputador: se imputa');
+    await page.goto(BASE + '/cuenta-corriente/cliente/' + codigo);
+    ok((await page.textContent('body')).includes('815,00'), 'imputador: la deuda queda en 815,00');
+
     // ---- Excel
     const xl = await ctx.request.get(BASE + '/cuenta-corriente?excel=1');
     ok(xl.status() === 200 && (xl.headers()['content-type'] || '').includes('spreadsheetml'), 'el resumen de deuda se baja en Excel');
