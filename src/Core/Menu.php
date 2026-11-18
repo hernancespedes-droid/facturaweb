@@ -30,6 +30,7 @@ final class Menu
         $o['imputar'] = ['texto' => 'Imputación manual', 'ruta' => '/cuenta-corriente/imputar', 'permiso' => 'ctacte.imputar', 'grupo' => 'Cuenta corriente'];
         $o['ctacte_ajuste'] = ['texto' => 'Ajuste de cuenta corriente', 'ruta' => '/cuenta-corriente/ajuste', 'permiso' => 'ctacte.ajustar', 'grupo' => 'Cuenta corriente'];
         $o['cheques'] = ['texto' => 'Cheques en cartera', 'ruta' => '/cheques', 'permiso' => 'ctacte.ver', 'grupo' => 'Cuenta corriente'];
+        $o['caja_diaria'] = ['texto' => 'Caja diaria', 'ruta' => '/listados/caja-diaria', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         $o['ventas_diarias'] = ['texto' => 'Ventas diarias', 'ruta' => '/listados/ventas-diarias', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         $o['iva_ventas'] = ['texto' => 'Subdiario IVA ventas', 'ruta' => '/listados/iva-ventas', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         $o['libro_iva'] = ['texto' => 'Libro IVA Digital (ventas)', 'ruta' => '/listados/libro-iva-digital', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];

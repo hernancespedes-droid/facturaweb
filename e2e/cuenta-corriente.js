@@ -210,6 +210,13 @@ async function factura(page, precio) {
     await page.goto(BASE + '/listados/iva-ventas');
     ok(!(await page.textContent('body')).includes('Presupuesto X'), 'presupuesto: no está en el subdiario de IVA');
 
+    // ---- Caja diaria: lo vendido, lo facturado a cuenta corriente y lo cobrado por forma de pago
+    await page.goto(BASE + '/listados/caja-diaria');
+    cp = await page.textContent('body');
+    ok(cp.includes('Caja diaria') && cp.includes('Facturado en cuenta corriente') && cp.includes('Billeteras virtuales') && cp.includes('Tarjeta'), 'caja diaria: muestra lo vendido, la cuenta corriente y lo cobrado por tarjeta y billeteras');
+    ok(cp.includes('Cobrado por forma de pago') && cp.includes('Movimientos'), 'caja diaria: detalle por forma de pago y movimientos');
+    await page.screenshot({ path: path.join(CAPTURAS, 'caja-diaria.png'), fullPage: true });
+
     // ---- Excel
     const xl = await ctx.request.get(BASE + '/cuenta-corriente?excel=1');
     ok(xl.status() === 200 && (xl.headers()['content-type'] || '').includes('spreadsheetml'), 'el resumen de deuda se baja en Excel');
@@ -234,7 +241,7 @@ async function factura(page, precio) {
     const movil = await browser.newContext({ ...devices['Pixel 7'] });
     const p2 = await movil.newPage();
     await login(p2, 'e2e_admin');
-    for (const [ruta, nombre] of [['/cuenta-corriente', 'Cuenta corriente'], ['/cuenta-corriente/cliente/' + codigo, 'el extracto'], ['/recibos/nuevo?cliente=' + codigo, 'el formulario de recibo'], ['/cheques', 'Cheques'], ['/recibos', 'Recibos'], ['/listados/ventas-diarias', 'Ventas diarias'], ['/comprobantes/nuevo?tipo=PR', 'el presupuesto']]) {
+    for (const [ruta, nombre] of [['/cuenta-corriente', 'Cuenta corriente'], ['/cuenta-corriente/cliente/' + codigo, 'el extracto'], ['/recibos/nuevo?cliente=' + codigo, 'el formulario de recibo'], ['/cheques', 'Cheques'], ['/recibos', 'Recibos'], ['/listados/ventas-diarias', 'Ventas diarias'], ['/listados/caja-diaria', 'Caja diaria'], ['/comprobantes/nuevo?tipo=PR', 'el presupuesto']]) {
       await p2.goto(BASE + ruta);
       ok(await sinDesborde(p2), 'celular: ' + nombre + ' no se desborda');
     }

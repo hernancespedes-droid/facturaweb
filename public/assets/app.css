@@ -1119,3 +1119,8 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .total-cobrar { font-size: 1.3rem; margin: 0 0 10px; }
 .total-cobrar b { font-size: 1.8rem; }
 .vuelto { font-size: 1.15rem; font-weight: 700; }
+
+/* Caja diaria: tarjetas de totales */
+.resumen-fila { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-bottom: 8px; }
+.resumen-fila > div { display: flex; flex-direction: column; }
+.resumen-fila b { font-size: 1.3rem; }
