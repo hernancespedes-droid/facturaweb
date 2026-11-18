@@ -63,13 +63,13 @@ final class ComprobantesHttpTest extends ComprobantesTestCase
         $this->assertStringContainsString('Pedido &lt;b&gt;5&lt;/b&gt;', $rev->body, 'se escapa lo que escribe el usuario');
         $this->assertSame(0, (int) Db::pdo()->query('SELECT COUNT(*) FROM subdiario')->fetchColumn(), 'revisar no graba');
 
-        $res = $this->post('/comprobantes', ['datos' => $datos, 'operacion' => $op]);
+        $res = $this->post('/comprobantes', ['datos' => $datos, 'operacion' => $op, 'forma_pago' => '2']); // la forma de pago se elige en la revisión
         $this->assertSame(302, $res->status);
         $id = (int) Db::pdo()->query('SELECT fe_clave FROM subdiario')->fetchColumn();
         $this->assertSame(url('/comprobantes/' . $id), $res->headers['Location']);
 
         // doble envío: no emite otro
-        $res2 = $this->post('/comprobantes', ['datos' => $datos, 'operacion' => $op]);
+        $res2 = $this->post('/comprobantes', ['datos' => $datos, 'operacion' => $op, 'forma_pago' => '2']);
         $this->assertSame(302, $res2->status);
         $this->assertSame(1, (int) Db::pdo()->query('SELECT COUNT(*) FROM subdiario')->fetchColumn());
 

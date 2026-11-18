@@ -108,10 +108,32 @@ final class ComprobantesController
         if (!$r['ok']) {
             return self::form($svc, $datos, $r['errores'], 422);
         }
+        return self::pantallaRevisar($r['cbte'], $datos);
+    }
+
+    /** Campos de «cómo se paga»: se piden en la pantalla de revisión (con el total a la vista) y se suman a lo cargado antes de emitir. */
+    private const CAMPOS_PAGO = ['forma_pago', 'fpago', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'excede_ok'];
+
+    /**
+     * Pantalla de revisión: el comprobante calculado y, si se cobra (factura, nota de débito, presupuesto), cómo se paga.
+     * @param array<string,mixed> $cbte el 'cbte' de armar() @param array<string,mixed> $datos lo cargado en el formulario (sin el pago)
+     * @param array<string,string> $errores errores del pago @param array<string,mixed> $pagoCargado lo que se había elegido de pago
+     */
+    private static function pantallaRevisar(array $cbte, array $datos, array $errores = [], array $pagoCargado = [], int $status = 200): Response
+    {
+        $pdo = Db::pdo();
+        $pagar = !Tipos::credito($cbte['tipo']) && empty($cbte['solo_subdiario']);
+        if ($pagar) { // el pago se elige acá: no viaja en lo cargado (las notas de crédito sí conservan su elección)
+            $datos = array_diff_key($datos, array_flip(self::CAMPOS_PAGO));
+        }
         return Response::html(View::render('comprobantes/revisar', [
-            'title' => 'Revisar ' . Tipos::titulo($r['cbte']['tipo'], $r['cbte']['letra']), 'nav' => 'comprobantes_' . strtolower($r['cbte']['tipo']),
-            'c' => $r['cbte'], 'etiquetaArca' => Arca::etiqueta(), 'datos' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'operacion' => bin2hex(random_bytes(16)),
-        ]));
+            'title' => ($cbte['presupuesto'] ?? null) ? 'Facturar presupuesto' : 'Revisar ' . Tipos::titulo($cbte['tipo'], $cbte['letra']), 'nav' => 'comprobantes_' . strtolower($cbte['tipo']),
+            'c' => $cbte, 'etiquetaArca' => Arca::etiqueta(), 'datos' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'operacion' => bin2hex(random_bytes(16)),
+            'errores' => $errores, 'pagoCargado' => $pagoCargado, 'puedeCredito' => Auth::puede('comprobantes.credito'),
+            'pagar' => $pagar,
+            'formas' => $pdo->query('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE tipo IN (1, 2, 3, 5, 10) ORDER BY tipo, descripcion')->fetchAll(),
+            'bancos' => $pdo->query('SELECT codigo, descripcion FROM bancos ORDER BY descripcion')->fetchAll(),
+        ]), $status);
     }
 
     public static function emitir(Request $req, array $params): Response
@@ -122,8 +144,18 @@ final class ComprobantesController
             Session::flash('error', 'No se pudo leer el comprobante. Volvé a cargarlo.');
             return Response::redirect(url('/comprobantes/nuevo'));
         }
+        $pagoCargado = array_intersect_key($req->post, array_flip(self::CAMPOS_PAGO));
+        $datos = array_merge($datos, $pagoCargado);
         $r = $svc->armar($datos, Auth::puede('comprobantes.credito'));
         if (!$r['ok']) {
+            // Si solo falla lo del pago, se vuelve a la revisión (con el total y lo ya elegido) en vez de al formulario
+            $soloPago = ['forma_pago', 'fpago', 'pago_nro', 'pago_banco', 'pago_vto', 'recibido', 'credito'];
+            if ($pagoCargado !== [] && array_diff(array_keys($r['errores']), $soloPago) === []) {
+                $base = $svc->armar(array_diff_key($datos, array_flip(self::CAMPOS_PAGO)), Auth::puede('comprobantes.credito'));
+                if ($base['ok']) {
+                    return self::pantallaRevisar($base['cbte'], $datos, $r['errores'], $pagoCargado, 422);
+                }
+            }
             return self::form($svc, $datos, $r['errores'], 422);
         }
         try {
@@ -146,7 +178,8 @@ final class ComprobantesController
         }
         Session::flash($e['repetido'] ? 'info' : 'ok', $e['repetido']
             ? 'Ese comprobante ya se había emitido (no se emitió otro).'
-            : Tipos::titulo($r['cbte']['tipo'], $r['cbte']['letra']) . ' ' . numero_cbte($r['cbte']['prefijo'], $e['numero']) . ($r['cbte']['tipo'] === 'PR' ? ' emitido.' : ' emitida.'));
+            : Tipos::titulo($r['cbte']['tipo'], $r['cbte']['letra']) . ' ' . numero_cbte($r['cbte']['prefijo'], $e['numero']) . ($r['cbte']['tipo'] === 'PR' ? ' emitido.' : ' emitida.')
+                . (($e['vuelto'] ?? 0) > 0 ? ' DAR VUELTO AL CLIENTE: ' . plata_dec($e['vuelto']) . '.' : ''));
         return Response::redirect(url('/comprobantes/' . $e['id']));
     }
 
@@ -166,10 +199,7 @@ final class ComprobantesController
             Session::flash('error', implode(' ', $r['errores']));
             return Response::redirect(url('/comprobantes/' . $id));
         }
-        return Response::html(View::render('comprobantes/revisar', [
-            'title' => 'Facturar presupuesto', 'nav' => 'comprobantes', 'c' => $r['cbte'], 'etiquetaArca' => Arca::etiqueta(),
-            'datos' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'operacion' => bin2hex(random_bytes(16)),
-        ]));
+        return self::pantallaRevisar($r['cbte'], $datos);
     }
 
     // ------------------------------------------------------------------ buscadores (JSON)
@@ -276,14 +306,12 @@ final class ComprobantesController
             $cond = $svc->condicionArca((int) $cliente['iva']);
             $letra = $cond !== null ? Tipos::letra((string) $emisor['condicion'], $cond) : '';
         }
-        $formas = $pdo->query('SELECT codigo, descripcion, tipo FROM forma_de_pagos WHERE tipo IN (1, 2, 3, 5) ORDER BY tipo, descripcion')->fetchAll();
         return Response::html(View::render('comprobantes/form', [
             'title' => Tipos::NOMBRES[$tipo] ?? 'Comprobante', 'nav' => 'comprobantes_' . strtolower($tipo),
             'tipo' => $tipo, 'datos' => $datos, 'errores' => $errores, 'cliente' => $cliente, 'asociables' => $asociables,
             'sucursales' => $svc->sucursales(), 'alicuotas' => $pdo->query('SELECT codigo, descripcion, porcentaje FROM tasas_iva ORDER BY porcentaje DESC')->fetchAll(),
             'vendedores' => $pdo->query('SELECT codigo, descripcion FROM vendedores ORDER BY descripcion')->fetchAll(),
             'condiciones' => $pdo->query('SELECT codigo, descripcion FROM condicionpago ORDER BY descripcion')->fetchAll(),
-            'formas' => $formas, 'bancos' => $pdo->query('SELECT codigo, descripcion FROM bancos ORDER BY descripcion')->fetchAll(),
             'emisor' => $emisor, 'letra' => $letra, 'modoArca' => Arca::modo(), 'etiquetaArca' => Arca::etiqueta(),
             'electronicas' => array_filter($svc->sucursales(), static fn ($s) => Arca::electronica($s)),
             'conceptoDefecto' => \App\Modules\Configuracion\Configuracion::entero('comprobantes.concepto_defecto', 1), 'puedeCredito' => Auth::puede('comprobantes.credito'),

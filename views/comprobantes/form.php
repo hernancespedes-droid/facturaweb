@@ -98,34 +98,14 @@ $hoyIso = date('Y-m-d');
         <?php elseif (count($sucursales) === 1): ?>
             <input type="hidden" name="sucursal" value="<?= e(array_key_first($sucursales)) ?>">
         <?php endif; ?>
+        <?php if ($credito): ?>
         <fieldset class="field" data-forma-pago>
             <legend><span>Forma de pago *</span></legend>
             <label class="check"><input type="radio" name="forma_pago" value="2" <?= $formaPago === '2' ? 'checked' : '' ?>> Cuenta corriente</label>
             <label class="check"><input type="radio" name="forma_pago" value="1" <?= $formaPago === '1' ? 'checked' : '' ?>> Contado</label>
         </fieldset>
+        <?php endif; ?>
     </div>
-
-    <?php if (!$credito): ?>
-        <div class="grid-2" data-contado hidden>
-            <label class="field<?= isset($errores['fpago']) ? ' has-error' : '' ?>" for="fpago"><span>Se paga con</span>
-                <select id="fpago" name="fpago" data-fpago>
-                    <?php foreach ($formas as $f): ?>
-                        <option value="<?= e($f['codigo']) ?>" data-tipo="<?= (int) $f['tipo'] ?>" <?= $fpagoElegida === (string) $f['codigo'] || ($fpagoElegida === '' && (int) $f['tipo'] === 1 && !isset($yaEf)) ? 'selected' : '' ?>><?= e($f['descripcion']) ?></option>
-                        <?php if ((int) $f['tipo'] === 1) { $yaEf = true; } ?>
-                    <?php endforeach; ?>
-                </select><?= $err('fpago') ?></label>
-        </div>
-        <div class="grid-2" data-cheque hidden>
-            <label class="field<?= isset($errores['pago_nro']) ? ' has-error' : '' ?>"><span>Número del cheque</span>
-                <input name="pago_nro" value="<?= e($v('pago_nro')) ?>" maxlength="20"><?= $err('pago_nro') ?></label>
-            <label class="field<?= isset($errores['pago_banco']) ? ' has-error' : '' ?>"><span>Banco</span>
-                <select name="pago_banco"><option value="">—</option>
-                    <?php foreach ($bancos as $b): ?><option value="<?= e($b['codigo']) ?>" <?= $v('pago_banco') === (string) $b['codigo'] ? 'selected' : '' ?>><?= e($b['descripcion']) ?></option><?php endforeach; ?>
-                </select><?= $err('pago_banco') ?></label>
-            <label class="field<?= isset($errores['pago_vto']) ? ' has-error' : '' ?>"><span>Vencimiento del cheque</span>
-                <input name="pago_vto" type="date" value="<?= e($v('pago_vto')) ?>"><?= $err('pago_vto') ?></label>
-        </div>
-    <?php endif; ?>
 
     <h2>Renglones</h2>
     <?php if (isset($errores['items'])): ?><div class="alerta alerta-error" role="alert"><?= nl2br(e($errores['items'])) ?></div><?php endif; ?>

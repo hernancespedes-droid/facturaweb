@@ -25,7 +25,7 @@ use PDO;
 final class ComprobantesService
 {
     public const MAX_RENGLONES = 100;
-    private const TIPOS_PAGO_CONTADO = [1, 2, 3, 5]; // efectivo, tickets, tarjeta, cheques
+    private const TIPOS_PAGO_CONTADO = [1, 2, 3, 5, 10]; // efectivo, tickets, tarjeta, cheques, billetera virtual
     private const CANAL = 'W';
 
     private PDO $pdo;
@@ -202,8 +202,13 @@ final class ComprobantesService
         }
 
         // Forma de pago
-        $formaPago = (int) ($in['forma_pago'] ?? 0);
-        if (!in_array($formaPago, [1, 2], true)) {
+        // DECISIÓN D-43 (Claude, a confirmar por Hernán): en facturas, notas de débito y presupuestos la forma de pago NO se pide en el formulario: se
+        // pide al terminar la venta, en la pantalla de revisión, con el total a la vista. Mientras no llega forma_pago el comprobante queda con el
+        // pago pendiente (armar() valida todo lo demás) y emitir() no lo graba. Las notas de crédito conservan su elección en el formulario.
+        $necesitaPago = !Tipos::credito($tipo) && !$solo;
+        $pagoPendiente = $necesitaPago && trim((string) ($in['forma_pago'] ?? '')) === '';
+        $formaPago = $pagoPendiente ? 0 : (int) ($in['forma_pago'] ?? 0);
+        if (!$pagoPendiente && !in_array($formaPago, [1, 2], true)) {
             $err['forma_pago'] = 'Elegí contado o cuenta corriente.';
         }
         $pago = null;
@@ -317,6 +322,30 @@ final class ComprobantesService
             }
         }
 
+        // Vuelto: si el cliente entrega de más y la forma de pago lo acepta (efectivo), la diferencia es el vuelto que hay que darle
+        if ($pago !== null && $calc !== null && !isset($err['fpago']) && !isset($err['items'])) {
+            $recibidoTxt = trim((string) ($in['recibido'] ?? ''));
+            $totalVenta = $calc['total'];
+            $recibido = $totalVenta;
+            if ($recibidoTxt !== '') {
+                $v = Valida::decimal($recibidoTxt);
+                if ($v === null || $v <= 0 || $v > Calculadora::MAX_IMPORTE) {
+                    $err['recibido'] = 'El importe recibido no es válido.';
+                } else {
+                    $recibido = Calculadora::r2($v);
+                }
+            }
+            if (!isset($err['recibido'])) {
+                if ($recibido < $totalVenta - 0.004) {
+                    $err['recibido'] = 'El cliente entregó menos que el total (' . plata($totalVenta) . '): cobrá el total o elegí cuenta corriente.';
+                } elseif ($recibido > $totalVenta + 0.004 && !$pago['acepta_vuelto']) {
+                    $err['recibido'] = $pago['descripcion'] . ' no acepta vuelto: cobrá exactamente ' . plata($totalVenta) . '.';
+                }
+            }
+            $pago['recibido'] = $recibido;
+            $pago['vuelto'] = max(0.0, Calculadora::r2($recibido - $totalVenta));
+        }
+
         // DECISIÓN D-01 (Claude, a confirmar por Hernán): una nota de crédito no puede superar lo que queda por acreditar de la
         // factura. El VFP lo permitía. Se cambia en Configuración (comprobantes.nc_limite_factura) sin tocar el código.
         if ($calc !== null && Tipos::credito($tipo) && is_array($asoc) && !isset($err['items']) && Configuracion::activo('comprobantes.nc_limite_factura')) {
@@ -361,7 +390,7 @@ final class ComprobantesService
         }
         return ['ok' => true, 'errores' => [], 'cbte' => [
             'tipo' => $tipo, 'letra' => $letra, 'fecha' => $fecha, 'sucursal' => $codSuc, 'prefijo' => (int) $suc['prefijo'],
-            'cliente' => $cliente, 'cond_arca' => $condArca, 'forma_pago' => $formaPago, 'pago' => $pago,
+            'cliente' => $cliente, 'cond_arca' => $condArca, 'forma_pago' => $pagoPendiente ? null : $formaPago, 'pago' => $pago, 'pago_pendiente' => $pagoPendiente,
             'vendedor' => $vendedor, 'cond_pago' => $condPago, 'descuento' => $desc, 'observaciones' => $obs, 'orden_compra' => $oc,
             'email' => $mails, 'asociado' => is_array($asoc) ? $asoc : null, 'calculo' => $calc, 'excede_credito' => $excede,
             'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
@@ -468,14 +497,14 @@ final class ComprobantesService
     private function validarPago(array $in, array &$err): ?array
     {
         $cod = trim((string) ($in['fpago'] ?? ''));
-        $st = $this->pdo->prepare('SELECT codigo, descripcion, tipo FROM forma_de_pagos WHERE codigo = ?');
+        $st = $this->pdo->prepare('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE codigo = ?');
         $st->execute([$cod]);
         $f = $st->fetch();
         if ($f === false || !in_array((int) $f['tipo'], self::TIPOS_PAGO_CONTADO, true)) {
             $err['fpago'] = 'Elegí cómo se paga (efectivo, tarjeta, cheque...).';
             return null;
         }
-        $pago = ['codigo' => (string) $f['codigo'], 'descripcion' => (string) $f['descripcion'], 'tipo' => (int) $f['tipo'], 'nro' => null, 'banco' => 0, 'vencimiento' => null];
+        $pago = ['codigo' => (string) $f['codigo'], 'descripcion' => (string) $f['descripcion'], 'tipo' => (int) $f['tipo'], 'acepta_vuelto' => (int) $f['acepta_vuelto'] === 1, 'nro' => null, 'banco' => 0, 'vencimiento' => null];
         if ((int) $f['tipo'] === 5) {
             $nro = trim((string) ($in['pago_nro'] ?? ''));
             $banco = (int) ($in['pago_banco'] ?? 0);
@@ -547,6 +576,9 @@ final class ComprobantesService
         $previo = $this->porOperacion($operacion);
         if ($previo !== null) {
             return $previo + ['repetido' => true];
+        }
+        if (!empty($cbte['pago_pendiente'])) {
+            throw new \InvalidArgumentException('Falta indicar cómo se paga.');
         }
         \App\Modules\Licencia\Licencia::exigirParaEmitir(); // suscripción vigente (solo si la instalación la exige)
         if (!empty($cbte['presupuesto'])) { // antes de pedir un CAE: el presupuesto solo genera una factura
@@ -771,6 +803,7 @@ final class ComprobantesService
                     'p_fpago' => $cbte['forma_pago'] === 2 ? $this->codigoCuentaCorriente() : $pago['codigo'], 'p_nro' => $pago['nro'] ?? null,
                     'p_fecvto' => $cbte['forma_pago'] === 2 ? $cbte['fecha'] : ($pago['vencimiento'] ?? null), 'p_banco' => (int) ($pago['banco'] ?? 0),
                     'p_importe' => $c['total'], 'a_pagar' => $c['total'], 'actualizacion' => $ahora,
+                    'p_recibido' => $cbte['forma_pago'] === 1 ? ($pago['recibido'] ?? $c['total']) : null, 'p_vuelto' => $pago['vuelto'] ?? 0,
                 ]);
             }
             // Cuenta corriente: la factura y la nota de débito generan deuda; la nota de crédito, saldo a favor
@@ -802,7 +835,7 @@ final class ComprobantesService
             $this->pdo->rollBack();
             throw $e;
         }
-        return ['id' => $id, 'numero' => $numero, 'repetido' => false];
+        return ['id' => $id, 'numero' => $numero, 'repetido' => false, 'vuelto' => (float) (($cbte['pago']['vuelto'] ?? 0))];
     }
 
     /** INSERT de una fila a partir de [columna => valor]; las columnas salen siempre del código. @param array<string,mixed> $fila */

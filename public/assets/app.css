@@ -1114,3 +1114,8 @@ fieldset.field legend { padding: 0; margin-bottom: 4px; }
 .imputador > .card { min-width: 0; }
 .imputador td input[data-imp-cr], .imputador td input[data-imp-db] { min-width: 120px; text-align: right; }
 .imputador td[data-label="Comprobante"] { white-space: nowrap; }
+
+/* Pago al final de la venta */
+.total-cobrar { font-size: 1.3rem; margin: 0 0 10px; }
+.total-cobrar b { font-size: 1.8rem; }
+.vuelto { font-size: 1.15rem; font-weight: 700; }

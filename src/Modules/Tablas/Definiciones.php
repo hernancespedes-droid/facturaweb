@@ -168,16 +168,17 @@ final class Definiciones
                     'codigo' => $cod(2), 'descripcion' => $desc(),
                     'tipo' => ['label' => 'Tipo de pago', 'tipo' => 'opciones', 'requerido' => true, 'opciones' => self::TIPOS_PAGO],
                     'recargo' => $pct('Recargo (%)'),
+                    'acepta_vuelto' => ['label' => 'Acepta vuelto (si el cliente paga de más se le devuelve)', 'tipo' => 'si_no'],
                     'cta_contable' => ['label' => 'Imputación (cuenta contable)', 'tipo' => 'entero', 'min' => 0, 'max' => 9999],
                 ],
-                'lista' => ['codigo', 'descripcion', 'tipo', 'recargo'],
+                'lista' => ['codigo', 'descripcion', 'tipo', 'acepta_vuelto', 'recargo'],
                 'orden' => 'codigo',
             ],
         ];
     }
 
     /** Tipo de forma de pago (combo de forma_de_pagos.scx). */
-    public const TIPOS_PAGO = [1 => 'Efectivo', 2 => 'Tickets', 3 => 'Tarjeta', 4 => 'Dólares', 5 => 'Cheques', 6 => 'Cta./Cte.', 7 => 'Ajuste', 8 => 'Nota de crédito', 9 => 'Gastos'];
+    public const TIPOS_PAGO = [1 => 'Efectivo', 2 => 'Tickets', 3 => 'Tarjeta', 4 => 'Dólares', 5 => 'Cheques', 6 => 'Cta./Cte.', 7 => 'Ajuste', 8 => 'Nota de crédito', 9 => 'Gastos', 10 => 'Billetera virtual'];
 
     public const IMPUESTOS_RETENCION = [1 => 'Ganancias', 2 => 'IVA', 3 => 'Ingresos Brutos', 4 => 'SUSS', 9 => 'Otra'];
 

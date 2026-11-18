@@ -214,8 +214,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.waitForSelector('[data-cliente-lista] li');
     await page.click('[data-cliente-lista] li');
     ok((await page.textContent('[data-letra-titulo]')).trim() === 'B', 'consumidor final: factura B');
-    await page.check('input[name=forma_pago][value="1"]');
-    ok(await page.isVisible('[data-fpago]'), 'contado: elige con qué paga');
+    ok((await page.locator('input[name=forma_pago]').count()) === 0, 'la forma de pago no se pide en el formulario');
     const b1 = page.locator('[data-renglon]').nth(0);
     await b1.locator('[data-descripcion]').fill('Consulta');
     await b1.locator('[data-cantidad]').fill('1');
@@ -223,8 +222,25 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.textContent('[data-t-total]')).includes('1.210,00'), 'en la B el total es el precio con IVA');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
     ok((await page.textContent('.totales-rev')).includes('IVA contenido: $ 210,00'), 'IVA contenido de la B');
+    // la forma de pago se pide al terminar, con el total a la vista
+    ok((await page.textContent('.total-cobrar')).includes('1.210,00'), 'revisión: muestra el total a cobrar');
+    await page.check('input[name=forma_pago][value="1"]');
+    ok(await page.isVisible('[data-fpago]'), 'contado: elige con qué paga');
+    ok(await page.isVisible('[data-recibido]'), 'efectivo: pide lo recibido');
+    await page.fill('[data-recibido]', '1.500');
+    const aviso = await page.textContent('[data-vuelto-aviso]');
+    ok(aviso.includes('DAR VUELTO AL CLIENTE') && aviso.includes('290,00'), 'avisa el vuelto (1.500 − 1.210 = 290)');
+    await page.screenshot({ path: path.join(CAPTURAS, 'pago-vuelto.png'), fullPage: true });
+    await page.selectOption('[data-fpago]', { label: 'BILLETERA VIRTUAL' });
+    ok(!(await page.isVisible('[data-recibido]')), 'billetera virtual: no hay vuelto');
+    await page.selectOption('[data-fpago]', { label: 'EFECTIVO' });
+    await page.fill('[data-recibido]', '1.000');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    ok((await page.textContent('body')).includes('entregó menos'), 'si entrega menos del total, no emite y lo dice');
+    await page.fill('[data-recibido]', '1.500');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
     ok(/Factura B 0004-\d{8}/.test(await page.textContent('h1')), 'factura B emitida');
+    ok((await page.textContent('body')).includes('DAR VUELTO AL CLIENTE: $ 290,00'), 'al emitir recuerda dar el vuelto');
     ok((await page.textContent('body')).includes('Contado'), 'queda como contado');
     // listado
     await page.goto(BASE + '/comprobantes?cliente=E2E');
