@@ -94,6 +94,7 @@ final class Definiciones
                     'ultimo_cliente' => ['label' => 'Último código de cliente', 'tipo' => 'entero', 'min' => 0, 'max' => 99999999, 'grupo' => 'Numeradores'],
                     'ultimo_recibo' => ['label' => 'Último recibo', 'tipo' => 'entero', 'min' => 0, 'max' => 99999999, 'grupo' => 'Numeradores'],
                     'por_impuesto' => $pct('% impuesto') + ['grupo' => 'Numeradores'],
+                    'caja_tope' => ['label' => 'Tope de caja por movimiento manual ($; 0 = sin tope)', 'tipo' => 'decimal', 'dec' => 2, 'min' => 0, 'max' => 999999999999, 'grupo' => 'Mostrador'],
                     'impresion' => ['label' => 'Impresión de comprobantes (hoja A4 o ticket de impresora térmica; el PDF y los envíos siguen igual)', 'tipo' => 'opciones', 'opciones' => self::PAPELES, 'grupo' => 'Mostrador'],
                     'kiosco' => ['label' => 'Habilitar modo Kiosco (carrito de mostrador con los productos en tarjetas; al finalizar genera un presupuesto)', 'tipo' => 'si_no', 'grupo' => 'Mostrador'],
                     'ticket_cambio' => ['label' => 'Habilita modo ticket de cambio (ticket sin importes para regalos y cambio de mercadería)', 'tipo' => 'si_no', 'grupo' => 'Mostrador'],

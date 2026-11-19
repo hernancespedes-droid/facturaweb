@@ -37,7 +37,8 @@ $otros = $r['total_cobrado'] - $tipoMonto(1) - $tipoMonto(3) - $tipoMonto(10) - 
     <div><span class="muted small">Cheques</span><b><?= e($p($tipoMonto(5))) ?></b></div>
     <?php if (abs($otros) > 0.004): ?><div><span class="muted small">Otros (tickets, dólares…)</span><b><?= e($p($otros)) ?></b></div><?php endif; ?>
 </section>
-<p class="small muted">Efectivo: se recibieron <b><?= e($p($ef['recibido'])) ?></b>, se dieron <b><?= e($p($ef['vuelto'])) ?></b> de vuelto y quedan <b><?= e($p($ef['neto'])) ?></b> en caja.</p>
+<p class="small muted">Efectivo: se recibieron <b><?= e($p($ef['recibido'])) ?></b>, se dieron <b><?= e($p($ef['vuelto'])) ?></b> de vuelto y quedan <b><?= e($p($ef['neto'])) ?></b> en caja.
+    <?php if ($ef['ingresos'] > 0 || $ef['egresos'] > 0): ?>Movimientos manuales: ingresos <b><?= e($p($ef['ingresos'])) ?></b>, egresos <b><?= e($p($ef['egresos'])) ?></b> → efectivo total en caja <b><?= e($p($ef['en_caja'])) ?></b>.<?php endif; ?></p>
 
 <h2>Lo vendido</h2>
 <section class="card resumen-fila" aria-label="Vendido">
@@ -75,10 +76,12 @@ $otros = $r['total_cobrado'] - $tipoMonto(1) - $tipoMonto(3) - $tipoMonto(10) - 
 <?php else: ?>
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
     <div class="table-wrap"><table class="table table-cards">
-        <thead><tr><?= th_orden('Fecha', 'fecha', $f, $u) ?><?= th_orden('Comprobante', 'comprobante', $f, $u) ?><?= th_orden('Cliente', 'cliente', $f, $u) ?><?= th_orden('Forma de pago', 'forma', $f, $u) ?><?= th_orden('Importe', 'importe', $f, $u, true) ?><?= th_orden('Vuelto', 'vuelto', $f, $u, true) ?></tr></thead>
+        <thead><tr><?= th_orden('Fecha', 'fecha', $f, $u) ?><?= th_orden('Hora', 'hora', $f, $u) ?><?= th_orden('Usuario', 'usuario', $f, $u) ?><?= th_orden('Comprobante', 'comprobante', $f, $u) ?><?= th_orden('Cliente', 'cliente', $f, $u) ?><?= th_orden('Forma de pago', 'forma', $f, $u) ?><?= th_orden('Importe', 'importe', $f, $u, true) ?><?= th_orden('Vuelto', 'vuelto', $f, $u, true) ?></tr></thead>
         <tbody>
         <?php foreach ($filas as $x): $esRecibo = $x['cobra_id'] !== null; ?>
             <tr><td data-label="Fecha" class="nw"><?= e(date('d/m/Y', (int) strtotime($x['fecha']))) ?></td>
+                <td data-label="Hora" class="nw"><?= $x['creado_en'] !== null ? e(date('H:i', (int) strtotime($x['creado_en']))) : '—' ?></td>
+                <td data-label="Usuario"><?= e((string) $x['usuario'] !== '' ? (string) $x['usuario'] : '—') ?></td>
                 <td data-label="Comprobante" class="nw"><?php if ($esRecibo): ?><a href="<?= e(url('/recibos/' . (int) $x['cobra_id'])) ?>">Recibo X <?= e(sprintf('%04d-%08d', $x['prefijo'], $x['numero'])) ?></a>
                     <?php elseif ($x['subdiario_id'] !== null): ?><a href="<?= e(url('/comprobantes/' . (int) $x['subdiario_id'])) ?>"><?= e(Tipos::titulo($x['tipo'], $x['letra']) . ' ' . sprintf('%04d-%08d', $x['prefijo'], $x['numero'])) ?></a>
                     <?php else: ?><?= e($x['tipo'] . ' ' . $x['letra'] . ' ' . sprintf('%04d-%08d', $x['prefijo'], $x['numero'])) ?><?php endif; ?></td>

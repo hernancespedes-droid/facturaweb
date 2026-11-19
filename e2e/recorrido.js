@@ -417,6 +417,39 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.content()).includes('size: 50mm auto'), 'ticket 50 mm: usa el ancho de 50 mm');
     const pdfT = await ctx.request.get(BASE + '/comprobantes/' + idCbte + '/pdf?papel=t80');
     ok(pdfT.status() === 200 && (pdfT.headers()['content-type'] || '').includes('pdf'), 'ticket: el PDF sigue generándose');
+    // ---- caja: turno con arqueo, ingreso y egreso manual, anulación, auditoría con hora y usuario
+    await page.goto(BASE + '/caja');
+    if (await page.locator('button:has-text("Abrir turno")').count()) {
+      await page.fill('input[name=fondo]', '500');
+      await Promise.all([page.waitForNavigation(), page.click('button:has-text("Abrir turno")')]);
+    }
+    ok((await page.textContent('body')).includes('Cerrar mi turno'), 'caja: se abre el turno');
+    await page.selectOption('[data-mover] select[name=tipo]', 'I');
+    await page.fill('[data-mover] input[name=importe]', '1.000');
+    await page.fill('[data-mover] input[name=motivo]', 'Cambio para el cajón E2E');
+    await Promise.all([page.waitForNavigation(), page.click('[data-mover] button')]);
+    
+    ok((await page.textContent('body')).includes('Ingreso: Cambio para el cajón E2E'), 'caja: el ingreso manual queda en los movimientos del turno');
+    await page.selectOption('[data-mover] select[name=tipo]', 'E');
+    await page.fill('[data-mover] input[name=importe]', '10.000.000,01');
+    await page.fill('[data-mover] input[name=motivo]', 'Supera el tope');
+    await Promise.all([page.waitForNavigation(), page.click('[data-mover] button')]);
+    ok((await page.textContent('body')).includes('supera el tope'), 'caja: el tope de 10 millones frena el movimiento');
+    page.once('dialog', (d) => d.accept('Carga repetida E2E'));
+    await Promise.all([page.waitForNavigation(), page.locator('form[data-anular] button').first().click()]);
+    ok((await page.textContent('body')).includes('anulado con un contra-asiento'), 'caja: un movimiento se anula con contra-asiento');
+    await page.screenshot({ path: path.join(CAPTURAS, 'caja.png'), fullPage: true });
+    const esperado = (await page.textContent('[data-esperado]')).replace('$', '').trim();
+    await page.fill('[data-cerrar] input[name=contado]', esperado);
+    await Promise.all([page.waitForNavigation(), page.click('[data-cerrar] button')]);
+    ok(page.url().includes('/caja/turnos') && (await page.textContent('body')).includes('El arqueo cierra justo'), 'caja: el arqueo cierra justo y el turno queda en el historial');
+    await page.goto(BASE + '/caja/auditoria');
+    const aud = await page.textContent('body');
+    ok(aud.includes('Registro de acciones íntegro') && aud.includes('anulacion') && aud.includes('apertura'), 'caja: la auditoría muestra las acciones y la cadena íntegra');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'caja: la auditoría no se desborda');
+    await page.goto(BASE + '/listados/caja-diaria');
+    ok((await page.locator('th a.th-orden:has-text("Hora")').count()) > 0 && (await page.locator('th a.th-orden:has-text("Usuario")').count()) > 0, 'caja diaria: muestra hora y usuario de cada cobro');
+    await page.screenshot({ path: path.join(CAPTURAS, 'caja-diaria.png'), fullPage: true });
     execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_stock.php'), 'off']);
     // grillas: orden por columna (servidor con páginas, navegador sin páginas), Excel y alto que entra en la pantalla
     await page.goto(BASE + '/comprobantes?cliente=E2E');

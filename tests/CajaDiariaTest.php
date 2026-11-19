@@ -55,7 +55,8 @@ final class CajaDiariaTest extends ComprobantesTestCase
         $this->assertSame([242.0, 726.0], [$v['cuenta_corriente'], $v['contado']], 'lo facturado en cuenta corriente y lo de contado');
         $this->assertSame([1 => 342.0, 3 => 242.0, 10 => 242.0], $res['por_tipo'], 'efectivo (ventas + recibo), tarjeta y billetera');
         $this->assertSame(826.0, $res['total_cobrado']);
-        $this->assertSame(['recibido' => 400.0, 'vuelto' => 58.0, 'neto' => 342.0], $res['efectivo'], 'efectivo: recibido, vuelto y neto en caja');
+        $this->assertSame(['recibido' => 400.0, 'vuelto' => 58.0, 'neto' => 342.0], array_intersect_key($res['efectivo'], array_flip(['recibido', 'vuelto', 'neto'])), 'efectivo: recibido, vuelto y neto en caja');
+        $this->assertSame(342.0, $res['efectivo']['en_caja'], 'sin movimientos manuales, el efectivo en caja es el neto');
         $ef = array_values(array_filter($res['cobrado'], static fn (array $c) => $c['codigo'] === 'EF'))[0];
         $this->assertSame([242.0, 100.0], [(float) $ef['ventas'], (float) $ef['recibos']], 'se separan ventas de contado y recibos');
         // otro día: nada

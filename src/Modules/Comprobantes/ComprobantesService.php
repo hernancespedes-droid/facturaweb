@@ -977,7 +977,7 @@ final class ComprobantesService
                         'p_fecvto' => $esCuenta ? $cbte['fecha'] : ($pago['vencimiento'] ?? null), 'p_banco' => (int) ($pago['banco'] ?? 0),
                         'p_importe' => $pago['importe'], 'a_pagar' => $pago['importe'], 'actualizacion' => $ahora,
                         'p_recibido' => $esCuenta ? null : ($pago['recibido'] ?? $pago['importe']), 'p_vuelto' => $pago['vuelto'] ?? 0,
-                    ]);
+                    ] + \App\Modules\Caja\CajaService::contexto());
                 }
             }
             // Cuenta corriente: la factura, la nota de débito y el presupuesto generan deuda (solo la parte que quedó a cuenta); la nota de crédito, saldo a favor

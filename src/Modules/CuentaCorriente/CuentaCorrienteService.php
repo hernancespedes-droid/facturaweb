@@ -428,10 +428,11 @@ final class CuentaCorrienteService
             }
 
             foreach ($r['pagos'] as $p) {
-                $this->pdo->prepare('INSERT INTO caja (cobra_id, fecha, tipo, letra, canal, terminal, sucursal, prefijo, comprobante, cliente, p_fpago, p_cuotas, p_nro, p_fecvto, p_banco, p_cotiz, p_importe, a_pagar, actualizacion)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                $ctx = \App\Modules\Caja\CajaService::contexto();
+                $this->pdo->prepare('INSERT INTO caja (cobra_id, fecha, tipo, letra, canal, terminal, sucursal, prefijo, comprobante, cliente, p_fpago, p_cuotas, p_nro, p_fecvto, p_banco, p_cotiz, p_importe, a_pagar, actualizacion, usuario_id, creado_en, turno_id)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
                     ->execute([$cobraId, $r['fecha'], 'RC', self::LETRA_RECIBO, self::CANAL, 1, $r['sucursal'], $r['prefijo'], $numero, $cli['codigo'], $p['codigo'], 0,
-                        $p['nro'] !== '' ? $p['nro'] : null, $p['vencimiento'], $p['banco'], 1, $p['importe'], $p['importe'], $ahora]);
+                        $p['nro'] !== '' ? $p['nro'] : null, $p['vencimiento'], $p['banco'], 1, $p['importe'], $p['importe'], $ahora, $ctx['usuario_id'], $ctx['creado_en'], $ctx['turno_id']]);
             }
             $this->pdo->commit();
         } catch (\PDOException $e) {
