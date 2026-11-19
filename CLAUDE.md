@@ -69,6 +69,10 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `Stock/ReservasService`: reservas blandas por venta en curso (token `reserva`, 15 min, `reservas.js`), `disponible` en `BuscadorArticulos`; faltantes piden autorización (`stock.autorizar`, o supervisor con clave) en `armar` y se re-controlan con filas bloqueadas en `grabar` (`StockNoDisponible`); se registran en `stock_autorizaciones`. Fotos de artículos en `articulos_fotos` (`Articulos/Foto`, `/articulos/foto`), visor con zoom en `app.js`.
 
+## Impresión A4 / ticket (0.24.0)
+
+`parametros.impresion` (`a4`|`t80`|`t50`): `ImpresionController::imprimir` elige `views/comprobantes/imprimir.php` (A4) o `imprimir_ticket.php`; `?papel=` lo cambia. El PDF (`pdf()`, mail) sigue en A4; `ComprobanteTicketPdf` (con `?papel=t80|t50`) hace el PDF angosto. El vuelto se lee de `caja` (`ComprobanteImpreso::datos()['pagos']`).
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.

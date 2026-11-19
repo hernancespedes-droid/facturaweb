@@ -92,6 +92,13 @@ final class ComprobanteImpreso
         }
 
         $pago = forma_pago_texto($h, ' - ');
+        // cómo se pagó, renglón por renglón (el ticket muestra lo recibido y el vuelto; sale de caja, así se puede reimprimir)
+        $pagos = [];
+        foreach ($h['pagos'] ?? [] as $p) {
+            $esCuenta = (int) ($p['fpago_tipo'] ?? 0) === 6;
+            $pagos[] = ['forma' => $esCuenta ? 'Cuenta corriente' : (string) ($p['fpago_descripcion'] ?? $p['p_fpago']), 'importe' => (float) $p['p_importe'],
+                'recibido' => $esCuenta || $p['p_recibido'] === null ? null : (float) $p['p_recibido'], 'vuelto' => (float) $p['p_vuelto'], 'cuenta' => $esCuenta];
+        }
 
         return [
             'logo' => \App\Modules\Configuracion\Logo::obtener(),
@@ -108,7 +115,7 @@ final class ComprobanteImpreso
                 'domicilio' => (string) ($h['cliente_domicilio'] ?? $cli['domicilio'] ?? ''), 'localidad' => (string) ($h['cliente_localidad'] ?? $cli['localidad'] ?? ''),
                 'cuit' => cuit_texto($h['cuit_cliente']), 'condicion' => \App\Modules\Clientes\ClientesService::CONDICIONES_IVA[(int) $h['iva_cliente']] ?? '',
             ],
-            'condicion_pago' => $pago, 'orden_compra' => (string) $h['orden_compra'],
+            'condicion_pago' => $pago, 'pagos' => $pagos, 'orden_compra' => (string) $h['orden_compra'],
             'asociado' => $h['fe_nrocbte_asoc'] > 0 ? Tipos::titulo($h['fe_tipocbte_asoc'], $letra) . ' ' . numero_cbte($h['prefijo'], $h['fe_nrocbte_asoc']) . ($h['fe_fecha_asoc'] ? ' del ' . fecha($h['fe_fecha_asoc']) : '') : '',
             'items' => $items, 'totales' => $totales, 'observaciones' => (string) $h['observaciones'], 'leyendas' => $leyendas, 'copia' => $copia,
             'cae' => $conCae ? ['cae' => (string) $h['fe_ccae'], 'vto' => fecha($h['fe_dvtocae'])] : null, 'qr' => $qr, 'aviso_prueba' => $aviso,

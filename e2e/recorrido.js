@@ -404,6 +404,19 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
     ok(page.url().includes('/kiosco?hecho='), 'kiosco: al emitir vuelve al kiosco');
     ok((await page.textContent('body')).includes('Venta registrada') && (await page.locator('.k-linea').count()) === 0, 'kiosco: avisa la venta hecha y el carrito queda vacío');
+    // ---- impresión en ticket (80 y 50 mm) con el mismo comprobante
+    await page.goto(BASE + '/comprobantes?cliente=E2E');
+    const hrefCbte = await page.locator('table a[href*="/comprobantes/"]').first().getAttribute('href');
+    const idCbte = hrefCbte.match(/comprobantes\/(\d+)/)[1];
+    await page.goto(BASE + '/comprobantes/' + idCbte + '/imprimir?papel=t80');
+    const tk = await page.textContent('body');
+    ok(tk.includes('TOTAL') && tk.includes('Imprimir ticket') && tk.includes('Bajar PDF (A4)'), 'ticket 80 mm: muestra el comprobante y los botones');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'ticket 80 mm: no se desborda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'ticket-80.png'), fullPage: true });
+    await page.goto(BASE + '/comprobantes/' + idCbte + '/imprimir?papel=t50');
+    ok((await page.content()).includes('size: 50mm auto'), 'ticket 50 mm: usa el ancho de 50 mm');
+    const pdfT = await ctx.request.get(BASE + '/comprobantes/' + idCbte + '/pdf?papel=t80');
+    ok(pdfT.status() === 200 && (pdfT.headers()['content-type'] || '').includes('pdf'), 'ticket: el PDF sigue generándose');
     execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_stock.php'), 'off']);
     // grillas: orden por columna (servidor con páginas, navegador sin páginas), Excel y alto que entra en la pantalla
     await page.goto(BASE + '/comprobantes?cliente=E2E');

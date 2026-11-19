@@ -58,6 +58,8 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
 <div class="acciones">
     <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
     <a class="b" href="<?= e(url('/comprobantes/' . $id . '/pdf') . '?copia=' . $d['copia']) ?>">Bajar PDF</a>
+    <a href="<?= e(url('/comprobantes/' . $id . '/imprimir') . '?papel=t80') ?>">Ticket 80 mm</a>
+    <a href="<?= e(url('/comprobantes/' . $id . '/imprimir') . '?papel=t50') ?>">Ticket 50 mm</a>
     <?php foreach ($copias as $k): if ($k !== $d['copia']): ?><a href="<?= e(url('/comprobantes/' . $id . '/imprimir') . '?copia=' . $k) ?>"><?= e(ucfirst(strtolower($k))) ?></a><?php endif; endforeach; ?>
     <a href="<?= e(url('/comprobantes/' . $id)) ?>">Volver al comprobante</a>
 </div>
