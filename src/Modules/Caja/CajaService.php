@@ -333,12 +333,12 @@ final class CajaService
         $base = "SELECT * FROM (
             SELECT IF(c.cobra_id IS NULL, 'venta', 'recibo') AS origen, c.fe_clave AS id, COALESCE(c.creado_en, CAST(c.fecha AS DATETIME)) AS cuando, c.fecha AS dia,
                    CONCAT(c.tipo COLLATE utf8mb4_unicode_ci, ' ', c.letra COLLATE utf8mb4_unicode_ci, ' ', LPAD(c.prefijo, 4, '0'), '-', LPAD({$nro}, 8, '0'), ' · ', COALESCE(s.cliente_razon_social, k.razon_social, '')) AS detalle,
-                   t.descripcion AS forma, c.p_importe AS importe, c.p_vuelto AS vuelto, c.usuario_id, c.turno_id, NULL AS anula_id
+                   t.descripcion AS forma, c.p_importe AS importe, c.p_vuelto AS vuelto, c.usuario_id, c.turno_id, NULL AS anula_id, NULL AS mtipo
               FROM caja c JOIN forma_de_pagos t ON t.codigo = c.p_fpago LEFT JOIN subdiario s ON s.fe_clave = c.subdiario_id LEFT JOIN clientes k ON k.codigo = c.cliente
              WHERE t.tipo <> 6
             UNION ALL
-            SELECT 'manual', m.id, m.creado_en, DATE(m.creado_en), CONCAT(IF(m.tipo = 'I', 'Ingreso', 'Egreso'), ': ', m.motivo), 'EFECTIVO',
-                   IF(m.tipo = 'I', m.importe, -m.importe), 0, m.usuario_id, m.turno_id, m.anula_id
+            SELECT 'manual', m.id, m.creado_en, DATE(m.creado_en), m.motivo, 'EFECTIVO',
+                   IF(m.tipo = 'I', m.importe, -m.importe), 0, m.usuario_id, m.turno_id, m.anula_id, m.tipo
               FROM caja_movimientos m
         ) x";
         $where = ['x.dia BETWEEN ? AND ?'];

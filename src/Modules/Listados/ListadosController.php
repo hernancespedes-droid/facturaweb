@@ -34,7 +34,7 @@ final class ListadosController
         $por = Configuracion::porPagina();
         $m = CajaDiaria::movimientos($f, $pagina, $por);
         return Response::html(View::render('listados/caja_diaria', [
-            'title' => 'Caja diaria', 'nav' => 'caja_diaria', 'f' => $f, 'r' => CajaDiaria::resumen($f), 'filas' => $m['filas'], 'total' => $m['total'],
+            'title' => 'Caja diaria', 'nav' => 'caja_diaria', 'f' => $f, 'r' => CajaDiaria::resumen($f), 'manuales' => CajaDiaria::manuales($f), 'filas' => $m['filas'], 'total' => $m['total'],
             'pagina' => $pagina, 'porPagina' => $por,
         ]));
     }

@@ -112,6 +112,22 @@ final class CajaDiaria
         return ['filas' => $st->fetchAll(), 'total' => $total];
     }
 
+    /**
+     * Ingresos y egresos de dinero del período (caja_movimientos): plata que entra o sale de la caja sin ser una venta ni una cobranza.
+     *
+     * @param array<string,string> $f
+     * @return array<int,array<string,mixed>>
+     */
+    public static function manuales(array $f): array
+    {
+        [$d, $h] = self::fechas($f);
+        $st = Db::pdo()->prepare('SELECT m.id, m.creado_en, m.tipo, m.importe, m.motivo, m.anula_id, u.nombre AS usuario,
+                (SELECT COUNT(*) FROM caja_movimientos a WHERE a.anula_id = m.id) AS anulado
+            FROM caja_movimientos m LEFT JOIN usuarios u ON u.id = m.usuario_id WHERE DATE(m.creado_en) BETWEEN ? AND ? ORDER BY m.creado_en, m.id');
+        $st->execute([$d, $h]);
+        return $st->fetchAll();
+    }
+
     /** Etiqueta de un tipo de forma de pago. */
     public static function etiquetaTipo(int $tipo): string
     {

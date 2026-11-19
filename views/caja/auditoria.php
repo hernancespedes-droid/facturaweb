@@ -27,7 +27,7 @@ $hora = static fn (?string $t) => $t === null ? '—' : date('d/m/Y H:i:s', strt
     <label class="field"><span>Usuario</span><select name="usuario"><option value="">Todos</option>
         <?php foreach ($usuarios as $id => $n): ?><option value="<?= (int) $id ?>" <?= ($f['usuario'] ?? '') === (string) $id ? 'selected' : '' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>
     <label class="field"><span>Origen</span><select name="origen"><option value="">Todos</option>
-        <?php foreach (['venta' => 'Ventas', 'recibo' => 'Recibos', 'manual' => 'Manuales'] as $k => $t): ?><option value="<?= $k ?>" <?= ($f['origen'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select></label>
+        <?php foreach (['venta' => 'Ventas', 'recibo' => 'Cobranzas (recibos)', 'manual' => 'Ingresos y egresos de dinero'] as $k => $t): ?><option value="<?= $k ?>" <?= ($f['origen'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select></label>
     <?php if (($f['turno'] ?? '') !== ''): ?><input type="hidden" name="turno" value="<?= e($f['turno']) ?>"><?php endif; ?>
     <button class="btn btn-ghost" type="submit">Ver</button>
 </form>
@@ -37,23 +37,7 @@ $hora = static fn (?string $t) => $t === null ? '—' : date('d/m/Y H:i:s', strt
     <p class="muted vacio">No hay movimientos con esos filtros.</p>
 <?php else: ?>
     <?= paginador($pagina, $paginas, $total, $porPagina, $link, true) ?>
-    <div class="table-wrap"><table class="table table-cards">
-        <thead><tr><?= th_orden('Fecha y hora', 'cuando', $f, $u, true) ?><?= th_orden('Usuario', 'usuario', $f, $u) ?><?= th_orden('Origen', 'origen', $f, $u) ?><?= th_orden('Detalle', 'detalle', $f, $u) ?><?= th_orden('Forma de pago', 'forma', $f, $u) ?><?= th_orden('Importe', 'importe', $f, $u, true) ?><th class="num">Vuelto</th><?= th_orden('Turno', 'turno', $f, $u) ?></tr></thead>
-        <tbody>
-        <?php foreach ($filas as $x): ?>
-            <tr>
-                <td data-label="Fecha y hora"><?= e($hora($x['cuando'])) ?></td>
-                <td data-label="Usuario"><?= e((string) $x['usuario'] !== '' ? (string) $x['usuario'] : '—') ?></td>
-                <td data-label="Origen"><?= e(['venta' => 'Venta', 'recibo' => 'Recibo', 'manual' => 'Manual'][$x['origen']] ?? $x['origen']) ?></td>
-                <td data-label="Detalle"><?= e($x['detalle']) ?><?= $x['anula_id'] !== null ? ' <span class="muted small">(anulación)</span>' : '' ?><?= (int) $x['anulado'] > 0 ? ' <span class="muted small">(anulado)</span>' : '' ?></td>
-                <td data-label="Forma de pago"><?= e($x['forma']) ?></td>
-                <td data-label="Importe" class="num"><?= e($m($x['importe'])) ?></td>
-                <td data-label="Vuelto" class="num"><?= (float) $x['vuelto'] > 0 ? e($m($x['vuelto'])) : '' ?></td>
-                <td data-label="Turno"><?= $x['turno_id'] !== null ? (int) $x['turno_id'] : '—' ?></td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table></div>
+    <?= \App\Core\View::render('caja/_movimientos', ['filas' => $filas, 'f' => $f, 'u' => $u, 'anular' => false, 'segundos' => true], null) ?>
 <?php endif; ?>
 
 <h2>Registro de acciones <span class="muted small">(últimas <?= count($registro) ?>)</span></h2>
