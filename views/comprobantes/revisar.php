@@ -15,7 +15,10 @@ $disc = $c['letra'] === 'A';
     </div>
 </div>
 
-<?php if (!empty($c['stock_faltantes'])): ?>
+<?php if (!empty($c['stock_faltantes']) && !empty($c['stock_autorizado']['automatica'])): ?>
+<div class="alerta alerta-warn" role="status" id="venta-sin-stock"><b>Se vende sin stock disponible:</b> tu rol puede hacerlo sin pedir autorización. Queda registrado con tu nombre.
+    <ul class="list small"><?php foreach ($c['stock_faltantes'] as $f): ?><li><?= e($f['mensaje']) ?></li><?php endforeach; ?></ul></div>
+<?php elseif (!empty($c['stock_faltantes'])): ?>
 <section class="card alerta-stock" id="autorizacion-stock">
     <h2>Stock no disponible</h2>
     <ul class="list small">

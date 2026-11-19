@@ -12,6 +12,17 @@ use App\Modules\Configuracion\Configuracion;
 
 final class StockController
 {
+    /** Informe «Ventas sin stock»: lo vendido sin que alcanzara el stock, quién lo vendió y cómo se autorizó. */
+    public static function ventasSinStock(Request $req, array $params): Response
+    {
+        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'modo', 'orden'])));
+        $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
+        $por = Configuracion::porPagina();
+        $r = VentasSinStock::listar($f, $pagina, $por);
+        return Response::html(View::render('stock/ventas_sin_stock', ['title' => 'Ventas sin stock', 'nav' => 'stock_ventas_sin_stock', 'f' => $f, 'filas' => $r['filas'],
+            'total' => $r['total'], 'unidades' => $r['unidades'], 'pagina' => $pagina, 'porPagina' => $por]));
+    }
+
     public static function index(Request $req, array $params): Response
     {
         $svc = new StockService();

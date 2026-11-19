@@ -404,6 +404,19 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
     ok(page.url().includes('/kiosco?hecho='), 'kiosco: al emitir vuelve al kiosco');
     ok((await page.textContent('body')).includes('Venta registrada') && (await page.locator('.k-linea').count()) === 0, 'kiosco: avisa la venta hecha y el carrito queda vacío');
+    // 0.26.0: el administrador (permiso kiosco.precio) cambia el precio en el carrito; los favoritos se ordenan desde la ficha del artículo
+    await page.locator('.k-tarjeta', { hasText: 'E2E-001' }).click();
+    ok((await page.locator('.k-precio-ed').count()) === 1, 'kiosco: con el permiso del precio, la línea trae el precio editable');
+    await page.fill('.k-precio-ed', '1.000');
+    await page.press('.k-precio-ed', 'Tab');
+    ok((await page.textContent('[data-total]')).includes('1.000,00'), 'kiosco: al cambiar el precio el total se actualiza');
+    page.once('dialog', (d) => d.accept());
+    await page.click('[data-vaciar]');
+    await page.goto(BASE + '/articulos/ficha?codigo=E2E-001');
+    ok((await page.textContent('body')).includes('Posición en el kiosco'), 'artículo: la ficha permite definir la posición en el kiosco');
+    await page.goto(BASE + '/stock/ventas-sin-stock');
+    ok((await page.textContent('h1')).includes('Ventas sin stock'), 'stock: informe de ventas sin stock');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'stock: el informe de ventas sin stock no se desborda');
     // ---- impresión en ticket (80 y 50 mm) con el mismo comprobante
     await page.goto(BASE + '/comprobantes?cliente=E2E');
     const hrefCbte = await page.locator('table a[href*="/comprobantes/"]').first().getAttribute('href');

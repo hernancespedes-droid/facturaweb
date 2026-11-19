@@ -43,6 +43,7 @@ final class Menu
             $o[$t] = ['texto' => $d['titulo'], 'ruta' => '/tablas/' . $t, 'permiso' => 'tablas.' . $t, 'grupo' => 'Tablas'];
         }
         $o['stock'] = ['texto' => 'Saldos de stock', 'ruta' => '/stock', 'permiso' => 'stock.ver', 'grupo' => 'Stock'];
+        $o['stock_ventas_sin_stock'] = ['texto' => 'Ventas sin stock', 'ruta' => '/stock/ventas-sin-stock', 'permiso' => 'stock.ver', 'grupo' => 'Stock'];
         $o['stock_ajuste'] = ['texto' => 'Ingreso, egreso o ajuste', 'ruta' => '/stock/ajuste', 'permiso' => 'stock.mover', 'grupo' => 'Stock'];
         $o['stock_transferir'] = ['texto' => 'Transferencia entre depósitos', 'ruta' => '/stock/transferir', 'permiso' => 'stock.mover', 'grupo' => 'Stock'];
         $o['stock_depositos'] = ['texto' => 'Depósitos', 'ruta' => '/stock/depositos', 'permiso' => 'stock.administrar', 'grupo' => 'Stock'];

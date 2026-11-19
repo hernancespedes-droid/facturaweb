@@ -56,7 +56,7 @@ final class BuscadorArticulos
     }
 
     /** Listado para la ventana de búsqueda: artículos activos por descripción (filtrados por palabras si se escribe algo), de a 20. @return array{items:array<int,array<string,mixed>>,hay_mas:bool} */
-    public static function listar(string $q, int $pagina, ?string $rubro = null, int $porPagina = 20): array
+    public static function listar(string $q, int $pagina, ?string $rubro = null, int $porPagina = 20, bool $kiosco = false): array
     {
         $cond = ["estado = 'AC'"];
         $par = [];
@@ -71,7 +71,7 @@ final class BuscadorArticulos
                 array_push($par, $like, $like, $like, $p, $p, $p);
             }
         }
-        $st = Db::pdo()->prepare('SELECT * FROM articulos WHERE ' . implode(' AND ', $cond) . ' ORDER BY descripcion, codigo LIMIT ' . ($porPagina + 1) . ' OFFSET ' . (max(1, $pagina) - 1) * $porPagina);
+        $st = Db::pdo()->prepare('SELECT * FROM articulos WHERE ' . implode(' AND ', $cond) . ($kiosco ? ' ORDER BY orden_kiosco = 0, orden_kiosco, descripcion, codigo' : ' ORDER BY descripcion, codigo') . ' LIMIT ' . ($porPagina + 1) . ' OFFSET ' . (max(1, $pagina) - 1) * $porPagina);
         $st->execute($par);
         $filas = $st->fetchAll();
         $hayMas = count($filas) > $porPagina;

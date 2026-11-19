@@ -196,11 +196,32 @@ final class ReservasService
     // ------------------------------------------------------------------ autorización
 
     /** ¿Ese usuario activo tiene permiso para autorizar? (sus permisos son los de su rol; Administrador y Master los tienen todos guardados) */
-    public function usuarioPuede(int $usuarioId): bool
+    public function usuarioPuede(int $usuarioId, string $permiso = self::PERMISO): bool
     {
         $st = $this->pdo->prepare('SELECT 1 FROM usuarios u JOIN rol_permisos rp ON rp.rol_id = u.rol_id JOIN permisos p ON p.id = rp.permiso_id WHERE u.id = ? AND u.activo = 1 AND p.codigo = ?');
-        $st->execute([$usuarioId, self::PERMISO]);
+        $st->execute([$usuarioId, $permiso]);
         return $st->fetchColumn() !== false;
+    }
+
+    /**
+     * DECISIÓN D-55 (Dev Senior, a confirmar por Hernán): hay usuarios a los que NO se les pide autorización para vender sin stock: los de un rol con el permiso
+     * `stock.vender_sin_stock` (en cualquier venta) o `kiosco.sin_stock` (solo en el presupuesto del kiosco). La venta sale directo, el stock puede quedar en negativo y
+     * queda registrada («por permiso») para el informe «Ventas sin stock». Nadie lo tiene por omisión: se tilda por rol.
+     *
+     * @return array{usuario_id:int,nombre:string,automatica:true}|null
+     */
+    public function autorizaPorPermiso(array $in, int $usuarioId, string $tipo): ?array
+    {
+        if ($usuarioId <= 0) {
+            return null;
+        }
+        $kiosco = $tipo === 'PR' && ($in['origen'] ?? '') === 'kiosco';
+        if (!$this->usuarioPuede($usuarioId, 'stock.vender_sin_stock') && !($kiosco && $this->usuarioPuede($usuarioId, 'kiosco.sin_stock'))) {
+            return null;
+        }
+        $st = $this->pdo->prepare('SELECT nombre FROM usuarios WHERE id = ?');
+        $st->execute([$usuarioId]);
+        return ['usuario_id' => $usuarioId, 'nombre' => (string) $st->fetchColumn(), 'automatica' => true];
     }
 
     /**
@@ -240,10 +261,11 @@ final class ReservasService
      */
     public function registrar(array $faltantes, int $pideUsuarioId, ?array $autorizo, int $subdiarioId): void
     {
-        $st = $this->pdo->prepare('INSERT INTO stock_autorizaciones (fecha, articulo, cantidad, disponible, pide_usuario_id, autoriza_usuario_id, subdiario_id, detalle) VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?)');
+        $st = $this->pdo->prepare('INSERT INTO stock_autorizaciones (fecha, articulo, cantidad, disponible, pide_usuario_id, autoriza_usuario_id, subdiario_id, detalle, automatica) VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?)');
         foreach ($faltantes as $f) {
             $st->execute([$f['articulo'], $f['falta'], max(0.0, $f['disponible']), $pideUsuarioId > 0 ? $pideUsuarioId : null, $autorizo['usuario_id'] ?? null, $subdiarioId,
-                $autorizo === null ? 'Sin autorización: el comprobante ya estaba autorizado por ARCA cuando cambió el stock' : mb_substr($f['mensaje'], 0, 255)]);
+                $autorizo === null ? 'Sin autorización: el comprobante ya estaba autorizado por ARCA cuando cambió el stock' : mb_substr(($autorizo['automatica'] ?? false ? 'Por permiso, sin pedir autorización. ' : '') . $f['mensaje'], 0, 255),
+                !empty($autorizo['automatica']) ? 1 : 0]);
         }
     }
 }

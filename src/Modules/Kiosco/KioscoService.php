@@ -40,4 +40,24 @@ final class KioscoService
     {
         return Db::pdo()->query("SELECT r.codigo, r.descripcion FROM rubros r WHERE EXISTS (SELECT 1 FROM articulos a WHERE a.rubro = r.codigo AND a.estado = 'AC') ORDER BY r.descripcion")->fetchAll();
     }
+
+    /**
+     * Sin el permiso kiosco.precio el precio de cada renglón es SIEMPRE el de lista (lo que dice la tarjeta), por más que el navegador mande otro: el precio se vuelve a
+     * leer del artículo en el servidor. Con el permiso se respeta el que se escribió en el carrito.
+     *
+     * @param array<int,array<string,mixed>> $items renglones con 'articulo' y 'precio' @return array<int,array<string,mixed>>
+     */
+    public static function fijarPrecios(array $items, bool $puedeCambiarPrecio): array
+    {
+        if ($puedeCambiarPrecio) {
+            return $items;
+        }
+        foreach ($items as $i => $it) {
+            $a = \App\Modules\Articulos\BuscadorArticulos::buscar((string) ($it['articulo'] ?? ''), true)[0] ?? null;
+            if ($a !== null) {
+                $items[$i]['precio'] = (string) $a['precio'];
+            }
+        }
+        return $items;
+    }
 }

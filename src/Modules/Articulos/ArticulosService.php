@@ -47,6 +47,7 @@ final class ArticulosService
             'bonificacion_a' => ['label' => 'Bonificación A (%)', 'tipo' => 'decimal', 'dec' => 2, 'min' => 0, 'max' => 100, 'grupo' => 'Precios'],
             'bonificacion_b' => ['label' => 'Bonificación B (%)', 'tipo' => 'decimal', 'dec' => 2, 'min' => 0, 'max' => 100, 'grupo' => 'Precios'],
             'incluirlista' => ['label' => 'Incluir en la lista de precios', 'tipo' => 'si_no', 'grupo' => 'Precios'],
+            'orden_kiosco' => ['label' => 'Posición en el kiosco (1 = primero; 0 = sin posición, va al final)', 'tipo' => 'entero', 'min' => 0, 'max' => 65535, 'grupo' => 'Otros datos', 'ayuda' => 'Para poner los favoritos primero en las tarjetas del modo Kiosco.'],
             'proveedor' => ['label' => 'Proveedor (código)', 'tipo' => 'entero', 'min' => 0, 'max' => 99999, 'grupo' => 'Otros datos'],
             'stock_minimo_unidades' => ['label' => 'Stock mínimo (unidades)', 'tipo' => 'entero', 'min' => 0, 'max' => 999999999, 'grupo' => 'Otros datos'],
             'cta_contable' => ['label' => 'Cuenta contable', 'tipo' => 'entero', 'min' => 0, 'max' => 9999, 'grupo' => 'Otros datos'],

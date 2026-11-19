@@ -7,8 +7,9 @@ use App\Modules\Comprobantes\Tipos;
 /** @var ?array<string,mixed> $hecho */
 /** @var bool $puedeVer */
 /** @var bool $conTicket */
+/** @var bool $puedePrecio */
 ?>
-<div class="kiosco" data-kiosco
+<div class="kiosco" data-kiosco data-puede-precio="<?= $puedePrecio ? '1' : '0' ?>"
      data-url-articulos="<?= e(url('/kiosco/articulos')) ?>" data-url-cliente="<?= e(url('/kiosco/buscar-cliente')) ?>"
      data-cliente-codigo="<?= e((string) ($cliente['codigo'] ?? '')) ?>" data-cliente-nombre="<?= e((string) ($cliente['razon_social'] ?? '')) ?>"
      data-hecho="<?= $hecho !== null ? '1' : '0' ?>" data-url-reservar="<?= e(url('/stock/reservar')) ?>" data-url-liberar="<?= e(url('/stock/liberar')) ?>"

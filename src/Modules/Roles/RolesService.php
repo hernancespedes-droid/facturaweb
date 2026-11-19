@@ -22,9 +22,9 @@ final class RolesService
     public const MENU = [
         'clientes' => ['clientes.ver', ['clientes.editar']],
         'articulos' => ['articulos.ver', ['articulos.editar']],
-        'comprobantes' => ['comprobantes.ver', ['comprobantes.emitir', 'comprobantes.credito']],
+        'comprobantes' => ['comprobantes.ver', ['comprobantes.emitir', 'comprobantes.credito', 'stock.vender_sin_stock']],
         'cambios' => ['cambios.hacer', []],
-        'kiosco' => ['kiosco.usar', []],
+        'kiosco' => ['kiosco.usar', ['kiosco.precio', 'kiosco.sin_stock']],
         'ctacte' => ['ctacte.ver', ['ctacte.cobrar', 'ctacte.imputar', 'ctacte.ajustar']],
         'caja' => ['caja.turno', ['caja.mover']],
         'caja_auditoria' => ['caja.auditar', []],

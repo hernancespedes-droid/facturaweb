@@ -162,4 +162,130 @@ final class KioscoTest extends ComprobantesTestCase
         // la marca está en Parámetros
         $this->assertTrue(isset(\App\Modules\Tablas\Definiciones::de('parametros')['campos']['kiosco']));
     }
+
+    // ---------------------------------------------------------------- 0.26.0: orden de las tarjetas, precio con permiso y venta sin stock sin autorización
+
+    /** Datos (JSON) de la pantalla de revisión que devuelve /kiosco/cobrar. @return array<string,mixed> */
+    private function datosDeLaRevision(\App\Http\Response $rev): array
+    {
+        preg_match('/name="datos" value="([^"]*)"/', $rev->body, $m);
+        return json_decode(html_entity_decode($m[1], ENT_QUOTES), true);
+    }
+
+    /** @return array<int,array{0:mixed,1:mixed}> permisos actuales del rol Operador, para devolverlos como estaban */
+    private function copiaPermisosOperador(): array
+    {
+        return Db::pdo()->query("SELECT rp.rol_id, rp.permiso_id FROM rol_permisos rp JOIN roles r ON r.id = rp.rol_id WHERE r.codigo = 'operador'")->fetchAll(\PDO::FETCH_NUM);
+    }
+
+    private function restaurarPermisosOperador(array $copia): void
+    {
+        Db::pdo()->exec("DELETE rp FROM rol_permisos rp JOIN roles r ON r.id = rp.rol_id WHERE r.codigo = 'operador'");
+        $ins = Db::pdo()->prepare('INSERT IGNORE INTO rol_permisos (rol_id, permiso_id) VALUES (?, ?)');
+        foreach ($copia as $f) {
+            $ins->execute([$f[0], $f[1]]);
+        }
+        \App\Modules\Auth\Auth::reset();
+    }
+
+    private function darAOperador(string $permiso): void
+    {
+        Db::pdo()->prepare("INSERT IGNORE INTO rol_permisos (rol_id, permiso_id) SELECT r.id, p.id FROM roles r JOIN permisos p ON p.codigo = ? WHERE r.codigo = 'operador'")->execute([$permiso]);
+        \App\Modules\Auth\Auth::reset();
+    }
+
+    public function testLasTarjetasSalenEnElOrdenDelKioscoConLosFavoritosPrimero(): void
+    {
+        $this->loginComo($this->crearUsuario('t_op_ord', 'operador'));
+        $orden = fn () => array_values(array_filter(array_column(json_decode($this->get('/kiosco/articulos', ['q' => 'T-ART'])->body, true)['items'], 'codigo'), static fn ($c) => str_starts_with($c, 'T-ART')));
+        $this->assertSame(['T-ART', 'T-ART2'], $orden(), 'sin posición: por orden alfabético de la descripción');
+        Db::pdo()->exec("UPDATE articulos SET orden_kiosco = 1 WHERE codigo = 'T-ART2'");
+        $this->assertSame(['T-ART2', 'T-ART'], $orden(), 'el favorito con posición 1 va primero');
+        Db::pdo()->exec("UPDATE articulos SET orden_kiosco = 2 WHERE codigo = 'T-ART'");
+        $this->assertSame(['T-ART2', 'T-ART'], $orden());
+        Db::pdo()->exec("UPDATE articulos SET orden_kiosco = 1 WHERE codigo = 'T-ART'; UPDATE articulos SET orden_kiosco = 3 WHERE codigo = 'T-ART2'");
+        $this->assertSame(['T-ART', 'T-ART2'], $orden(), 'se reordena con la posición');
+        // el resto de las pantallas (buscadores de los comprobantes) siguen alfabéticas
+        $this->assertSame('ARTICULO DE PRUEBA', \App\Modules\Articulos\BuscadorArticulos::listar('T-ART', 1)['items'][0]['descripcion']);
+        // la ficha del artículo lo pide y lo guarda
+        $this->loginComo($this->crearUsuario('t_adm_ord', 'admin'));
+        $this->assertStringContainsString('Posición en el kiosco', $this->get('/articulos/ficha', ['codigo' => 'T-ART'])->body);
+    }
+
+    public function testSinElPermisoDelPrecioElKioscoUsaSiempreElPrecioDeLista(): void
+    {
+        $op = $this->crearUsuario('t_op_pre', 'operador');
+        $this->loginComo($op);
+        $lista = json_decode($this->get('/kiosco/articulos', ['q' => 'T-ART', 'exacto' => '1'])->body, true)['items'][0]['precio'];
+        $manipulado = ['cliente' => '990002', 'items' => [['articulo' => 'T-ART', 'cantidad' => '2', 'precio' => '1', 'alicuota' => '21']]];
+        $d = $this->datosDeLaRevision($this->post('/kiosco/cobrar', $manipulado));
+        $this->assertSame($lista, $d['items'][0]['precio'], 'sin kiosco.precio el servidor pone el precio de lista');
+        $this->assertSame('1', $this->kioscoPrecioConPermiso($manipulado), 'con kiosco.precio se respeta el precio escrito');
+        // y tampoco se cambia tocando los datos de la pantalla de revisión
+        $this->loginComo($op);
+        $d['items'][0]['precio'] = '1';
+        $this->post('/kiosco/emitir', ['datos' => json_encode($d, JSON_UNESCAPED_UNICODE), 'operacion' => bin2hex(random_bytes(16)), 'forma_pago' => '2']);
+        $h = Db::pdo()->query("SELECT neto FROM subdiario WHERE tipo = 'PR' ORDER BY fe_clave DESC LIMIT 1")->fetchColumn();
+        $this->assertSame(200.0, (float) $h, '2 × 100 de lista, no 2 × 1');
+        // la pantalla pide el precio editable solo con el permiso
+        $this->assertStringContainsString('data-puede-precio="0"', $this->get('/kiosco')->body);
+        $this->loginComo($this->crearUsuario('t_adm_pre', 'admin'));
+        $this->assertStringContainsString('data-puede-precio="1"', $this->get('/kiosco')->body);
+    }
+
+    private function kioscoPrecioConPermiso(array $carrito): string
+    {
+        $this->loginComo($this->crearUsuario('t_adm_pre2', 'admin'));
+        return $this->datosDeLaRevision($this->post('/kiosco/cobrar', $carrito))['items'][0]['precio'];
+    }
+
+    public function testVenderSinStockSinAutorizacionSoloConElPermisoYQuedaRegistrado(): void
+    {
+        $copia = $this->copiaPermisosOperador();
+        try {
+            $op = $this->crearUsuario('t_op_ss', 'operador');
+            $this->loginComo($op);
+            $carrito = ['cliente' => '990002', 'items' => [['articulo' => 'T-ART', 'cantidad' => '8', 'precio' => '100', 'alicuota' => '21']]]; // hay 5: faltan 3
+            // sin permiso: pide autorización
+            $rev = $this->post('/kiosco/cobrar', $carrito);
+            $this->assertStringContainsString('autoriza_clave', $rev->body);
+            $this->assertStringNotContainsString('Se vende sin stock disponible', $rev->body);
+            // con el permiso del kiosco: la revisión solo avisa, no pide nada, y la venta sale
+            $this->darAOperador('kiosco.sin_stock');
+            $rev = $this->post('/kiosco/cobrar', $carrito);
+            $this->assertStringContainsString('Se vende sin stock disponible', $rev->body);
+            $this->assertStringNotContainsString('autoriza_clave', $rev->body);
+            $d = $this->datosDeLaRevision($rev);
+            $ok = $this->post('/kiosco/emitir', ['datos' => json_encode($d, JSON_UNESCAPED_UNICODE), 'operacion' => bin2hex(random_bytes(16)), 'forma_pago' => '1', 'fpago' => 'EF']);
+            $this->assertSame(302, $ok->status);
+            $this->assertStringContainsString('/kiosco?hecho=', (string) $ok->headers['Location']);
+            $this->assertSame(-3.0, $this->stock->saldo('T-ART'), 'el stock queda en negativo (D-19)');
+            $a = $this->fila('SELECT * FROM stock_autorizaciones ORDER BY id DESC LIMIT 1');
+            $this->assertSame([3.0, 1, $op, $op], [(float) $a['cantidad'], (int) $a['automatica'], (int) $a['pide_usuario_id'], (int) $a['autoriza_usuario_id']], 'queda asentado: por permiso, a nombre de quien vendió');
+            $this->assertStringContainsString('Por permiso', (string) $a['detalle']);
+            // kiosco.sin_stock vale solo en el kiosco: una factura normal sigue pidiendo autorización
+            $fc = $this->svc->armar($this->pedido(['items' => [['articulo' => 'T-ART', 'descripcion' => '', 'cantidad' => '2', 'precio' => '100', 'alicuota' => '21']]]) + ['forma_pago' => '2'], false, $op);
+            $this->assertTrue(isset($fc['errores']['stock']), 'una factura fuera del kiosco sigue pidiendo autorización');
+            // con stock.vender_sin_stock vale en todas las ventas
+            $this->darAOperador('stock.vender_sin_stock');
+            $fc = $this->svc->armar($this->pedido(['items' => [['articulo' => 'T-ART', 'descripcion' => '', 'cantidad' => '2', 'precio' => '100', 'alicuota' => '21']]]) + ['forma_pago' => '2'], false, $op);
+            $this->assertSame([], $fc['errores']);
+            $e = $this->svc->emitir($fc['cbte'], bin2hex(random_bytes(16)), $op);
+            $this->assertSame(2, (int) $this->fila('SELECT COUNT(*) AS n FROM stock_autorizaciones WHERE automatica = 1')['n']);
+            $this->assertTrue($e['id'] > 0);
+            // el informe de ventas sin stock lo muestra; solo lo ve quien tiene stock.ver
+            $this->assertSame(403, $this->get('/stock/ventas-sin-stock')->status);
+            $this->loginComo($this->crearUsuario('t_adm_ss', 'admin'));
+            $inf = $this->get('/stock/ventas-sin-stock');
+            $this->assertSame(200, $inf->status);
+            $this->assertStringContainsString('Por permiso del que vende', $inf->body);
+            $this->assertStringContainsString('T-ART', $inf->body);
+            $this->assertStringContainsString('t_op_ss', $inf->body);
+            $this->assertStringNotContainsString('Autorizó un supervisor</td>', $inf->body);
+            $solo = $this->get('/stock/ventas-sin-stock', ['modo' => 'supervisor']);
+            $this->assertStringContainsString('No hubo ventas sin stock', $solo->body);
+        } finally {
+            $this->restaurarPermisosOperador($copia);
+        }
+    }
 }
