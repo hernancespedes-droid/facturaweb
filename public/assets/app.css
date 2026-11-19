@@ -1200,3 +1200,6 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 
 /* Caja: los ingresos y egresos de dinero se distinguen de las ventas */
 .table tr.fila-manual td { background: color-mix(in srgb, var(--primary, #2f6bff) 6%, transparent); }
+
+/* Kiosco: precio editable en el carrito (permiso kiosco.precio) */
+.k-precio-ed { width: 7rem; text-align: right; padding: .2rem .4rem; }

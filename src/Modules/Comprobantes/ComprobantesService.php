@@ -371,10 +371,14 @@ final class ComprobantesService
         $reserva = ReservasService::tokenValido($in['reserva'] ?? null);
         $faltantes = [];
         $autorizo = null;
+        $auto = null;
         if (in_array($tipo, ['FC', 'PR'], true) && !$solo && $items !== [] && !isset($err['items'])) {
             $rs = new ReservasService($this->pdo);
             $faltantes = $rs->faltantes($items, $reserva);
-            if ($faltantes !== [] && !$pagoPendiente) {
+            $auto = $rs->autorizaPorPermiso($in, $usuarioId, $tipo); // D-55: roles que venden sin stock sin pedir autorización
+            if ($faltantes !== [] && $auto !== null) {
+                $autorizo = $auto;
+            } elseif ($faltantes !== [] && !$pagoPendiente) {
                 $a = $rs->autorizar($in, $usuarioId);
                 if ($a['ok']) {
                     $autorizo = ['usuario_id' => $a['usuario_id'], 'nombre' => $a['nombre']];
@@ -412,7 +416,7 @@ final class ComprobantesService
             'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
             'concepto' => $concepto, 'serv_desde' => $servDesde, 'serv_hasta' => $servHasta, 'vto_pago' => $vtoPago,
             'interno' => $interno, 'sin_iva' => $sinIva, 'solo_subdiario' => $solo, 'presupuesto' => $presupuesto !== null ? (int) $presupuesto['fe_clave'] : null,
-            'stock_faltantes' => $faltantes, 'stock_autorizado' => $autorizo, 'reserva_token' => $reserva,
+            'stock_faltantes' => $faltantes, 'stock_autorizado' => $autorizo, 'stock_automatico' => $auto, 'reserva_token' => $reserva,
             'advertencias' => $solo || in_array($tipo, ['FC', 'PR'], true) ? [] : (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
         ]];
     }
@@ -950,10 +954,11 @@ final class ComprobantesService
                 $rs = new ReservasService($this->pdo);
                 $falta = $rs->faltantes($c['items'], $cbte['reserva_token'] ?? null, true);
                 if ($falta !== []) {
-                    if ($arca === null && empty($cbte['stock_autorizado'])) {
+                    $autoriz = $cbte['stock_autorizado'] ?: ($cbte['stock_automatico'] ?? null); // un supervisor, o el permiso del que vende (D-55)
+                    if ($arca === null && empty($autoriz)) {
                         throw new StockNoDisponible(implode("\n", array_map(static fn (array $f) => $f['mensaje'], $falta)));
                     }
-                    $rs->registrar($falta, $usuarioId, $arca === null ? $cbte['stock_autorizado'] : null, $id);
+                    $rs->registrar($falta, $usuarioId, $arca === null ? $autoriz : null, $id);
                 }
                 if (!empty($cbte['reserva_token'])) {
                     $rs->liberar((string) $cbte['reserva_token']);

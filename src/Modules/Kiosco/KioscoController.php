@@ -39,7 +39,7 @@ final class KioscoController
         return Response::html(View::render('kiosco/index', [
             'title' => 'Kiosco', 'nav' => 'kiosco', 'rubros' => KioscoService::rubros(), 'cliente' => KioscoService::clientePorOmision(),
             'sucursales' => $svc->sucursales(), 'hecho' => $hecho, 'puedeVer' => Auth::puede('comprobantes.ver'),
-            'conTicket' => \App\Modules\Cambios\CambiosService::habilitado() && Auth::puede('comprobantes.ver'),
+            'conTicket' => \App\Modules\Cambios\CambiosService::habilitado() && Auth::puede('comprobantes.ver'), 'puedePrecio' => Auth::puede('kiosco.precio'),
         ]));
     }
 
@@ -54,7 +54,7 @@ final class KioscoController
         if (isset($req->query['exacto'])) {
             return Response::json(['items' => BuscadorArticulos::buscar($q, true), 'hay_mas' => false]);
         }
-        return Response::json(BuscadorArticulos::listar($q, max(1, (int) ($req->query['pagina'] ?? 1)), trim((string) ($req->query['rubro'] ?? '')), 24));
+        return Response::json(BuscadorArticulos::listar($q, max(1, (int) ($req->query['pagina'] ?? 1)), trim((string) ($req->query['rubro'] ?? '')), 24, true)); // con el orden del kiosco (favoritos primero)
     }
 
     /** Buscador de clientes del carrito (JSON): el mismo de los comprobantes; el usuario elige. */
@@ -79,6 +79,7 @@ final class KioscoController
                     'alicuota' => (string) ($x['alicuota'] ?? '')];
             }
         }
+        $items = KioscoService::fijarPrecios($items, Auth::puede('kiosco.precio'));
         $datos = ['tipo' => 'PR', 'origen' => 'kiosco', 'cliente' => (string) ($req->post['cliente'] ?? ''), 'items' => $items, 'reserva' => (string) ($req->post['reserva'] ?? '')];
         if (trim((string) ($req->post['sucursal'] ?? '')) !== '') { // si no viene, con un solo punto de venta se usa ese
             $datos['sucursal'] = (string) $req->post['sucursal'];
@@ -102,6 +103,9 @@ final class KioscoController
             Session::flash('error', 'No se pudo leer la venta. Volvé a armarla en el kiosco.');
             return Response::redirect(url('/kiosco'));
         }
+        // el precio se vuelve a fijar acá: quien no puede cambiarlo no lo cambia tocando los datos de la pantalla de revisión
+        $d['items'] = KioscoService::fijarPrecios(array_values(array_filter((array) ($d['items'] ?? []), 'is_array')), Auth::puede('kiosco.precio'));
+        $req = new Request($req->method, $req->path, $req->query, array_merge($req->post, ['datos' => (string) json_encode($d, JSON_UNESCAPED_UNICODE)]), $req->server, $req->files);
         return ComprobantesController::emitir($req, $params);
     }
 }

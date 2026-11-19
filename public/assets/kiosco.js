@@ -56,6 +56,8 @@
 
   // ---- carrito
   var lineas = q('[data-lineas]');
+  var puedePrecio = raiz.getAttribute('data-puede-precio') === '1';
+  function fmt2(v) { return v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }); }
   function totalCarrito() { return r2(estado.items.reduce(function (a, x) { return a + x.cantidad * num(x.precio); }, 0)); }
   function render(soloEstados) {
     lineas.innerHTML = '';
@@ -76,7 +78,15 @@
       var mas = el('button', 'btn btn-ghost btn-sm', '+'); mas.type = 'button'; mas.setAttribute('aria-label', 'Una más');
       mas.addEventListener('click', function () { x.cantidad = r2(x.cantidad + 1); cambio(); });
       ctl.appendChild(menos); ctl.appendChild(inp); ctl.appendChild(mas);
-      ctl.appendChild(el('span', 'k-linea-precio muted small', '× ' + fmt(num(x.precio))));
+      if (puedePrecio) { // con el permiso kiosco.precio se puede escribir otro precio (el servidor lo respeta solo si el usuario tiene el permiso)
+        var pr = el('input', 'k-precio-ed'); pr.type = 'text'; pr.inputMode = 'decimal'; pr.value = fmt2(num(x.precio));
+        pr.title = 'Precio unitario (con IVA incluido)'; pr.setAttribute('aria-label', 'Precio de ' + x.descripcion);
+        pr.addEventListener('focus', function () { pr.select(); });
+        pr.addEventListener('change', function () { var v = num(pr.value); if (v >= 0 && pr.value.trim() !== '') { x.precio = String(v).replace('.', ','); } cambio(); });
+        ctl.appendChild(el('span', 'muted small', '×')); ctl.appendChild(pr);
+      } else {
+        ctl.appendChild(el('span', 'k-linea-precio muted small', '× ' + fmt(num(x.precio))));
+      }
       ctl.appendChild(el('b', 'k-linea-sub', fmt(r2(x.cantidad * num(x.precio)))));
       f.appendChild(ctl);
       var er = estadosRes[x.codigo];

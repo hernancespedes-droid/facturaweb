@@ -77,6 +77,10 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `Modules/Caja/CajaService`: turnos con arqueo (`caja_turnos`), ingresos/egresos manuales (`caja_movimientos`, tope `parametros.caja_tope`, se anulan con contra-asiento `anula_id`, nunca se editan) y `caja_auditoria` con hash encadenado (`verificar()`). Todo cobro nuevo en `caja` lleva `usuario_id`, `creado_en` y `turno_id` con `CajaService::contexto()` (hay que sumarlo en cualquier INSERT nuevo en `caja`). Permisos `caja.turno`, `caja.mover`, `caja.auditar`.
 
+## Kiosco: orden, precio y venta sin stock (0.26.0)
+
+`articulos.orden_kiosco` ordena las tarjetas (`BuscadorArticulos::listar(..., $kiosco = true)`). `KioscoService::fijarPrecios` impone el precio de lista a quien no tiene `kiosco.precio` (se aplica en `cobrar` y en `emitir`). `ReservasService::autorizaPorPermiso` salta la autorización de stock para roles con `kiosco.sin_stock` (solo PR del kiosco) o `stock.vender_sin_stock`; `ComprobantesService::armar` lo guarda en `stock_automatico` y `grabar` lo registra con `automatica = 1` (informe `Stock/VentasSinStock`).
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.
