@@ -1,6 +1,6 @@
 # Factura electrónica (ARCA): puesta en marcha paso a paso
 
-Para Hernán. Claude no entra a ARCA con la clave fiscal: los pasos de ARCA los hacés vos. El sistema queda en **modo interno**
+Para Hernán. Dev Senior no entra a ARCA con la clave fiscal: los pasos de ARCA los hacés vos. El sistema queda en **modo interno**
 (sin CAE) hasta que cambies el modo en `config/local.php`. Nada de esto toca el sistema VFP de escritorio.
 
 ## 0. Probar todo SIN certificado: modo simulado

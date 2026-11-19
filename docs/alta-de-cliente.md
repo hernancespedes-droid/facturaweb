@@ -12,7 +12,7 @@ El código es el mismo para todos. Este manual es el camino que se repite; lo qu
 ## Reglas que no se negocian
 - **Una base y una carpeta por cliente.** Nunca se comparten.
 - **Nada de datos del cliente, claves ni certificados en el repositorio ni en el chat**: la ficha, el `.rar` del VFP, `config/local.php`, la clave privada de ARCA y la clave privada de licencias viven en Drive o en el servidor.
-- **Claude no entra a ARCA ni escribe claves fiscales**: prepara la clave privada y el `.csr`, y el cliente (o Hernán con su autorización) hace lo que se hace dentro de ARCA.
+- **Dev Senior no entra a ARCA ni escribe claves fiscales**: prepara la clave privada y el `.csr`, y el cliente (o Hernán con su autorización) hace lo que se hace dentro de ARCA.
 - Siempre se prueba **primero en modo interno, después homologación, después producción**, y la migración **primero con `--simular`**.
 - Se entrega con la nota `docs/entregas/…` y el cliente firma la prueba.
 
@@ -24,10 +24,10 @@ El código es el mismo para todos. Este manual es el camino que se repite; lo qu
 | 3 | Instalar | Hernán | `/instalar` crea las tablas y el Master. **Vaciar `instalar_token` después.** `/salud` tiene que dar `ok`. |
 | 4 | Licencia | Hernán | Se emite con `bin/licencia.php` (la clave privada nunca sale de tu PC). Cada mes se emite una nueva y se carga en Sistema → Licencia. |
 | 5 | Datos de la empresa | Hernán + cliente | Parámetros y sucursal/punto de venta con la numeración que sigue a la última del sistema anterior. |
-| 6 | Migrar el VFP | Claude | `.rar` por Drive, `php bin/migrar-dbf.php <carpeta> --simular`, revisar avisos, migrar, controlar saldos y cantidades contra el VFP. Ver `docs/migracion-dbf.md`. |
-| 7 | ARCA | Claude prepara, cliente/Hernán ejecutan | `bin/afip-csr.php` genera la clave y el `.csr`; el cliente lo sube, descarga el certificado y habilita el punto de venta RECE. Ver `docs/ARCA-PUESTA-EN-MARCHA.md`. |
+| 6 | Migrar el VFP | Dev Senior | `.rar` por Drive, `php bin/migrar-dbf.php <carpeta> --simular`, revisar avisos, migrar, controlar saldos y cantidades contra el VFP. Ver `docs/migracion-dbf.md`. |
+| 7 | ARCA | Dev Senior prepara, cliente/Hernán ejecutan | `bin/afip-csr.php` genera la clave y el `.csr`; el cliente lo sube, descarga el certificado y habilita el punto de venta RECE. Ver `docs/ARCA-PUESTA-EN-MARCHA.md`. |
 | 8 | Puesta en marcha | Todos | Prueba con el cliente presente (una factura y una NC reales), usuarios y roles, agente + importador si sigue usando el VFP en paralelo, capacitación. |
-| 9 | Cierre | Claude | Ficha completa, lecciones, instalaciones, nota de entrega. |
+| 9 | Cierre | Dev Senior | Ficha completa, lecciones, instalaciones, nota de entrega. |
 
 ## Suscripción mensual: la licencia
 - Una licencia es un archivo firmado por O&S (Ed25519) con el cliente, el CUIT y la fecha de vencimiento. La instalación solo tiene la **clave pública**: puede verificarla pero no fabricarla ni alargarla; tampoco sirve para otro CUIT.

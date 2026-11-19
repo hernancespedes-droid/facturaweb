@@ -1,10 +1,10 @@
-# Decisiones que tomó Claude y que Hernán puede cambiar
+# Decisiones que tomó Dev Senior y que Hernán puede cambiar
 
-Cada una está marcada en el código con `DECISIÓN D-xx (Claude, a confirmar por Hernán)`. Buscarla con
+Cada una está marcada en el código con `DECISIÓN D-xx (Dev Senior, a confirmar por Hernán)`. Buscarla con
 `grep -rn "D-07" src public database` (cambiar el número). Las tres primeras se cambian **sin tocar el código**, en
 *Sistema → Configuración*.
 
-| ID | Qué decidió Claude | Dónde está | Cómo se cambia |
+| ID | Qué decidió Dev Senior | Dónde está | Cómo se cambia |
 |----|--------------------|------------|----------------|
 | D-01 | Una nota de crédito no puede superar lo que queda por acreditar de su factura (el VFP lo permitía). | `ComprobantesService::armar` | Configuración → `comprobantes.nc_limite_factura` (destildar = sin control) |
 | D-02 | Un cliente con límite de crédito 0 no tiene control de crédito (el VFP pedía autorización de un supervisor). | `ComprobantesService::armar` | Configuración → `comprobantes.credito_cero_sin_limite` |

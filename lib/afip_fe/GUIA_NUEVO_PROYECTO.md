@@ -24,15 +24,15 @@ Módulo PHP `afip_fe` (carpeta `G:\reciclados_cloud\modulos\afip_fe\`, paquete `
 
 - **Bases:** cualquier cambio en SQL Server o MySQL lo autoriza Hernán. Agregar está bien; **borrar** lo autoriza él.
 - **Facturación real:** activarla la decide Hernán.
-  - Claude deja todo listo en **modo prueba** (`factura_grabar` en `false`: se carga y se revisa, pero no se graba ni se pide CAE).
+  - Dev Senior deja todo listo en **modo prueba** (`factura_grabar` en `false`: se carga y se revisa, pero no se graba ni se pide CAE).
   - Hernán activa el último paso.
-- **Claves:** Claude no entra a ARCA con clave fiscal ni escribe claves en archivos de configuración. Prepara el pedido de certificado y las instrucciones; el trámite en ARCA lo hace Hernán o quien administre la empresa.
+- **Claves:** Dev Senior no entra a ARCA con clave fiscal ni escribe claves en archivos de configuración. Prepara el pedido de certificado y las instrucciones; el trámite en ARCA lo hace Hernán o quien administre la empresa.
 - **Sistemas con escritorio:** antes de programar, relevar cómo factura el sistema de escritorio (formularios, tablas, numeración, formato impreso) y **copiar su comportamiento**. Lo que difiera, decirlo.
 
 ## 3. Puesta en marcha en ARCA (checklist)
 
 1. **Certificado propio para la web.** ARCA da **un solo ticket de acceso (TA) por certificado**: si la web usa el mismo que otro sistema, se traban entre sí hasta 12 horas ("ya posee un TA válido").
-   - Claude genera la clave privada y el `.csr`.
+   - Dev Senior genera la clave privada y el `.csr`.
    - **Si la empresa ya tiene un alias que funciona** (con la relación wsfe hecha), conviene **"Agregar certificado" en ese mismo alias**:
      - hereda la autorización y no hace falta el Administrador de Relaciones;
      - el TA es por certificado, así que no se traba con el otro sistema (probado en Reciclados);
