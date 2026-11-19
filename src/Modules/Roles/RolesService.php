@@ -26,6 +26,7 @@ final class RolesService
         'cambios' => ['cambios.hacer', []],
         'kiosco' => ['kiosco.usar', ['kiosco.precio', 'kiosco.sin_stock']],
         'ctacte' => ['ctacte.ver', ['ctacte.cobrar', 'ctacte.imputar', 'ctacte.ajustar']],
+        'mp' => ['mercadopago.cobrar', ['mercadopago.administrar']],
         'caja' => ['caja.turno', ['caja.mover']],
         'caja_auditoria' => ['caja.auditar', []],
         'iva_ventas' => ['listados.ver', []],

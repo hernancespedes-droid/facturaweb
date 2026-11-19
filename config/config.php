@@ -34,6 +34,15 @@ $base = [
         'modo'   => env('AFIP_MODO', 'interno'),
         'config' => env('AFIP_CONFIG', ''),
     ],
+    // Mercado Pago (cobros con QR y link de pago). modo: apagado | simulado | produccion. Las claves van en config/local.php (o variables de entorno), nunca al repositorio.
+    'mp' => [
+        'modo'           => env('MP_MODO', 'apagado'),
+        'access_token'   => env('MP_ACCESS_TOKEN', ''),
+        'webhook_secret' => env('MP_WEBHOOK_SECRET', ''),
+        'user_id'        => env('MP_USER_ID', ''),
+        'pos_id'         => env('MP_POS_ID', ''),
+        'expira_minutos' => (int) env('MP_EXPIRA_MINUTOS', '30'),
+    ],
     'mail' => [
         'host'      => env('MAIL_HOST', ''),
         'port'      => (int) env('MAIL_PORT', '587'),

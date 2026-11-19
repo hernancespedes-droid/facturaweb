@@ -33,6 +33,15 @@ return [
         'modo'   => 'interno',   // interno | simulado | homologacion | produccion
         'config' => '',          // ruta al config_afip.php del cliente, FUERA de public_html
     ],
+    // Mercado Pago (cobros con QR y link de pago). Las claves son de la cuenta del cliente y van SOLO acá, nunca al repositorio.
+    'mp' => [
+        'modo'           => 'apagado',   // apagado | simulado | produccion
+        'access_token'   => '',          // credencial de producción de la aplicación de Mercado Pago
+        'webhook_secret' => '',          // clave secreta de las notificaciones (Webhooks) de la aplicación
+        'user_id'        => '',          // id de la cuenta vendedora (para el QR); sin esto solo hay link de pago
+        'pos_id'         => '',          // external_id de la caja (POS) creada en Mercado Pago (para el QR)
+        'expira_minutos' => 30,
+    ],
     'db' => [
         'host' => 'localhost',
         'name' => 'NOMBRE_DE_LA_BASE',
