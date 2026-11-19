@@ -214,7 +214,7 @@ async function factura(page, precio) {
     await page.goto(BASE + '/listados/caja-diaria');
     cp = await page.textContent('body');
     ok(cp.includes('Caja diaria') && cp.includes('Facturado en cuenta corriente') && cp.includes('Billeteras virtuales') && cp.includes('Tarjeta'), 'caja diaria: muestra lo vendido, la cuenta corriente y lo cobrado por tarjeta y billeteras');
-    ok(cp.includes('Cobrado por forma de pago') && cp.includes('Movimientos'), 'caja diaria: detalle por forma de pago y movimientos');
+    ok(cp.includes('Cobrado por forma de pago') && cp.includes('Cobros (ventas y cobranzas)') && cp.includes('Efectivo total en caja'), 'caja diaria: detalle por forma de pago y movimientos');
     await page.screenshot({ path: path.join(CAPTURAS, 'caja-diaria.png'), fullPage: true });
 
     // ---- Excel

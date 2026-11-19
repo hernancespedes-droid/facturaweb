@@ -31,9 +31,9 @@ $hora = static fn (?string $t) => $t === null ? '—' : date('d/m/Y H:i', strtot
     <section class="card resumen-fila" aria-label="Mi turno">
         <div><span class="muted small">Turno abierto desde</span><b><?= e($hora($turno['abierto_en'])) ?></b></div>
         <div><span class="muted small">Fondo inicial</span><b><?= e($p($resumen['fondo'])) ?></b></div>
-        <div><span class="muted small">Efectivo cobrado</span><b><?= e($p($resumen['efectivo'])) ?></b></div>
-        <div><span class="muted small">Ingresos manuales</span><b><?= e($p($resumen['ingresos'])) ?></b></div>
-        <div><span class="muted small">Egresos manuales</span><b>− <?= e($p($resumen['egresos'])) ?></b></div>
+        <div><span class="muted small">Efectivo cobrado (ventas y cobranzas)</span><b><?= e($p($resumen['efectivo'])) ?></b></div>
+        <div><span class="muted small">Ingresos de dinero (no son ventas)</span><b><?= e($p($resumen['ingresos'])) ?></b></div>
+        <div><span class="muted small">Egresos de dinero (no son ventas)</span><b>− <?= e($p($resumen['egresos'])) ?></b></div>
         <div><span class="muted small">Efectivo que debería haber</span><b data-esperado><?= e($p($resumen['esperado'])) ?></b></div>
     </section>
     <?php if ($resumen['otras'] !== []): ?>
@@ -69,26 +69,7 @@ $hora = static fn (?string $t) => $t === null ? '—' : date('d/m/Y H:i', strtot
     <?php if ($filas === []): ?>
         <p class="muted vacio">Todavía no hay movimientos en este turno.</p>
     <?php else: ?>
-        <div class="table-wrap"><table class="table table-cards">
-            <thead><tr><?= th_orden('Hora', 'cuando', $f, $u) ?><?= th_orden('Origen', 'origen', $f, $u) ?><?= th_orden('Detalle', 'detalle', $f, $u) ?><?= th_orden('Forma de pago', 'forma', $f, $u) ?><?= th_orden('Importe', 'importe', $f, $u, true) ?><?= th_orden('Usuario', 'usuario', $f, $u) ?><th></th></tr></thead>
-            <tbody>
-            <?php foreach ($filas as $x): ?>
-                <tr>
-                    <td data-label="Hora"><?= e($hora($x['cuando'])) ?></td>
-                    <td data-label="Origen"><?= e(['venta' => 'Venta', 'recibo' => 'Recibo', 'manual' => 'Manual'][$x['origen']] ?? $x['origen']) ?></td>
-                    <td data-label="Detalle"><?= e($x['detalle']) ?><?= $x['anula_id'] !== null ? ' <span class="muted small">(anulación)</span>' : '' ?><?= (int) $x['anulado'] > 0 ? ' <span class="muted small">(anulado)</span>' : '' ?></td>
-                    <td data-label="Forma de pago"><?= e($x['forma']) ?></td>
-                    <td data-label="Importe" class="num"><?= e($m($x['importe'])) ?></td>
-                    <td data-label="Usuario"><?= e((string) $x['usuario']) ?></td>
-                    <td class="num"><?php if ($puedeMover && $x['origen'] === 'manual' && $x['anula_id'] === null && (int) $x['anulado'] === 0): ?>
-                        <form method="post" action="<?= e(url('/caja/anular')) ?>" data-anular><?= csrf_field() ?>
-                            <input type="hidden" name="movimiento" value="<?= (int) $x['id'] ?>"><input type="hidden" name="motivo" value="">
-                            <button class="btn btn-ghost btn-sm" type="submit">Anular</button></form>
-                    <?php endif; ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table></div>
+        <?= \App\Core\View::render('caja/_movimientos', ['filas' => $filas, 'f' => $f, 'u' => $u, 'anular' => $puedeMover, 'segundos' => false], null) ?>
     <?php endif; ?>
 <?php endif; ?>
 <script>

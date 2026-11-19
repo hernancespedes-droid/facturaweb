@@ -429,7 +429,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.fill('[data-mover] input[name=motivo]', 'Cambio para el cajón E2E');
     await Promise.all([page.waitForNavigation(), page.click('[data-mover] button')]);
     
-    ok((await page.textContent('body')).includes('Ingreso: Cambio para el cajón E2E'), 'caja: el ingreso manual queda en los movimientos del turno');
+    ok((await page.textContent('body')).includes('Ingreso de dinero') && (await page.textContent('body')).includes('Cambio para el cajón E2E'), 'caja: el ingreso de dinero queda en los movimientos del turno con su concepto');
     await page.selectOption('[data-mover] select[name=tipo]', 'E');
     await page.fill('[data-mover] input[name=importe]', '10.000.000,01');
     await page.fill('[data-mover] input[name=motivo]', 'Supera el tope');

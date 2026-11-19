@@ -1197,3 +1197,6 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 .k-zoom:hover, .k-zoom:focus-visible { background: #fff; box-shadow: 0 0 0 2px var(--brand, #2f6bff); }
 .va-foto { border: 0; padding: 0; background: none; cursor: zoom-in; line-height: 0; }
 .va-foto img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border, #d6dbe6); }
+
+/* Caja: los ingresos y egresos de dinero se distinguen de las ventas */
+.table tr.fila-manual td { background: color-mix(in srgb, var(--primary, #2f6bff) 6%, transparent); }

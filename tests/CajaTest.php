@@ -146,6 +146,33 @@ final class CajaTest extends ComprobantesTestCase
         $this->assertSame('t_caja_beto', $this->usuarioDe($cd['filas'][0]['usuario']));
     }
 
+    public function testLosIngresosYEgresosNoSeMezclanConLasVentas(): void
+    {
+        $this->loginComo($this->beto);
+        $this->caja->abrir($this->beto, '0');
+        $this->emitir($this->pedido(['forma_pago' => '1', 'fpago' => 'EF']));      // venta en efectivo: 242
+        $this->caja->mover($this->beto, 'I', '1000', 'Cambio para el cajón');      // no es una venta
+        $this->caja->mover($this->beto, 'E', '300', 'Pago de flete');              // no es una venta
+        $hoy = date('d/m/Y');
+        $r = \App\Modules\Listados\CajaDiaria::resumen(['desde' => $hoy, 'hasta' => $hoy]);
+        $this->assertSame(242.0, $r['total_cobrado'], 'lo cobrado son solo ventas y cobranzas');
+        $this->assertSame(242.0, $r['ventas']['ventas_netas'], 'lo vendido no cambia con ingresos ni egresos');
+        $this->assertSame([242.0, 1000.0, 300.0, 942.0], [$r['efectivo']['neto'], $r['efectivo']['ingresos'], $r['efectivo']['egresos'], $r['efectivo']['en_caja']]);
+        $cobros = \App\Modules\Listados\CajaDiaria::movimientos(['desde' => $hoy, 'hasta' => $hoy], 1, 50);
+        $this->assertSame(1, $cobros['total'], 'el listado de cobros no trae ingresos ni egresos');
+        $pag = $this->get('/listados/caja-diaria', ['desde' => $hoy, 'hasta' => $hoy])->body;
+        $this->assertStringContainsString('Efectivo total en caja', $pag);
+        $this->assertStringContainsString('no son ventas', $pag);
+        $this->assertStringContainsString('Cambio para el cajón', $pag);
+        $this->assertStringContainsString('Pago de flete', $pag);
+        // en la pantalla de caja cada cosa tiene su concepto y va en Entra o en Sale
+        $aud = $this->get('/caja/auditoria', ['desde' => $hoy, 'hasta' => $hoy])->body;
+        $this->assertStringContainsString('Venta', $aud);
+        $this->assertStringContainsString('Ingreso de dinero', $aud);
+        $this->assertStringContainsString('Egreso de dinero', $aud);
+        $this->assertStringContainsString('<th class="num">Sale</th>', $aud);
+    }
+
     private function usuarioDe(?string $nombre): string
     {
         return str_replace('Nombre ', '', (string) $nombre);
@@ -170,7 +197,8 @@ final class CajaTest extends ComprobantesTestCase
         $this->post('/caja/abrir', ['fondo' => '0']);
         $this->assertStringContainsString('Ingresar o sacar dinero', $this->get('/caja')->body);
         $this->assertSame(302, $this->post('/caja/mover', ['tipo' => 'I', 'importe' => '500', 'motivo' => 'Cambio'])->status);
-        $this->assertStringContainsString('Ingreso: Cambio', $this->get('/caja')->body);
+        $this->assertStringContainsString('Ingreso de dinero', $this->get('/caja')->body);
+        $this->assertStringContainsString('Cambio', $this->get('/caja')->body);
         $mov = (int) $this->fila('SELECT id FROM caja_movimientos ORDER BY id DESC LIMIT 1')['id'];
         $this->assertSame(302, $this->post('/caja/anular', ['movimiento' => (string) $mov, 'motivo' => 'Error'])->status);
         $aud = $this->get('/caja/auditoria', ['desde' => date('d/m/Y')]);
