@@ -29,7 +29,7 @@ Formato: qué pasó → qué hacer.
 - Mientras el VFP y la web conviven, el VFP manda sobre clientes y artículos (el agente los pisa); no editar en la web lo que el VFP también carga.
 - El importador `IMPORTAR_WEB.PRG` hay que probarlo **primero en una copia de los datos** y con la opción de simulación.
 
-**Trabajo con Claude**
+**Trabajo con Dev Senior**
 - Los fuentes de `vfp/` en el repo pueden ser de otra instalación: para escribir algo que toque el VFP del cliente, mirar **sus** DBF.
 - Las decisiones de negocio que se toman sin consultar se marcan `DECISIÓN D-xx` y van a `docs/decisiones-pendientes.md`.
 - MySQL del contenedor se cae al reiniciar: `bash bin/setup-dev.sh`.

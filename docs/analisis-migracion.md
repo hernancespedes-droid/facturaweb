@@ -1,6 +1,6 @@
 # Facturador web — análisis de la migración desde VFP9
 
-Estimación y análisis de Claude, 11/11/2026, sobre el código en `vfp/` (1.013 archivos, 147 tablas).
+Estimación y análisis de Dev Senior, 11/11/2026, sobre el código en `vfp/` (1.013 archivos, 147 tablas).
 
 ## 1. Qué hay en el sistema VFP
 
@@ -55,7 +55,7 @@ Se reutiliza el módulo PHP `afip_fe` v2 (10/11/2026), copiado en `lib/afip_fe/`
 - Pruebas: `tests/prueba_facturador.php` pasa acá (ARCA simulado). `prueba.php` y `prueba_abm.php` necesitan la base de prueba de Reciclados, que no está en el paquete.
 
 **Puesta en marcha (según la guía), con cambios respecto de lo que dije antes:**
-- **Certificado propio para la web**, no el mismo del programa externo (ARCA da un solo ticket por certificado y se trabarían hasta 12 h). Lo ideal: "Agregar certificado" en el alias que ya funciona, con el mismo DN. Claude genera la clave y el `.csr`; el trámite en ARCA lo hace Hernán.
+- **Certificado propio para la web**, no el mismo del programa externo (ARCA da un solo ticket por certificado y se trabarían hasta 12 h). Lo ideal: "Agregar certificado" en el alias que ya funciona, con el mismo DN. Dev Senior genera la clave y el `.csr`; el trámite en ARCA lo hace Hernán.
 - **Punto de venta propio para la web** (RECE para aplicativo y web services), para no competir por los números con el escritorio mientras convivan.
 - `config_afip.php`, `.crt`, `.key` y `cacert.pem` **fuera de `public_html`** (por ejemplo `<raíz del hosting>/afip_facturador/`).
 - Se entrega en **modo prueba** (`factura_grabar = false`); la facturación real la activa Hernán.
@@ -112,7 +112,7 @@ Cada instalación: `facturador.<dominio>` → carpeta propia → base propia →
 | 6 | Pase a producción OYS | Migración de todo el histórico, controles de saldos contra VFP, capacitación |
 | 7 | Producto | Script de alta de una instalación nueva (base, carpeta, config, usuario inicial), licencia de suscripción, actualización de todas las instalaciones, migrador DBF reutilizable |
 
-## 4. Estimación (Claude, 11/11/2026)
+## 4. Estimación (Dev Senior, 11/11/2026)
 
 Solo el menú de facturación (`menu1`). Producción textil, aparte.
 

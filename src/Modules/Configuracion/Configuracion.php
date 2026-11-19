@@ -45,7 +45,7 @@ final class Configuracion
     }
 
     /** Renglones por página de las grillas (entre 10 y 500). */
-    /** Interruptor sí/no de Configuración (los de "decisiones de Claude, a confirmar": docs/decisiones-pendientes.md). */
+    /** Interruptor sí/no de Configuración (los de "decisiones de Dev Senior, a confirmar": docs/decisiones-pendientes.md). */
     public static function activo(string $clave): bool
     {
         return self::valor($clave) === '1';

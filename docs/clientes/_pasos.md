@@ -32,7 +32,7 @@ Manual completo y el porqué de cada paso: `docs/alta-de-cliente.md`. Marcá cad
 
 ## 7. ARCA (factura electrónica)
 - [ ] `php bin/afip-csr.php --cuit={{cuit}} --org="<razón social como figura en ARCA>" --cn="<alias>" --salida=<carpeta fuera de public_html>`
-- [ ] El cliente sube el `.csr` en ARCA (Administración de certificados digitales), descarga el `.crt` y habilita el punto de venta {{pv}} (RECE para WS). **Claude no entra a ARCA ni escribe claves.**
+- [ ] El cliente sube el `.csr` en ARCA (Administración de certificados digitales), descarga el `.crt` y habilita el punto de venta {{pv}} (RECE para WS). **Dev Senior no entra a ARCA ni escribe claves.**
 - [ ] `config_afip.php` + `.key` + `.crt` + `cacert.pem` en `afip_{{slug}}/`; modo `homologacion`, luego `produccion`. Guía: `docs/ARCA-PUESTA-EN-MARCHA.md`.
 
 ## 8. Puesta en marcha
