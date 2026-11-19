@@ -1203,3 +1203,10 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 
 /* Kiosco: precio editable en el carrito (permiso kiosco.precio) */
 .k-precio-ed { width: 7rem; text-align: right; padding: .2rem .4rem; }
+
+/* Mercado Pago */
+.btn-mp { background: #009ee3; border-color: #009ee3; color: #fff; }
+.mp-medios { display: flex; flex-wrap: wrap; gap: 2rem; align-items: flex-start; margin: 1rem 0; }
+.mp-qr svg { width: min(18rem, 70vw); height: auto; background: #fff; padding: .5rem; border-radius: .5rem; }
+.mp-link input { width: min(32rem, 100%); }
+.mp-estado { font-size: 1.1rem; }

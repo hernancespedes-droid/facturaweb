@@ -38,9 +38,12 @@ final class CajaService
      *
      * @return array{usuario_id:?int,turno_id:?int,creado_en:string}
      */
+    /** Quien hace el cobro cuando no hay sesión (la venta se emite desde la notificación de Mercado Pago): lo fija quien emite y lo suelta al terminar. */
+    public static ?int $actor = null;
+
     public static function contexto(): array
     {
-        $uid = Auth::id();
+        $uid = self::$actor ?? Auth::id();
         $turno = null;
         if ($uid !== null) {
             $st = Db::pdo()->prepare("SELECT id FROM caja_turnos WHERE usuario_id = ? AND estado = 'A' ORDER BY id DESC LIMIT 1");

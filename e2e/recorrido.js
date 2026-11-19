@@ -44,7 +44,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
 (async () => {
   let server = null;
   if (!(await servidorArriba())) {
-    server = spawn('bash', [path.join(ROOT, 'bin/dev-server.sh')], { stdio: 'ignore', detached: true });
+    server = spawn('bash', [path.join(ROOT, 'bin/dev-server.sh')], { stdio: 'ignore', detached: true, env: { ...process.env, MP_MODO: 'simulado' } });
     for (let i = 0; i < 40 && !(await servidorArriba()); i++) await new Promise(r => setTimeout(r, 250));
   }
   execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_usuarios.php'), CLAVE], { stdio: 'inherit' });
@@ -430,6 +430,34 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.content()).includes('size: 50mm auto'), 'ticket 50 mm: usa el ancho de 50 mm');
     const pdfT = await ctx.request.get(BASE + '/comprobantes/' + idCbte + '/pdf?papel=t80');
     ok(pdfT.status() === 200 && (pdfT.headers()['content-type'] || '').includes('pdf'), 'ticket: el PDF sigue generándose');
+    // ---- Mercado Pago (simulado): la venta no se emite hasta que se acredita el pago
+    await page.goto(BASE + '/comprobantes/nuevo?tipo=PR');
+    await page.fill('#cliente-q', 'CLIENTE E2E FINAL');
+    await page.waitForSelector('[data-cliente-lista] li');
+    await page.click('[data-cliente-lista] li');
+    await page.fill('[data-renglon] [data-articulo]', 'E2E-001');
+    await page.waitForSelector('#articulos-sugerencias li');
+    await page.click('#articulos-sugerencias li');
+    await page.fill('[data-renglon] [data-cantidad]', '1');
+    await page.fill('[data-renglon] [data-precio]', '100');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
+    ok(await page.isVisible('button:has-text("Cobrar con Mercado Pago")'), 'mercado pago: la revisión ofrece cobrar con QR / link');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Cobrar con Mercado Pago")')]);
+    const cobroUrl = page.url();
+    const cuerpoMp = await page.textContent('body');
+    ok(cobroUrl.includes('/mercadopago/cobro/') && cuerpoMp.includes('Pendiente de pago') && cuerpoMp.includes('todavía no se emitió'), 'mercado pago: el cobro queda pendiente, sin emitir');
+    ok((await page.locator('.mp-qr svg').count()) === 1 && (await page.locator('[data-mp-link]').count()) === 1, 'mercado pago: muestra el QR y el link de pago');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'mercado pago: el cobro no se desborda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'mercadopago-cobro.png'), fullPage: true });
+    await page.goto(BASE + '/mercadopago');
+    ok((await page.textContent('body')).includes('Pendiente de pago'), 'mercado pago: el listado muestra el cobro pendiente');
+    await page.goto(cobroUrl);
+    await Promise.all([page.waitForNavigation(), page.click('a:has-text("Ir al simulador de pago")')]);
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Simular pago aprobado")')]);
+    ok((await page.textContent('body')).includes('Pago acreditado: la venta se emitió'), 'mercado pago: al acreditarse se emite sola');
+    await Promise.all([page.waitForNavigation(), page.click('a:has-text("Seguir")')]);
+    ok((await page.textContent('body')).includes('MERCADO PAGO'), 'mercado pago: el comprobante quedó con Mercado Pago como forma de pago');
+
     // ---- caja: turno con arqueo, ingreso y egreso manual, anulación, auditoría con hora y usuario
     await page.goto(BASE + '/caja');
     if (await page.locator('button:has-text("Abrir turno")').count()) {

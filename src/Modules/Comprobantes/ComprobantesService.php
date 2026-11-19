@@ -91,7 +91,8 @@ final class ComprobantesService
      * @param bool $puedeExcederCredito el usuario tiene comprobantes.credito
      * @return array{ok:bool,errores:array<string,string>,cbte:?array<string,mixed>}
      */
-    public function armar(array $in, bool $puedeExcederCredito = false, int $usuarioId = 0): array
+    /** @param array{usuario_id:int,nombre:string}|null $autorizoPrevio quién ya autorizó vender sin stock (lo fija el código, nunca el navegador: lo usa el cobro de Mercado Pago que se emite después) */
+    public function armar(array $in, bool $puedeExcederCredito = false, int $usuarioId = 0, ?array $autorizoPrevio = null): array
     {
         $err = [];
         $tipo = strtoupper(trim((string) ($in['tipo'] ?? '')));
@@ -376,7 +377,9 @@ final class ComprobantesService
             $rs = new ReservasService($this->pdo);
             $faltantes = $rs->faltantes($items, $reserva);
             $auto = $rs->autorizaPorPermiso($in, $usuarioId, $tipo); // D-55: roles que venden sin stock sin pedir autorización
-            if ($faltantes !== [] && $auto !== null) {
+            if ($faltantes !== [] && $autorizoPrevio !== null) {
+                $autorizo = $autorizoPrevio;
+            } elseif ($faltantes !== [] && $auto !== null) {
                 $autorizo = $auto;
             } elseif ($faltantes !== [] && !$pagoPendiente) {
                 $a = $rs->autorizar($in, $usuarioId);
@@ -416,7 +419,7 @@ final class ComprobantesService
             'tipo_afip' => Tipos::tipoAfip($tipo, $letra), 'emisor' => $emisor, 'sucursal_datos' => $suc, 'electronica' => $electronica,
             'concepto' => $concepto, 'serv_desde' => $servDesde, 'serv_hasta' => $servHasta, 'vto_pago' => $vtoPago,
             'interno' => $interno, 'sin_iva' => $sinIva, 'solo_subdiario' => $solo, 'presupuesto' => $presupuesto !== null ? (int) $presupuesto['fe_clave'] : null,
-            'stock_faltantes' => $faltantes, 'stock_autorizado' => $autorizo, 'stock_automatico' => $auto, 'reserva_token' => $reserva,
+            'stock_faltantes' => $faltantes, 'stock_autorizado' => $autorizo, 'stock_automatico' => $auto ?? $autorizoPrevio, 'reserva_token' => $reserva,
             'advertencias' => $solo || in_array($tipo, ['FC', 'PR'], true) ? [] : (new \App\Modules\Stock\StockService($this->pdo))->advertencias($tipo, $items),
         ]];
     }

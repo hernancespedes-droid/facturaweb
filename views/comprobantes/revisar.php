@@ -15,6 +15,7 @@ $disc = $c['letra'] === 'A';
     </div>
 </div>
 
+<?php if (isset($errores['mp'])): ?><div class="alerta alerta-error" role="alert"><b>Mercado Pago:</b> <?= e($errores['mp']) ?></div><?php endif; ?>
 <?php if (!empty($c['stock_faltantes']) && !empty($c['stock_autorizado']['automatica'])): ?>
 <div class="alerta alerta-warn" role="status" id="venta-sin-stock"><b>Se vende sin stock disponible:</b> tu rol puede hacerlo sin pedir autorización. Queda registrado con tu nombre.
     <ul class="list small"><?php foreach ($c['stock_faltantes'] as $f): ?><li><?= e($f['mensaje']) ?></li><?php endforeach; ?></ul></div>
@@ -108,6 +109,9 @@ endif; ?>
         <input type="hidden" name="datos" value="<?= e($datos) ?>">
         <input type="hidden" name="operacion" value="<?= e($operacion) ?>">
         <button class="btn" type="submit" data-un-solo-envio>Emitir <?= e(Tipos::titulo($c['tipo'], $c['letra'])) ?></button>
+        <?php if (!empty($pagar) && \App\Modules\MercadoPago\MercadoPago::activo() && puede('mercadopago.cobrar')): ?>
+            <button class="btn btn-mp" type="submit" formaction="<?= e(url('/mercadopago/iniciar')) ?>" title="Genera el QR y el link de pago; la venta se emite cuando Mercado Pago confirma la acreditación">Cobrar con Mercado Pago (QR / link)</button>
+        <?php endif; ?>
     </form>
     <?php if (!empty($urlVolver)): ?>
         <a class="btn btn-ghost" href="<?= e($urlVolver) ?>">Volver al kiosco</a>
