@@ -34,10 +34,11 @@ final class Pdf
     public readonly float $anchoHoja;
     public readonly float $altoHoja;
 
-    public function __construct(bool $apaisada = false)
+    /** @param ?float $ancho @param ?float $alto tamaño de hoja propio en mm (el ticket de 80 o 50 mm); sin ellos, A4. */
+    public function __construct(bool $apaisada = false, ?float $ancho = null, ?float $alto = null)
     {
-        $this->anchoHoja = $apaisada ? self::ALTO : self::ANCHO;
-        $this->altoHoja = $apaisada ? self::ANCHO : self::ALTO;
+        $this->anchoHoja = $ancho ?? ($apaisada ? self::ALTO : self::ANCHO);
+        $this->altoHoja = $alto ?? ($apaisada ? self::ANCHO : self::ALTO);
     }
 
     public function pagina(): void

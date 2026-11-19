@@ -26,7 +26,10 @@ final class ImpresionController
         }
         $copia = self::copia($req);
         $d = ComprobanteImpreso::datos($h, $svc->emisor(), $copia);
-        $res = Response::html(View::render('comprobantes/imprimir', ['d' => $d, 'id' => (int) $h['fe_clave'], 'copias' => self::COPIAS], null));
+        $papel = self::papel($req, $svc->emisor());
+        $res = Response::html($papel === 'a4'
+            ? View::render('comprobantes/imprimir', ['d' => $d, 'id' => (int) $h['fe_clave'], 'copias' => self::COPIAS], null)
+            : View::render('comprobantes/imprimir_ticket', ['d' => $d, 'id' => (int) $h['fe_clave'], 'copias' => self::COPIAS, 'papel' => $papel], null));
         $res->headers['X-Frame-Options'] = 'SAMEORIGIN';
         return $res;
     }
@@ -39,7 +42,10 @@ final class ImpresionController
             return new Response(404);
         }
         $d = ComprobanteImpreso::datos($h, $svc->emisor(), self::copia($req));
-        return new Response(200, ComprobantePdf::generar($d), ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="' . $d['nombre_archivo'] . '"']);
+        // el PDF sale siempre en A4 (es lo que se manda por mail y se guarda); el ticket en PDF se pide con ?papel=t80 o t50
+        $papel = (string) ($req->query['papel'] ?? '');
+        $pdf = in_array($papel, ['t80', 't50'], true) ? ComprobanteTicketPdf::generar($d, $papel === 't50' ? 50 : 80) : ComprobantePdf::generar($d);
+        return new Response(200, $pdf, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="' . $d['nombre_archivo'] . '"']);
     }
 
     public static function mail(Request $req, array $params): Response
@@ -74,6 +80,13 @@ final class ImpresionController
         Db::pdo()->prepare('UPDATE subdiario SET fe_cemailenvio = ?, fe_dfechaenvio = CURDATE(), fe_limprimio = 1, actualizacion = NOW() WHERE fe_clave = ?')->execute([$mails, $id]);
         Session::flash('ok', 'Enviado a ' . $mails . '.');
         return $volver;
+    }
+
+    /** Papel de la página imprimible: el de Parámetros, o el que se pida con ?papel=a4|t80|t50. @param array<string,mixed> $emisor */
+    private static function papel(Request $req, array $emisor): string
+    {
+        $p = (string) ($req->query['papel'] ?? ($emisor['impresion'] ?? 'a4'));
+        return in_array($p, ['a4', 't80', 't50'], true) ? $p : 'a4';
     }
 
     private static function copia(Request $req): string

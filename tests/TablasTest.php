@@ -92,7 +92,7 @@ final class TablasTest extends DbTestCase
         $antes = Db::pdo()->query('SELECT empresa, cuit FROM parametros WHERE id = 1')->fetch();
         $res = $this->post('/tablas/parametros/1', ['empresa' => 'T EMPRESA', 'cuit' => '30-71435753-8', 'iva' => '1']);
         $this->assertSame(422, $res->status, 'CUIT con dígito verificador mal');
-        $this->post('/tablas/parametros/1', ['empresa' => 'T EMPRESA', 'cuit' => '30-71435753-7', 'iva' => '1']);
+        $this->post('/tablas/parametros/1', ['empresa' => 'T EMPRESA', 'cuit' => '30-71435753-7', 'iva' => '1', 'impresion' => 'a4']);
         $this->assertSame('30714357537', (string) Db::pdo()->query('SELECT cuit FROM parametros WHERE id = 1')->fetchColumn());
         Db::pdo()->prepare('UPDATE parametros SET empresa = ?, cuit = ? WHERE id = 1')->execute([$antes['empresa'], $antes['cuit']]);
     }

@@ -94,6 +94,7 @@ final class Definiciones
                     'ultimo_cliente' => ['label' => 'Último código de cliente', 'tipo' => 'entero', 'min' => 0, 'max' => 99999999, 'grupo' => 'Numeradores'],
                     'ultimo_recibo' => ['label' => 'Último recibo', 'tipo' => 'entero', 'min' => 0, 'max' => 99999999, 'grupo' => 'Numeradores'],
                     'por_impuesto' => $pct('% impuesto') + ['grupo' => 'Numeradores'],
+                    'impresion' => ['label' => 'Impresión de comprobantes (hoja A4 o ticket de impresora térmica; el PDF y los envíos siguen igual)', 'tipo' => 'opciones', 'opciones' => self::PAPELES, 'grupo' => 'Mostrador'],
                     'kiosco' => ['label' => 'Habilitar modo Kiosco (carrito de mostrador con los productos en tarjetas; al finalizar genera un presupuesto)', 'tipo' => 'si_no', 'grupo' => 'Mostrador'],
                     'ticket_cambio' => ['label' => 'Habilita modo ticket de cambio (ticket sin importes para regalos y cambio de mercadería)', 'tipo' => 'si_no', 'grupo' => 'Mostrador'],
                 ],
@@ -185,6 +186,7 @@ final class Definiciones
     public const IMPUESTOS_RETENCION = [1 => 'Ganancias', 2 => 'IVA', 3 => 'Ingresos Brutos', 4 => 'SUSS', 9 => 'Otra'];
 
     /** Condición de IVA del emisor (mismos códigos que el cliente). */
+    public const PAPELES = ['a4' => 'Hoja A4', 't80' => 'Ticket 80 mm (impresora térmica)', 't50' => 'Ticket 50 mm (impresora térmica)'];
     public const CONDICIONES_EMPRESA = [1 => 'Responsable Inscripto', 7 => 'Monotributo', 4 => 'Exento'];
 
     /** @return array<string,mixed>|null */
