@@ -21,7 +21,7 @@ use App\Modules\Tablas\Definiciones;
  */
 final class CajaDiaria
 {
-    private const ORDEN = ['fecha' => 'c.fecha, c.fe_clave', 'comprobante' => 'c.tipo, c.letra, c.prefijo, numero', 'cliente' => 'razon_social', 'forma' => 't.descripcion', 'importe' => 'c.p_importe', 'vuelto' => 'c.p_vuelto'];
+    private const ORDEN = ['fecha' => 'c.fecha, c.fe_clave', 'comprobante' => 'c.tipo, c.letra, c.prefijo, numero', 'hora' => 'c.creado_en', 'usuario' => 'u.nombre', 'cliente' => 'razon_social', 'forma' => 't.descripcion', 'importe' => 'c.p_importe', 'vuelto' => 'c.p_vuelto'];
 
     /** @param array<string,string> $f desde, hasta @return array{0:string,1:string} */
     public static function fechas(array $f): array
@@ -81,6 +81,13 @@ final class CajaDiaria
                 $ef['neto'] += (float) $c['total'];
             }
         }
+        // ingresos y egresos manuales de efectivo (caja_movimientos): entran al efectivo que queda en caja, aparte de lo cobrado
+        $st = $pdo->prepare("SELECT COALESCE(SUM(IF(tipo = 'I', importe, 0)), 0), COALESCE(SUM(IF(tipo = 'E', importe, 0)), 0) FROM caja_movimientos WHERE DATE(creado_en) BETWEEN ? AND ?");
+        $st->execute([$d, $h]);
+        [$ing, $egr] = $st->fetch(\PDO::FETCH_NUM);
+        $ef['ingresos'] = (float) $ing;
+        $ef['egresos'] = (float) $egr;
+        $ef['en_caja'] = $ef['neto'] + (float) $ing - (float) $egr;
         return ['ventas' => $v, 'cobrado' => $cobrado, 'por_tipo' => $porTipo, 'total_cobrado' => Calculadora::r2($total),
             'efectivo' => array_map([Calculadora::class, 'r2'], $ef)];
     }
@@ -91,14 +98,15 @@ final class CajaDiaria
         [$d, $h] = self::fechas($f);
         $pdo = Db::pdo();
         $base = 'FROM caja c JOIN forma_de_pagos t ON t.codigo = c.p_fpago LEFT JOIN subdiario s ON s.fe_clave = c.subdiario_id LEFT JOIN clientes k ON k.codigo = c.cliente
-            WHERE c.fecha BETWEEN ? AND ? AND t.tipo <> 6';
+            LEFT JOIN usuarios u ON u.id = c.usuario_id WHERE c.fecha BETWEEN ? AND ? AND t.tipo <> 6';
         $st = $pdo->prepare("SELECT COUNT(*) {$base}");
         $st->execute([$d, $h]);
         $total = (int) $st->fetchColumn();
         $desde = max(0, ($pagina - 1) * $porPagina);
         $nro = 'IF(s.fe_clave IS NULL, c.comprobante, ' . Tipos::sqlNumeroVisible('s') . ')';
-        $st = $pdo->prepare("SELECT c.fe_clave, c.subdiario_id, c.cobra_id, c.fecha, c.tipo, c.letra, c.prefijo, {$nro} AS numero, c.p_importe, c.p_vuelto,
-                COALESCE(c.p_recibido, c.p_importe) AS recibido, t.descripcion AS forma, t.tipo AS tipo_forma, COALESCE(s.cliente_razon_social, k.razon_social) AS razon_social
+        $st = $pdo->prepare("SELECT c.fe_clave, c.subdiario_id, c.cobra_id, c.fecha, c.creado_en, c.tipo, c.letra, c.prefijo, {$nro} AS numero, c.p_importe, c.p_vuelto,
+                COALESCE(c.p_recibido, c.p_importe) AS recibido, t.descripcion AS forma, t.tipo AS tipo_forma, COALESCE(s.cliente_razon_social, k.razon_social) AS razon_social,
+                u.nombre AS usuario
             {$base} ORDER BY " . Orden::sql(self::ORDEN, (string) ($f['orden'] ?? ''), 'c.fecha DESC, c.fe_clave DESC') . " LIMIT {$porPagina} OFFSET {$desde}");
         $st->execute([$d, $h]);
         return ['filas' => $st->fetchAll(), 'total' => $total];
