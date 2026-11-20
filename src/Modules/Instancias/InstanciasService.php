@@ -7,6 +7,7 @@ use App\App;
 use App\Core\Config;
 use App\Core\Db;
 use App\Core\Migrator;
+use App\Core\Modulos;
 use App\Core\Valida;
 use App\Modules\Auth\LoginService;
 use PDO;
@@ -27,10 +28,44 @@ final class InstanciasService
 {
     /** Condiciones de IVA de la empresa (códigos del VFP) que se ofrecen en el alta. */
     public const IVA = [1 => 'Responsable Inscripto', 7 => 'Monotributo', 4 => 'Exento'];
+    /** La misma condición, como cliente del master (códigos de clientes.iva del VFP). */
+    private const IVA_CLIENTE = [1 => 1, 7 => 7, 4 => 4];
 
+    /**
+     * Carpeta del código que usan los clientes. Con dos carpetas en el hosting (master con la versión nueva y clientes con la
+     * estable) va en config/local.php del master: 'panel' => ['carpeta_clientes' => '/ruta/…/facturador_clientes']. Sin eso, es la misma.
+     */
+    public static function carpetaClientes(): string
+    {
+        $c = rtrim((string) Config::get('panel.carpeta_clientes', ''), '/');
+        return $c !== '' ? $c : App::root();
+    }
+
+    public static function dosCarpetas(): bool
+    {
+        return (realpath(self::carpetaClientes()) ?: self::carpetaClientes()) !== (realpath(App::root()) ?: App::root());
+    }
+
+    /** Donde viven las instalaciones de los clientes (storage/instancias de la carpeta de clientes). */
     public static function raiz(): string
     {
+        return self::carpetaClientes() . '/storage/instancias';
+    }
+
+    private static function raizPrincipal(): string
+    {
         return App::root() . '/storage/instancias';
+    }
+
+    /** @return array{version:string,commit:?string,rama:?string} */
+    public static function codigo(string $carpeta): array
+    {
+        return ['version' => trim((string) @file_get_contents($carpeta . '/VERSION')), 'commit' => Promocion::commit($carpeta), 'rama' => Promocion::ramaDe($carpeta)];
+    }
+
+    private static function migraciones(): string
+    {
+        return self::carpetaClientes() . '/database/migrations';
     }
 
     /** El panel existe solo en la instalación principal (nunca dentro de un cliente) y se puede apagar con 'panel' => ['activo' => false]. */
@@ -58,7 +93,7 @@ final class InstanciasService
     /** Direcciones de la instalación principal (las únicas donde responde config/local.php una vez que hay clientes). @return string[] */
     public static function principal(): array
     {
-        $f = self::raiz() . '/_principal.php';
+        $f = self::raizPrincipal() . '/_principal.php';
         return is_file($f) ? array_values(array_filter((array) require $f, 'is_string')) : [];
     }
 
@@ -66,8 +101,10 @@ final class InstanciasService
     public static function guardarPrincipal(array $hosts): void
     {
         $hosts = array_values(array_unique(array_filter(array_map(static fn ($h) => strtolower(trim((string) $h)), $hosts), [self::class, 'hostValido'])));
-        self::asegurarRaiz();
-        self::escribirPhp(self::raiz() . '/_principal.php', $hosts);
+        if (!is_dir(self::raizPrincipal())) {
+            @mkdir(self::raizPrincipal(), 0775, true);
+        }
+        self::escribirPhp(self::raizPrincipal() . '/_principal.php', $hosts);
     }
 
     /**
@@ -83,11 +120,13 @@ final class InstanciasService
             $host = basename($dir);
             $info = json_decode((string) @file_get_contents($dir . '/info.json'), true) ?: [];
             $lic = json_decode((string) @file_get_contents($dir . '/licencia.json'), true) ?: [];
+            $cfg = self::config($host);
             $fila = ['host' => $host, 'nombre' => (string) ($info['nombre'] ?? $host), 'cuit' => (string) ($info['cuit'] ?? ''),
-                'alta' => (string) ($info['alta'] ?? ''), 'licencia_vence' => (string) ($lic['vence'] ?? ''), 'conecta' => null, 'pendientes' => null, 'error' => null];
+                'alta' => (string) ($info['alta'] ?? ''), 'licencia_vence' => (string) ($lic['vence'] ?? ''), 'cliente' => (int) ($info['cliente'] ?? 0),
+                'suscripcion' => Suscripcion::estado((array) ($cfg['suscripcion'] ?? [])), 'conecta' => null, 'pendientes' => null, 'error' => null];
             if ($conEstado) {
                 try {
-                    $estado = (new Migrator(self::conectar(self::config($host)['db'] ?? []), App::root() . '/database/migrations'))->status();
+                    $estado = (new Migrator(self::conectar($cfg['db'] ?? []), self::migraciones()))->status();
                     $fila['conecta'] = true;
                     $fila['pendientes'] = count(array_filter($estado, static fn ($a) => !$a));
                 } catch (\Throwable $e) {
@@ -156,7 +195,7 @@ final class InstanciasService
             if ($tablas !== []) {
                 throw new ErrorDeAlta('db_name', 'La base ' . $v['db']['name'] . ' ya tiene tablas (' . count($tablas) . '). Para un cliente nuevo usá una base vacía: nunca se pisa una base con datos.');
             }
-            $cambios = (new Migrator($pdo, App::root() . '/database/migrations'))->run();
+            $cambios = (new Migrator($pdo, self::migraciones()))->run();
             $pdo->beginTransaction();
             $pdo->prepare('UPDATE parametros SET empresa = ?, cuit = ?, iva = ?, tk_iva = ? WHERE id = 1')
                 ->execute([$v['nombre'], $v['cuit'], $v['iva'], self::IVA[$v['iva']]]);
@@ -170,11 +209,16 @@ final class InstanciasService
                 @mkdir($dir . '/' . $sub, 0775, true);
             }
             self::escribirPhp($dir . '/config.php', self::armarConfig($v));
-            file_put_contents($dir . '/info.json', json_encode(['nombre' => $v['nombre'], 'cuit' => $v['cuit'], 'alta' => date('Y-m-d H:i'),
+            file_put_contents($dir . '/info.json', json_encode(['nombre' => $v['nombre'], 'cuit' => $v['cuit'], 'iva' => $v['iva'], 'alta' => date('Y-m-d H:i'),
                 'creado_por' => $creadoPor], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            // A partir de ahora la configuración principal solo responde en sus direcciones (ver config/config.php).
+            // A partir de ahora la configuración principal solo responde en sus direcciones (ver config/config.php); en la carpeta
+            // de clientes ninguna dirección sin instalación usa su local.php.
             self::guardarPrincipal(array_merge(self::principal(), [$hostActual]));
-            return ['ok' => true, 'host' => $host, 'admin_usuario' => $v['admin_usuario'], 'admin_clave' => $claveAdmin, 'cambios' => count($cambios)];
+            if (self::dosCarpetas() && !is_file(self::raiz() . '/_principal.php')) {
+                self::escribirPhp(self::raiz() . '/_principal.php', []);
+            }
+            $cliente = self::crearCliente($host, $v);
+            return ['ok' => true, 'host' => $host, 'admin_usuario' => $v['admin_usuario'], 'admin_clave' => $claveAdmin, 'cambios' => count($cambios)] + $cliente;
         } catch (\Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -204,6 +248,20 @@ final class InstanciasService
         if (in_array($modo, ['homologacion', 'produccion'], true) && $rutaAfip === '') {
             return ['afip_config' => 'Para homologación o producción hace falta la ruta al config_afip.php de este cliente.'];
         }
+        $sus = (string) ($d['suscripcion'] ?? 'activa');
+        if (!isset(Suscripcion::ESTADOS[$sus])) {
+            return ['suscripcion' => 'Estado de suscripción inválido.'];
+        }
+        $fechas = [];
+        foreach (['sin_emision_desde', 'bloqueo_desde'] as $campo) {
+            $f = trim((string) ($d[$campo] ?? ''));
+            if ($f !== '' && Valida::fecha($f) === null) {
+                return [$campo => 'Fecha inválida.'];
+            }
+            $fechas[$campo] = $f === '' ? '' : (string) Valida::fecha($f);
+        }
+        $c['suscripcion'] = ['estado' => $sus, 'mensaje' => mb_substr(trim((string) ($d['suscripcion_mensaje'] ?? '')), 0, 300), 'desde' => date('Y-m-d')] + $fechas;
+        $c['modulos'] = self::modulosDe($d);
         $c['afip'] = ['modo' => $modo, 'config' => $rutaAfip];
         $c['licencia'] = ['exigir' => !empty($d['licencia'])];
         $mail = self::mailDe($d);
@@ -233,11 +291,150 @@ final class InstanciasService
         }
         foreach (self::listar(false) as $i) {
             try {
-                $hechos = (new Migrator(self::conectar(self::config($i['host'])['db'] ?? []), $base))->run();
+                $hechos = (new Migrator(self::conectar(self::config($i['host'])['db'] ?? []), self::migraciones()))->run();
                 $out[$i['host']] = $hechos === [] ? 'al día' : 'aplicados: ' . implode(', ', $hechos);
             } catch (\Throwable $e) {
                 $out[$i['host']] = 'ERROR: ' . $e->getMessage();
             }
+        }
+        return $out;
+    }
+
+    /**
+     * Da de alta el cliente en la base del master (para facturarle la suscripción). Si ya hay un cliente activo con ese CUIT, se usa ese.
+     *
+     * @param array<string,mixed>|null $v datos del alta (null = tomarlos de info.json de una instalación ya creada)
+     * @return array{cliente:?int,aviso_cliente:?string}
+     */
+    public static function crearCliente(string $host, ?array $v = null): array
+    {
+        $dir = self::raiz() . '/' . $host;
+        $info = json_decode((string) @file_get_contents($dir . '/info.json'), true) ?: [];
+        $v ??= ['nombre' => (string) ($info['nombre'] ?? ''), 'cuit' => (string) ($info['cuit'] ?? ''), 'iva' => (int) ($info['iva'] ?? 1),
+            'domicilio' => '', 'localidad' => '', 'telefono' => '', 'email' => ''];
+        try {
+            $st = Db::pdo()->prepare('SELECT codigo FROM clientes WHERE cuit = ? AND activo = 1 ORDER BY codigo LIMIT 1');
+            $st->execute([$v['cuit']]);
+            $codigo = (int) $st->fetchColumn();
+            $aviso = null;
+            if ($codigo === 0) {
+                $r = (new \App\Modules\Clientes\ClientesService())->guardar(null, ['razon_social' => mb_substr((string) $v['nombre'], 0, 100),
+                    'iva' => (string) self::IVA_CLIENTE[(int) $v['iva']], 'cuit' => (string) $v['cuit'], 'forma_pago' => '2',
+                    'domicilio' => $v['domicilio'], 'localidad' => $v['localidad'], 'telefono' => $v['telefono'], 'emailfc' => $v['email'],
+                    'observaciones' => 'Suscripción FacturaWeb: ' . $host]);
+                if (!$r['ok']) {
+                    return ['cliente' => null, 'aviso_cliente' => 'No se pudo crear el cliente en el master: ' . implode(' ', $r['errores']) . ' Crealo desde el panel.'];
+                }
+                $codigo = (int) $r['codigo'];
+            } else {
+                $aviso = 'Ya existía el cliente ' . $codigo . ' con ese CUIT en el master: quedó vinculado a ese.';
+            }
+            $info['cliente'] = $codigo;
+            $info['iva'] = (int) $v['iva'];
+            @file_put_contents($dir . '/info.json', json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            return ['cliente' => $codigo, 'aviso_cliente' => $aviso];
+        } catch (\Throwable $e) {
+            \App\App::registrar($e);
+            return ['cliente' => null, 'aviso_cliente' => 'No se pudo crear el cliente en el master (' . $e->getMessage() . '). Crealo desde el panel.'];
+        }
+    }
+
+    /** Copia completa de la base del cliente (.sql comprimido) para entregarle o guardar antes de la baja. @return array{nombre:string,contenido:string} */
+    public static function copia(string $host): array
+    {
+        $pdo = self::conectar(self::config($host)['db'] ?? []);
+        $sql = "-- FacturaWeb: copia de {$host} del " . date('d/m/Y H:i') . "\nSET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n";
+        foreach ($pdo->query('SHOW FULL TABLES WHERE Table_type = \'BASE TABLE\'')->fetchAll(PDO::FETCH_NUM) as [$tabla]) {
+            $t = '`' . str_replace('`', '``', (string) $tabla) . '`';
+            $sql .= "DROP TABLE IF EXISTS {$t};\n" . $pdo->query('SHOW CREATE TABLE ' . $t)->fetch(PDO::FETCH_NUM)[1] . ";\n";
+            $filas = [];
+            foreach ($pdo->query('SELECT * FROM ' . $t, PDO::FETCH_NUM) as $f) {
+                $filas[] = '(' . implode(',', array_map(static fn ($x) => $x === null ? 'NULL' : $pdo->quote((string) $x), $f)) . ')';
+                if (count($filas) === 200) {
+                    $sql .= "INSERT INTO {$t} VALUES\n" . implode(",\n", $filas) . ";\n";
+                    $filas = [];
+                }
+            }
+            if ($filas !== []) {
+                $sql .= "INSERT INTO {$t} VALUES\n" . implode(",\n", $filas) . ";\n";
+            }
+            $sql .= "\n";
+        }
+        $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+        return ['nombre' => 'copia-' . $host . '-' . date('Ymd-His') . '.sql.gz', 'contenido' => (string) gzencode($sql, 6)];
+    }
+
+    /**
+     * Baja definitiva: borra todas las tablas de la base del cliente y su carpeta (config, logs, licencia). No se puede deshacer:
+     * se pide escribir la dirección. Queda un renglón en storage/instancias/_bajas.json (sin datos del cliente más que nombre y CUIT).
+     */
+    public static function baja(string $host, string $confirmacion, string $por): ?string
+    {
+        $c = self::config($host);
+        if (trim(mb_strtolower($confirmacion)) !== $host) {
+            return 'Para dar de baja hay que escribir la dirección exacta (' . $host . ').';
+        }
+        $dir = self::raiz() . '/' . $host;
+        $info = json_decode((string) @file_get_contents($dir . '/info.json'), true) ?: [];
+        try {
+            $pdo = self::conectar($c['db'] ?? []);
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+            foreach ($pdo->query('SHOW FULL TABLES')->fetchAll(PDO::FETCH_NUM) as [$tabla, $tipo]) {
+                $pdo->exec(($tipo === 'VIEW' ? 'DROP VIEW ' : 'DROP TABLE ') . '`' . str_replace('`', '``', (string) $tabla) . '`');
+            }
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        } catch (\PDOException $e) {
+            return 'No se pudo vaciar la base del cliente (' . $e->getMessage() . '). No se borró nada de la carpeta.';
+        }
+        self::borrarCarpeta($dir);
+        $bajas = json_decode((string) @file_get_contents(self::raiz() . '/_bajas.json'), true) ?: [];
+        $bajas[] = ['host' => $host, 'nombre' => $info['nombre'] ?? '', 'cuit' => $info['cuit'] ?? '', 'cliente' => $info['cliente'] ?? null,
+            'alta' => $info['alta'] ?? '', 'baja' => date('Y-m-d H:i'), 'por' => $por, 'base' => (string) ($c['db']['name'] ?? '')];
+        @file_put_contents(self::raiz() . '/_bajas.json', json_encode($bajas, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        return null;
+    }
+
+    /** @return array<int,array<string,mixed>> */
+    public static function bajas(): array
+    {
+        return json_decode((string) @file_get_contents(self::raiz() . '/_bajas.json'), true) ?: [];
+    }
+
+    /** Instalaciones creadas en la carpeta del master antes de separar en dos carpetas. @return string[] */
+    public static function enCarpetaMaster(): array
+    {
+        if (!self::dosCarpetas()) {
+            return [];
+        }
+        return array_map(static fn ($f) => basename(dirname($f)), glob(self::raizPrincipal() . '/*/config.php') ?: []);
+    }
+
+    /** Las pasa a la carpeta de clientes (después hay que apuntar su subdominio a esa carpeta). @return string[] movidas */
+    public static function moverACarpetaClientes(): array
+    {
+        self::asegurarRaiz();
+        $hechas = [];
+        foreach (self::enCarpetaMaster() as $host) {
+            if (!is_dir(self::raiz() . '/' . $host) && @rename(self::raizPrincipal() . '/' . $host, self::raiz() . '/' . $host)) {
+                $hechas[] = $host;
+            }
+        }
+        if ($hechas !== [] && !is_file(self::raiz() . '/_principal.php')) {
+            self::escribirPhp(self::raiz() . '/_principal.php', []);
+        }
+        return $hechas;
+    }
+
+    /** @param array<string,mixed> $d @return array<string,bool> */
+    private static function modulosDe(array $d): array
+    {
+        if (empty($d['modulos_enviados'])) { // formulario sin la sección de módulos: lo que viene por omisión
+            return array_map(static fn (array $m) => $m['por_omision'], Modulos::LISTA);
+        }
+        $elegidos = (array) ($d['modulos'] ?? []);
+        $out = [];
+        foreach (array_keys(Modulos::LISTA) as $m) {
+            $out[$m] = !empty($elegidos[$m]);
         }
         return $out;
     }
@@ -265,6 +462,11 @@ final class InstanciasService
             'admin_nombre' => trim((string) ($d['admin_nombre'] ?? '')) ?: mb_substr($nombre, 0, 80),
             'licencia' => !empty($d['licencia']),
             'mail' => self::mailDe($d),
+            'modulos' => self::modulosDe($d),
+            'domicilio' => mb_substr(trim((string) ($d['domicilio'] ?? '')), 0, 80),
+            'localidad' => mb_substr(trim((string) ($d['localidad'] ?? '')), 0, 40),
+            'telefono' => mb_substr(trim((string) ($d['telefono'] ?? '')), 0, 60),
+            'email' => trim((string) ($d['email'] ?? '')),
         ];
     }
 
@@ -305,6 +507,9 @@ final class InstanciasService
         if ($clave !== null) {
             $e['master_clave'] = $clave;
         }
+        if ($v['email'] !== '' && filter_var($v['email'], FILTER_VALIDATE_EMAIL) === false) {
+            $e['email'] = 'Mail inválido.';
+        }
         if ($v['mail']['host'] !== '' && ($v['mail']['user'] === '' || $v['mail']['from'] === '')) {
             $e['mail_host'] = 'Si cargás el mail, completá también usuario y remitente (o dejalo vacío y se carga después).';
         }
@@ -327,6 +532,8 @@ final class InstanciasService
             'app' => ['url' => 'https://' . $v['host'], 'instalar_token' => '', 'diag_token' => ''],
             // Suscripción mensual: sin licencia vigente (firmada por O&S, Sistema → Licencia) no se emiten comprobantes.
             'licencia' => ['exigir' => $v['licencia']],
+            'suscripcion' => ['estado' => 'activa'],
+            'modulos' => $v['modulos'],
             'afip' => ['modo' => 'interno', 'config' => ''],
             'mail' => $v['mail'],
             'db' => $v['db'] + ['charset' => 'utf8mb4'],

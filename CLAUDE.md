@@ -96,6 +96,11 @@ y su base; su subdominio apunta a la **misma** carpeta `public/`. `config/config
 la principal solo responde en las direcciones de `storage/instancias/_principal.php` (otra dirección → «no habilitada»). **Todo archivo de datos va con `App::storage('…')`, nunca
 `App::root() . '/storage/…'`** (si no, se mezclan los clientes). Pruebas: base extra `facturaweb_test_inst` (crearla con root; si falta, `InstanciasTest` saltea el alta).
 
+**Sitio master y dos carpetas (0.29.0)**: oys.orgysis.site es el master (rama `main`); los clientes corren en otra carpeta con la rama `estable` (`panel.carpeta_clientes`).
+**Todo cambio llega primero al master**; a los clientes solo con «Pasar a clientes» (`Instancias/Promocion`). Suscripción por cliente (`Instancias/Suscripcion`: aviso → sin emitir →
+bloqueada, en `Licencia::exigirParaEmitir`, `Guard::auth` y `App::handle`). **Función nueva que no tienen que tener todos: declararla en `Core\Modulos::LISTA` con `por_omision => false`**
+(menú + prefijos de rutas); el master siempre tiene todo. Nunca romper el formato del config de los clientes: la carpeta de clientes puede estar una versión atrás.
+
 ## Estructura y convenciones
 
 - Módulos en `src/Modules/<Nombre>/` con `routes.php`; vistas en `views/<modulo>/`. Handlers `function (Request $req, array $params): Response`.

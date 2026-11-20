@@ -3,6 +3,33 @@
 Cada cliente es **una instalación propia**: su subdominio, su carpeta, su base, su certificado y punto de venta de ARCA y su licencia.
 El código es el mismo para todos. Este manual es el camino que se repite; lo que cambia de un cliente a otro va en su ficha.
 
+## Sitio master y dos carpetas (0.29.0)
+
+**oys.orgysis.site es el sitio master de O&S**: desde ahí se crean, facturan, suspenden y dan de baja los clientes, y es donde se prueba primero cada cambio.
+
+| Carpeta en el hosting | Rama de GIT | Quién la usa |
+|---|---|---|
+| `facturador_web` (la actual) | `main` | el master (oys.orgysis.site) |
+| `facturador_clientes` (nueva) | `estable` | todos los clientes (`cliente.orgysis.site`) |
+
+**Armar la carpeta de clientes (una sola vez):**
+1. Ferozo → GIT → Crear nuevo: mismo repo, rama **`estable`**, directorio `facturador_clientes`. Permisos 775 a `facturador_clientes/storage/`.
+2. En `facturador_web/config/local.php` (el del master) agregar:
+   `'panel' => ['carpeta_clientes' => '/ruta/completa/public_html/facturador_clientes', 'github_token' => '…'],`
+   La ruta completa se ve en Sistema → Instalaciones (la de la carpeta actual, cambiando el último nombre). El token es opcional: GitHub → Settings →
+   Developer settings → Fine-grained tokens → solo el repo `facturaweb`, permiso *Contents: Read and write*. Con el token aparece el botón «Pasar a clientes».
+3. Si ya había clientes creados en la carpeta del master, el panel muestra «Pasar a la carpeta de clientes»: tocarlo y apuntar sus subdominios a `facturador_clientes/public`.
+
+**Cada cambio pedido a Code:**
+1. Code hace el PR a `main`; se fusiona. Ferozo → GIT → `facturador_web` → actualizar. Sistema → Aplicar cambios. **Se prueba en el master.**
+2. Si está bien: Instalaciones de clientes → **Pasar a clientes** (mueve `estable` al commit exacto que corre el master; sin token, pedírselo a Code).
+3. Ferozo → GIT → `facturador_clientes` → actualizar. Instalaciones de clientes → **Aplicar cambios en todas**.
+4. Si la función nueva no la tienen que tener todos: viene como **módulo** apagado (`Core\Modulos`) y se prende por cliente en «Administrar → Módulos».
+
+**Suscripción** (Administrar → Suscripción): Activa → Aviso de pago pendiente (cartel) → Sin emitir (consultan e imprimen) → Bloqueada (solo entra el Master de O&S),
+con fechas opcionales para que avance sola. **Baja**: descargar la copia (`.sql.gz`) y después «Dar de baja» borra tablas y carpeta; falta borrar subdominio y base en el hosting.
+Cada cliente nuevo queda además como **cliente del master** (para facturarle; si el CUIT ya existe, se usa ese).
+
 ## Lo rápido: desde la web (0.28.0)
 1. Panel del hosting: crear una **base vacía** con su usuario.
 2. En la instalación principal (oys.orgysis.site), como Master: **Sistema → Instalaciones de clientes → + Nuevo cliente** (empresa, subdominio, base, usuarios). Crea las tablas,

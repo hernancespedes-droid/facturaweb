@@ -78,6 +78,10 @@ final class Menu
         if ($clave === 'cambios' && !\App\Modules\Cambios\CambiosService::habilitado()) {
             return false; // el modo ticket de cambio se enciende en Parámetros
         }
+        $modulo = Modulos::deMenu($clave);
+        if ($modulo !== null && !Modulos::activo($modulo)) {
+            return false; // módulo apagado para este cliente desde el sitio master
+        }
         if ($clave === 'instancias') {
             return Auth::esMaster() && \App\Modules\Instancias\InstanciasService::disponible(); // solo en la principal
         }

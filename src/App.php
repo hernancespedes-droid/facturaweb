@@ -127,6 +127,11 @@ final class App
                     'La página venció o el formulario no es válido. Volvé atrás, recargá la página y probá de nuevo.'
                 ));
             }
+            // Instalación de cliente: módulo no contratado o suscripción bloqueada (el portal y la API tampoco responden).
+            if (\App\Core\Modulos::apagadoPorRuta($req->path) !== null
+                || (\App\Modules\Instancias\Suscripcion::bloqueada() && ($esApi || str_starts_with($req->path, '/portal')))) {
+                return $this->withSecurityHeaders($this->errorPage(404));
+            }
             $res = $this->router->dispatch($req);
         } catch (\Throwable $e) {
             $this->log($e);

@@ -59,7 +59,7 @@ $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] =
     <main class="wrap">
         <?php $avisoLicencia = $usuarioActual !== null ? \App\Modules\Licencia\Licencia::aviso(Auth::esMaster() || Auth::esAdmin()) : null; ?>
         <?php if ($avisoLicencia !== null): ?>
-            <div class="alerta alerta-<?= e($avisoLicencia['tipo']) ?>" role="alert"><?= e($avisoLicencia['texto']) ?><?php if (Auth::esMaster() || Auth::esAdmin()): ?> <a href="<?= e(url('/sistema/licencia')) ?>">Ver licencia</a><?php endif; ?></div>
+            <div class="alerta alerta-<?= e($avisoLicencia['tipo']) ?>" role="alert"><?= e($avisoLicencia['texto']) ?><?php if ((Auth::esMaster() || Auth::esAdmin()) && empty($avisoLicencia['suscripcion'])): ?> <a href="<?= e(url('/sistema/licencia')) ?>">Ver licencia</a><?php endif; ?></div>
         <?php endif; ?>
         <?php foreach ($flashes as $f): ?>
             <div class="alerta alerta-<?= e($f['tipo']) ?>" role="status"><?= e($f['texto']) ?></div>

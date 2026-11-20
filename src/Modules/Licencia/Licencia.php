@@ -157,6 +157,10 @@ final class Licencia
     /** @throws LicenciaVencida si hay control de licencia y no está vigente */
     public static function exigirParaEmitir(?\DateTimeImmutable $hoy = null): void
     {
+        // Suscripción suspendida desde el sitio master (sin emitir o bloqueada).
+        if (!\App\Modules\Instancias\Suscripcion::puedeEmitir()) {
+            throw new LicenciaVencida((string) \App\Modules\Instancias\Suscripcion::mensaje());
+        }
         $e = self::estado($hoy);
         if ($e['exigida'] && in_array($e['estado'], ['vencida', 'sin_licencia', 'invalida'], true)) {
             throw new LicenciaVencida($e['mensaje']);
@@ -166,6 +170,10 @@ final class Licencia
     /** Aviso para el encabezado de todas las pantallas, o null. @return array{tipo:string,texto:string}|null */
     public static function aviso(bool $esAdmin): ?array
     {
+        $suscripcion = \App\Modules\Instancias\Suscripcion::mensaje();
+        if ($suscripcion !== null) {
+            return ['tipo' => \App\Modules\Instancias\Suscripcion::estado() === 'aviso' ? 'info' : 'error', 'texto' => $suscripcion, 'suscripcion' => true];
+        }
         $e = self::estado();
         return match ($e['estado']) {
             'vencida', 'sin_licencia', 'invalida' => ['tipo' => 'error', 'texto' => $e['mensaje']],

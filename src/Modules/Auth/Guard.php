@@ -35,6 +35,10 @@ final class Guard
             if ((int) $u['debe_cambiar_clave'] === 1) {
                 return Response::redirect(url('/mi-clave'));
             }
+            // Suscripción bloqueada desde el sitio master: solo entra el Master de O&S.
+            if (\App\Modules\Instancias\Suscripcion::bloqueada() && !Auth::esMaster()) {
+                return new Response(403, \App\Modules\Instancias\Suscripcion::paginaBloqueada(), ['Content-Type' => 'text/html; charset=utf-8']);
+            }
             return $handler($req, $params);
         };
     }
