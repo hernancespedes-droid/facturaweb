@@ -44,6 +44,8 @@ final class PagesController
             'db'      => $db,
             'version' => $version,
             'cambios_de_base_pendientes' => $pendientes,
+            'migracion_error' => \App\Core\AutoMigracion::ultimoError() !== null,
+            'licencia_dias' => \App\Modules\Licencia\Licencia::estado()['dias'],
             'php'     => PHP_VERSION,
             'hora'    => date('c'),
         ], $db ? 200 : 503);

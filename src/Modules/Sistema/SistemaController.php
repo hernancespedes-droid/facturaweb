@@ -103,18 +103,73 @@ final class SistemaController
         return $filas;
     }
 
+    // ---------------------------------------------------------------- instalaciones (clientes): solo el Master
+
+    public static function instalaciones(Request $req, array $params): Response
+    {
+        if (!Auth::esMaster()) {
+            return new Response(403);
+        }
+        $svc = new Instalaciones();
+        $filas = $svc->listar();
+        $propia = trim((string) @file_get_contents(App::root() . '/VERSION'));
+        return Response::html(View::render('sistema/instalaciones', ['title' => 'Instalaciones', 'nav' => 'sistema', 'filas' => $filas, 'propia' => $propia,
+            'nueva' => Instalaciones::versionMasNueva($filas, $propia), 'error' => null]));
+    }
+
+    public static function instalacionesGuardar(Request $req, array $params): Response
+    {
+        if (!Auth::esMaster()) {
+            return new Response(403);
+        }
+        $r = (new Instalaciones())->guardar((string) ($req->post['nombre'] ?? ''), (string) ($req->post['url'] ?? ''), (string) ($req->post['notas'] ?? ''));
+        if (!$r['ok']) {
+            $svc = new Instalaciones();
+            $filas = $svc->listar();
+            $propia = trim((string) @file_get_contents(App::root() . '/VERSION'));
+            return Response::html(View::render('sistema/instalaciones', ['title' => 'Instalaciones', 'nav' => 'sistema', 'filas' => $filas, 'propia' => $propia,
+                'nueva' => Instalaciones::versionMasNueva($filas, $propia), 'error' => $r['error']]), 422);
+        }
+        Session::flash('ok', 'Instalación agregada. Apretá «Revisar todas» para ver su estado.');
+        return Response::redirect(url('/sistema/instalaciones'));
+    }
+
+    public static function instalacionesBorrar(Request $req, array $params): Response
+    {
+        if (!Auth::esMaster()) {
+            return new Response(403);
+        }
+        (new Instalaciones())->borrar((int) $params['id']);
+        Session::flash('ok', 'Instalación quitada de la lista.');
+        return Response::redirect(url('/sistema/instalaciones'));
+    }
+
+    public static function instalacionesRevisar(Request $req, array $params): Response
+    {
+        if (!Auth::esMaster()) {
+            return new Response(403);
+        }
+        $n = (new Instalaciones())->revisar();
+        Session::flash('ok', $n === 0 ? 'No hay instalaciones para revisar.' : 'Se revisaron ' . $n . ' instalación(es).');
+        return Response::redirect(url('/sistema/instalaciones'));
+    }
+
     public static function migrar(Request $req, array $params): Response
     {
         if (!Auth::esMaster()) {
             return new Response(403);
         }
         $pdo = Db::pdo();
-        if ((int) $pdo->query("SELECT GET_LOCK('fw_migrar', 0)")->fetchColumn() !== 1) {
+        $lockSt = $pdo->query("SELECT GET_LOCK('fw_migrar', 0)");
+        $tomado = (int) $lockSt->fetchColumn() === 1;
+        $lockSt->closeCursor();
+        if (!$tomado) {
             Session::flash('error', 'Ya se están aplicando cambios de base. Esperá unos segundos.');
             return Response::redirect(url('/sistema'));
         }
         try {
             $aplicadas = self::migrator()->run();
+            \App\Core\AutoMigracion::marcarAlDia($pdo);
             Session::flash('ok', $aplicadas === []
                 ? 'La base ya estaba al día.'
                 : 'Cambios aplicados: ' . implode(', ', $aplicadas) . '.');
@@ -122,7 +177,7 @@ final class SistemaController
             // El detalle técnico le sirve al Master para pasárselo a O&S.
             Session::flash('error', 'No se pudo completar: ' . $e->getMessage() . ' Lo que se aplicó antes del error quedó registrado.');
         } finally {
-            $pdo->query("SELECT RELEASE_LOCK('fw_migrar')");
+            $pdo->query("SELECT RELEASE_LOCK('fw_migrar')")->closeCursor();
         }
         return Response::redirect(url('/sistema'));
     }

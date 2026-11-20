@@ -18,6 +18,8 @@ return [
         // y volver a dejarla vacía.
         'instalar_token' => '',
     ],
+    // Perfil de la instalación: lo que se enciende solo al instalar (después se cambia en Parámetros). basico | mostrador. Ver src/Core/Perfiles.php.
+    'perfil' => 'basico',
     // Mail de salida para enviar los comprobantes (casilla del dominio del cliente en el hosting).
     'mail' => [
         'host'      => 'smtp.dominio.com',

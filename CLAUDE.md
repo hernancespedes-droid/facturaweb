@@ -85,6 +85,10 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `Modules/MercadoPago/MercadoPago` es el único que habla con la API (modos `mp.modo` apagado|simulado|produccion en `config/local.php`; `MercadoPago::$transporte` permite probar sin red). `MercadoPagoService`: «Cobrar con Mercado Pago» deja la venta en un cobro `pendiente` (tabla `mp_cobros`, sin claves) y **solo se emite al acreditarse el pago** (`confirmar` → `emitir`, idempotente con el token como clave de operación; `CajaService::$actor` pone al cajero cuando no hay sesión). La notificación va por `/api/v1/mercadopago/webhook` (sin sesión ni CSRF) con firma HMAC verificada y el pago se vuelve a consultar en Mercado Pago. `ComprobantesService::armar` acepta `$autorizoPrevio` (solo desde el código) para la autorización de stock ya resuelta.
 
+## Un cambio llega a todos los clientes (0.28.0)
+
+Un solo código para todos: lo distinto por cliente va solo en `config/local.php` y en Parámetros/Configuración (nunca ramas ni copias). `core/AutoMigracion` aplica las migraciones al primer pedido tras actualizar (por eso **toda migración tiene que ser aditiva e idempotente**: sin borrar ni renombrar, sin `DELIMITER`/triggers, y nada de `SELECT` suelto). Los clientes siguen la rama `estable`; `main` es desarrollo: «publicar» = mover `estable` a `main` con etiqueta `vX.Y.Z` cuando Hernán lo pide (`docs/publicar-a-todos.md`). Altas: `bin/alta-cliente.php` y `src/Core/Perfiles.php`; Sistema → Instalaciones (Master) mira el `/salud` de cada cliente.
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.

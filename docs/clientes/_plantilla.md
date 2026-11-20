@@ -8,7 +8,7 @@
 | CUIT | {{cuit}} |
 | Condición de IVA | |
 | Punto de venta | {{pv}} |
-| Instalación | `{{slug}}` — `https://facturador.{{dominio}}` |
+| Instalación | `{{slug}}` — `https://{{host}}` |
 | Versión instalada / fecha de alta | {{version}} — {{fecha}} |
 | Sistema anterior | VFP (O&S) |
 | Contacto técnico / quién da el acceso a ARCA | |

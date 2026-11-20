@@ -14,7 +14,7 @@ Primero se instala en un ambiente de prueba y después en producción, con el mi
 Ferozo clona el repositorio dentro de `public_html/`.
 
 1. Ferozo → GIT → **Clave SSH**: cargarla en GitHub como *Deploy key* de solo lectura del repo `facturaweb`.
-2. GIT → **Crear nuevo**: repo `git@github.com:hernancespedes-droid/facturaweb.git`, rama de la versión, directorio `facturador_web`.
+2. GIT → **Crear nuevo**: repo `git@github.com:hernancespedes-droid/facturaweb.git`, rama **`estable`** (la que siguen todos los clientes; ver `docs/publicar-a-todos.md`), directorio `facturador_web`. Activar el **webhook de auto-despliegue** y cargarlo en GitHub (evento *push*): las versiones nuevas se bajan solas.
 3. Subir `docs/donweb/public_html.htaccess` como `public_html/.htaccess` (si el dominio del facturador apunta a `public_html`)
    o apuntar el subdominio (`facturador.<dominio>`) a `public_html/facturador_web/public`.
 4. Crear la base y su usuario en el panel. Crear `facturador_web/config/local.php` (copia de `config/local.example.php`) con:
@@ -38,10 +38,13 @@ Ferozo clona el repositorio dentro de `public_html/`.
 
 ## Actualizar
 
+**Con el canal `estable` (lo normal):** no hay que hacer nada en el cliente. Cuando Hernán publica una versión, el webhook baja el código y **el primer pedido aplica solo los cambios de base pendientes** (`AutoMigracion`). Después se mira **Sistema → Instalaciones** (versión, cambios pendientes, licencia). Ver `docs/publicar-a-todos.md`.
+
+**A mano (sin webhook, o si la actualización automática falló):**
 1. **Backup** de la base (phpMyAdmin → Exportar, o `mysqldump`).
 2. Ferozo → GIT → actualizar (pull) el repositorio de la instalación (con SSH: `git pull` o descomprimir el zip nuevo).
 3. Ingresar como Master → **Sistema → Aplicar cambios** (o `php bin/migrate.php`).
-4. `/salud` muestra la versión nueva y `cambios_de_base_pendientes: 0`.
+4. `/salud` muestra la versión nueva, `cambios_de_base_pendientes: 0` y `migracion_error: false`.
 
 Nunca se pisan `config/local.php` ni `storage/`.
 

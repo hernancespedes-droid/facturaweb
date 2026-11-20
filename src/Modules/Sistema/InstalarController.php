@@ -65,7 +65,9 @@ final class InstalarController
         $pdo->prepare('INSERT INTO usuarios (usuario, nombre, password_hash, rol_id) VALUES (?, ?, ?, ?)
                        ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), rol_id = VALUES(rol_id), activo = 1, debe_cambiar_clave = 0')
             ->execute([$datos['usuario'], $datos['nombre'], password_hash((string) $p['clave'], PASSWORD_DEFAULT), $rol]);
-        Session::flash('ok', 'Instalación lista (' . count($aplicadas) . ' cambio(s) de base). Ingresá con el usuario ' . $datos['usuario']
+        \App\Core\AutoMigracion::marcarAlDia($pdo);
+        $perfil = \App\Core\Perfiles::aplicarSiCorresponde($pdo);
+        Session::flash('ok', 'Instalación lista (' . count($aplicadas) . ' cambio(s) de base' . ($perfil !== null ? ', perfil ' . $perfil : '') . '). Ingresá con el usuario ' . $datos['usuario']
             . '. Borrá "instalar_token" de config/local.php.');
         return Response::redirect(url('/login'));
     }

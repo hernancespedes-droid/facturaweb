@@ -14,6 +14,12 @@
     <span class="chip">Versión <?= e($version) ?></span>
 </div>
 
+<?php $errMig = \App\Core\AutoMigracion::ultimoError(); ?>
+<?php if ($errMig !== null && $puedeMigrar): ?>
+    <div class="alerta alerta-error" role="alert"><b>La actualización automática de la base falló</b> (<?= e(date('d/m/Y H:i', $errMig['ts'])) ?>): <?= e($errMig['mensaje']) ?>
+        Revisá el detalle, arreglá el problema y apretá «Aplicar cambios» (si sale bien, este aviso desaparece).</div>
+<?php endif; ?>
+<?php if ($puedeMigrar): ?><p class="small"><a href="<?= e(url('/sistema/instalaciones')) ?>">Instalaciones (todos los clientes): versión, cambios pendientes y licencias →</a></p><?php endif; ?>
 <section class="card regenerar <?= $pendientes !== [] ? 'hay' : '' ?>">
     <div>
         <h2>Actualizar base de datos</h2>

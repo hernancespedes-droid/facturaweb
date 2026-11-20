@@ -19,7 +19,7 @@ Formato: qué pasó → qué hacer.
 - Primero modo simulado y homologación; en producción, recién con el cliente presente.
 
 **Hosting**
-- DonWeb (Ferozo) con GIT, **sin SSH**: instalar con `/instalar` y `instalar_token`; actualizar con GIT y **Sistema → Aplicar cambios**. No activar el webhook de auto-despliegue.
+- DonWeb (Ferozo) con GIT, **sin SSH**: instalar con `/instalar` y `instalar_token`. Desde 0.28.0 la base se actualiza sola al primer pedido después de actualizar el código, así que **sí** se puede activar el webhook de auto-despliegue (antes no: dejaba el código nuevo con la base vieja). Probarlo primero en una instalación poco crítica.
 - El `.htaccess` de `public/` tiene que pasar el encabezado `Authorization` (el agente lo necesita).
 - Límite de subida del hosting: el agente manda todo comprimido junto; si el hosting corta, avisa.
 

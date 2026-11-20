@@ -5,7 +5,11 @@ declare(strict_types=1);
  * Prepara el alta de una instalación nueva (un cliente nuevo de la suscripción). No toca ningún servidor: deja en una carpeta los archivos
  * listos para subir y la lista de pasos con los datos del cliente ya completados.
  *
- *   php bin/alta-cliente.php --nombre="Razón social SA" --cuit=30123456789 --dominio=cliente.com.ar --salida=<carpeta fuera del repo> [--slug=cliente] [--pv=1]
+ *   php bin/alta-cliente.php --nombre="Razón social SA" --dominio=cliente.com.ar --salida=<carpeta fuera del repo>
+ *        [--cuit=30123456789|pendiente] [--host=gogolinas.orgysis.site] [--slug=cliente] [--pv=1] [--perfil=basico|mostrador] [--rama=estable]
+ *   --cuit pendiente (o sin --cuit): para un cliente que todavía no tiene CUIT: sin control de licencia y sin ARCA (solo ventas internas) hasta completarlo.
+ *   --host: la dirección completa si no es «facturador.<dominio>» (por omisión es esa). --perfil: qué se enciende solo al instalar (src/Core/Perfiles.php).
+ *   --rama: la rama de GIT que sigue la instalación (por omisión «estable»: ver docs/publicar-a-todos.md).
  *
  * Genera en <salida>/<slug>/ :
  *   config/local.php  configuración de la instalación (clave de instalación al azar, licencia exigida, ARCA en modo interno); falta la base y el mail
@@ -18,22 +22,37 @@ if (PHP_SAPI !== 'cli') {
     http_response_code(404);
     exit;
 }
-$o = getopt('', ['nombre:', 'cuit:', 'dominio:', 'salida:', 'slug::', 'pv::']);
+$o = getopt('', ['nombre:', 'cuit::', 'dominio::', 'salida:', 'slug::', 'pv::', 'host::', 'perfil::', 'rama::']);
 $fallar = static function (string $m): never {
     fwrite(STDERR, "Error: {$m}\n");
     exit(1);
 };
 $nombre = trim((string) ($o['nombre'] ?? ''));
-$cuit = preg_replace('/\D/', '', (string) ($o['cuit'] ?? ''));
+$cuitTxt = trim((string) ($o['cuit'] ?? ''));
+$cuit = preg_replace('/\D/', '', $cuitTxt);
+$sinCuit = $cuitTxt === '' || strtolower($cuitTxt) === 'pendiente';
+$host = strtolower(trim((string) ($o['host'] ?? '')));
 $dominio = strtolower(trim((string) ($o['dominio'] ?? '')));
+if ($host === '' && $dominio !== '') {
+    $host = 'facturador.' . $dominio;
+}
+if ($dominio === '' && $host !== '') {
+    $dominio = preg_replace('/^[^.]+\./', '', $host) ?? $host;
+}
+$perfil = strtolower(trim((string) ($o['perfil'] ?? 'basico')));
+$rama = preg_replace('/[^A-Za-z0-9._\/-]/', '', (string) ($o['rama'] ?? 'estable')) ?: 'estable';
 $salida = rtrim((string) ($o['salida'] ?? ''), '/\\');
 $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) ($o['slug'] ?? '')) ?: '');
 if ($slug === '') {
     $slug = substr(strtolower(preg_replace('/[^a-z0-9]+/i', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nombre) ?: $nombre) ?: ''), 0, 12);
 }
 $pv = max(1, (int) ($o['pv'] ?? 1));
-if ($nombre === '' || strlen($cuit) !== 11 || $dominio === '' || $slug === '' || $salida === '' || !is_dir($salida)) {
-    $fallar('Faltan datos: --nombre, --cuit (11 dígitos), --dominio y --salida (una carpeta existente, fuera del repositorio).');
+if ($nombre === '' || (!$sinCuit && strlen($cuit) !== 11) || $host === '' || $slug === '' || $salida === '' || !is_dir($salida)) {
+    $fallar('Faltan datos: --nombre, --dominio (o --host), --salida (una carpeta existente, fuera del repositorio) y, si ya lo tiene, --cuit (11 dígitos; o «pendiente»).');
+}
+require_once $raiz0 = dirname(__DIR__) . '/src/Core/Perfiles.php';
+if (!isset(\App\Core\Perfiles::PERFILES[$perfil])) {
+    $fallar('El perfil «' . $perfil . '» no existe. Los que hay: ' . implode(', ', array_keys(\App\Core\Perfiles::PERFILES)) . '.');
 }
 $raiz = dirname(__DIR__);
 if (str_starts_with(realpath($salida) ?: $salida, $raiz)) {
@@ -44,14 +63,18 @@ if (file_exists($dir)) {
     $fallar("Ya existe {$dir}: no se pisa.");
 }
 $token = bin2hex(random_bytes(20));
-$vars = ['{{nombre}}' => $nombre, '{{cuit}}' => $cuit, '{{slug}}' => $slug, '{{dominio}}' => $dominio, '{{pv}}' => (string) $pv, '{{token}}' => $token,
+$vars = ['{{nombre}}' => $nombre, '{{cuit}}' => $sinCuit ? 'PENDIENTE' : $cuit, '{{host}}' => $host, '{{perfil}}' => $perfil, '{{rama}}' => $rama,
+    '{{licencia}}' => $sinCuit ? 'sin licencia hasta tener CUIT' : 'suscripción mensual', '{{sincuit}}' => $sinCuit ? "\n> **Sin CUIT todavía**: no se puede emitir licencia ni habilitar ARCA. Solo presupuestos y ventas internas. Cuando lo tenga: completar el CUIT en Parámetros, emitir la licencia (paso 4), poner `'licencia' => ['exigir' => true]` en `config/local.php` y seguir con el paso 7 (ARCA).\n" : '', '{{slug}}' => $slug, '{{dominio}}' => $dominio, '{{pv}}' => (string) $pv, '{{token}}' => $token,
     '{{version}}' => trim((string) @file_get_contents($raiz . '/VERSION')), '{{fecha}}' => date('d/m/Y')];
 mkdir($dir . '/config', 0775, true);
 
 $local = file_get_contents($raiz . '/config/local.example.php');
 $local = str_replace("'instalar_token' => '',", "'instalar_token' => '{$token}',   // BORRAR (dejar vacío) después de crear el Master", $local);
 $local = str_replace("'config' => '',          // ruta al config_afip.php del cliente, FUERA de public_html", "'config' => '/RUTA/DEL/HOSTING/afip_{$slug}/config_afip.php',   // FUERA de public_html", $local);
-$local = str_replace("    'db' => [", "    // Suscripción mensual: sin licencia vigente (firmada por O&S, Sistema → Licencia) no se emiten comprobantes.\n    'licencia' => ['exigir' => true],\n    'db' => [", $local);
+$local = str_replace("'perfil' => 'basico',", "'perfil' => '{$perfil}',", $local);
+$local = str_replace("    'db' => [", $sinCuit
+    ? "    // Sin CUIT todavía: sin control de licencia. Al tener CUIT y licencia, cambiar a true.\n    'licencia' => ['exigir' => false],\n    'db' => ["
+    : "    // Suscripción mensual: sin licencia vigente (firmada por O&S, Sistema → Licencia) no se emiten comprobantes.\n    'licencia' => ['exigir' => true],\n    'db' => [", $local);
 file_put_contents($dir . '/config/local.php', $local);
 foreach (['_pasos.md' => 'PASOS.md', '_plantilla.md' => 'ficha.md'] as $origen => $destino) {
     file_put_contents($dir . '/' . $destino, strtr((string) file_get_contents($raiz . '/docs/clientes/' . $origen), $vars));

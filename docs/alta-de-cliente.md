@@ -4,8 +4,11 @@ Cada cliente es **una instalación propia**: su subdominio, su carpeta, su base,
 El código es el mismo para todos. Este manual es el camino que se repite; lo que cambia de un cliente a otro va en su ficha.
 
 ## Cómo se trabaja un alta
-1. `php bin/alta-cliente.php --nombre="Razón social" --cuit=<11 dígitos> --dominio=<dominio.com.ar> --salida=<carpeta fuera del repo>`
+1. `php bin/alta-cliente.php --nombre="Razón social" --dominio=<dominio.com.ar> --salida=<carpeta fuera del repo> [--cuit=<11 dígitos>|pendiente] [--host=<dirección completa>] [--pv=1] [--perfil=basico|mostrador] [--rama=estable]`
    deja `config/local.php` listo, `PASOS.md` (la lista con los datos del cliente) y `ficha.md`. Las plantillas están en `docs/clientes/`.
+   - **Perfil** (`src/Core/Perfiles.php`): lo que se enciende solo al instalar. `basico` (lo de siempre) o `mostrador` (kiosco, ticket de cambio, ticket de 80 mm, control de stock). Después todo se cambia en Parámetros.
+   - **Sin CUIT todavía**: `--cuit=pendiente` deja la licencia sin exigir y el modo ARCA interno (solo presupuestos y ventas internas); `PASOS.md` dice qué completar cuando llegue el CUIT.
+   - **Rama `estable`** por omisión: todos los clientes siguen el mismo canal (`docs/publicar-a-todos.md`).
 2. Se sigue `PASOS.md` marcando cada paso. **Todo lo que salga distinto de lo esperado se anota en `ficha.md`, sección Lecciones, en el momento.**
 3. Al cerrar: lo generalizable pasa a `docs/lecciones-alta.md`, la instalación se suma a `docs/instalaciones.md` (sin claves) y la ficha va a Drive.
 
@@ -19,7 +22,7 @@ El código es el mismo para todos. Este manual es el camino que se repite; lo qu
 ## Los pasos, y por qué
 | # | Paso | Quién | Detalle y por qué |
 |---|---|---|---|
-| 1 | Hosting | Hernán | Mismo hosting que los demás (DonWeb/Ferozo con GIT, sin SSH): subdominio `facturador.<dominio>` → `public/`; base nueva; repo `facturaweb` rama `main`. Ver `docs/DESPLIEGUE.md`. |
+| 1 | Hosting | Hernán | Mismo hosting que los demás (DonWeb/Ferozo con GIT, sin SSH): subdominio → `public/`; base nueva; repo `facturaweb` rama **`estable`** con el webhook de auto-despliegue. Ver `docs/DESPLIEGUE.md`. |
 | 2 | Configuración | Hernán | `config/local.php` generado; completar base y mail del cliente. La clave de instalación ya viene puesta. |
 | 3 | Instalar | Hernán | `/instalar` crea las tablas y el Master. **Vaciar `instalar_token` después.** `/salud` tiene que dar `ok`. |
 | 4 | Licencia | Hernán | Se emite con `bin/licencia.php` (la clave privada nunca sale de tu PC). Cada mes se emite una nueva y se carga en Sistema → Licencia. |
@@ -40,8 +43,10 @@ El código es el mismo para todos. Este manual es el camino que se repite; lo qu
 ## Para presupuestar el próximo
 Con la ficha de cada alta se llena la tabla de tiempos reales. Una vez que haya 2 o 3 altas se promedian y se reemplazan las estimaciones del skill `facturaweb-proyecto` por números medidos.
 
+## Un cambio llega a todos los clientes
+Ver `docs/publicar-a-todos.md`: un solo código, rama `estable`, auto-despliegue y base que se actualiza sola; **Sistema → Instalaciones** muestra el estado de todos.
+
 ## Lo que todavía no está automatizado (siguientes mejoras, por prioridad)
-1. **Actualizar todas las instalaciones de una vez** (hoy: GIT + «Aplicar cambios» en cada una; con más de 3 clientes conviene un script que recorra `docs/instalaciones.md`).
-2. **Renovación automática de licencias** (hoy manual; luego un pequeño servicio o un archivo que la instalación consulta).
-3. Importador de maestros desde Excel para clientes que no vienen del VFP.
-4. Alta de la base y el hosting por API (hoy son pasos manuales en el panel).
+1. **Renovación automática de licencias** (hoy manual; luego un pequeño servicio o un archivo que la instalación consulta).
+2. Importador de maestros desde Excel para clientes que no vienen del VFP.
+3. Alta de la base y el hosting por API (hoy son pasos manuales en el panel).
