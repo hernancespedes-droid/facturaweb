@@ -89,6 +89,13 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.
 
+## Varias instalaciones con el mismo código (0.28.0)
+
+`Modules/Instancias`: Sistema → Instalaciones de clientes (solo Master y solo en la principal). Cada cliente tiene `storage/instancias/<dirección>/config.php` (+ logs, sesiones, licencia)
+y su base; su subdominio apunta a la **misma** carpeta `public/`. `config/config.php` elige la configuración por `HTTP_HOST` (por consola: `FACTURAWEB_HOST=`) y, con clientes creados,
+la principal solo responde en las direcciones de `storage/instancias/_principal.php` (otra dirección → «no habilitada»). **Todo archivo de datos va con `App::storage('…')`, nunca
+`App::root() . '/storage/…'`** (si no, se mezclan los clientes). Pruebas: base extra `facturaweb_test_inst` (crearla con root; si falta, `InstanciasTest` saltea el alta).
+
 ## Estructura y convenciones
 
 - Módulos en `src/Modules/<Nombre>/` con `routes.php`; vistas en `views/<modulo>/`. Handlers `function (Request $req, array $params): Response`.

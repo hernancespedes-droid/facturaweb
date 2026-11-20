@@ -38,7 +38,7 @@ description: Contexto, decisiones y estado del proyecto FacturaWeb (facturador w
 | 4 | Cta. cte. y cheques (recibos, imputación, ajustes, cartera) | **Hecha: versión 0.10.0** (nota `docs/entregas/0.10.0-etapa4-cuenta-corriente.md`); falta la prueba de Hernán, confirmar D-28…D-32 y que los recibos viajen al VFP |
 | 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | **Casi hecha**: subdiario de IVA ventas en pantalla/Excel (0.4.2) e **impreso para el libro** (0.15.0), cobranzas/deuda/cheques (0.10.0), **Libro IVA Digital ventas (0.11.0)**; falta probar el libro en el Portal IVA |
 | 6 | Pase a producción OYS: histórico completo, control de saldos contra VFP, capacitación | Pendiente |
-| 7 | Producto: alta de instalaciones, licencia de suscripción, actualización masiva | Pendiente |
+| 7 | Producto: alta de instalaciones, licencia de suscripción, actualización masiva | **En curso (0.28.0)**: panel Sistema → Instalaciones de clientes (alta desde la web, mismo código para todos, «Aplicar cambios en todas»); licencia hecha (0.9.0); falta importador de Excel y renovación automática |
 
 Estimación con IA (horas de sesión): 1) 4–6 · 2) 6–9 · 3) 1,5–3 + WSFEX 3–5 · 4) 6–9 · 5) 4–6 · 6) 3–5 · 7) 2–4.
 Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de saldos migrados.

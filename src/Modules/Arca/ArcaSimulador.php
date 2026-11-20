@@ -21,7 +21,7 @@ final class ArcaSimulador
     /** Configuración para el módulo: un certificado autofirmado de mentira que se crea una vez en storage/afip_simulado/. @return array<string,mixed> */
     public static function configuracion(string $cuit): array
     {
-        $dir = App::root() . '/storage/afip_simulado';
+        $dir = App::storage('afip_simulado');
         if (!is_dir($dir) && !@mkdir($dir, 0775, true)) {
             throw new \RuntimeException('No se pudo crear storage/afip_simulado (falta permiso de escritura en storage/).');
         }

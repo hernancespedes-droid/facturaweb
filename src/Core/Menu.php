@@ -54,6 +54,7 @@ final class Menu
         $o['agente'] = ['texto' => 'Agente de sincronización', 'ruta' => '/agente', 'permiso' => 'agente.administrar', 'grupo' => 'Sistema'];
         $o['arca'] = ['texto' => 'ARCA', 'ruta' => '/arca', 'permiso' => 'arca.administrar', 'grupo' => 'Sistema'];
         $o['sistema'] = ['texto' => 'Sistema', 'ruta' => '/sistema', 'permiso' => null, 'grupo' => 'Sistema'];
+        $o['instancias'] = ['texto' => 'Instalaciones de clientes', 'ruta' => '/instancias', 'permiso' => null, 'grupo' => 'Sistema'];
         return $o;
     }
 
@@ -76,6 +77,9 @@ final class Menu
         }
         if ($clave === 'cambios' && !\App\Modules\Cambios\CambiosService::habilitado()) {
             return false; // el modo ticket de cambio se enciende en Parámetros
+        }
+        if ($clave === 'instancias') {
+            return Auth::esMaster() && \App\Modules\Instancias\InstanciasService::disponible(); // solo en la principal
         }
         if ($clave === 'sistema') {
             return Auth::esMaster() || Auth::esAdmin();

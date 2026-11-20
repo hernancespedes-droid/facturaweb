@@ -48,7 +48,7 @@ final class Diagnostico
                 'max_execution_time' => (string) ini_get('max_execution_time'),
             ],
             'escritura' => [
-                'storage/logs' => is_writable($root . '/storage/logs'),
+                'storage/logs' => is_writable(\App\App::storage('logs')),
             ],
             'espacio_libre_mb' => (int) round((float) @disk_free_space($root) / 1048576),
             'zona_horaria' => date_default_timezone_get(),

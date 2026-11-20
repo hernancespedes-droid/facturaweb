@@ -26,6 +26,19 @@ final class App
         return dirname(__DIR__);
     }
 
+    /**
+     * Carpeta de datos de esta instalación (logs, sesiones, licencia, temporales). La principal usa storage/; cada cliente
+     * creado desde el panel de instalaciones tiene la suya en storage/instancias/<dirección>/ (ver config/config.php).
+     */
+    public static function storage(string $sub = ''): string
+    {
+        $base = (string) Config::get('instancia.dir', '');
+        if ($base === '') {
+            $base = self::root() . '/storage';
+        }
+        return $sub === '' ? $base : $base . '/' . ltrim($sub, '/');
+    }
+
     /** @param array<string,mixed>|null $config */
     public static function boot(?array $config = null): self
     {
@@ -43,6 +56,10 @@ final class App
                 self::registrar(new \ErrorException($e['message'], 0, $e['type'], $e['file'], $e['line']));
             }
         });
+        if ((string) Config::get('instancia.desconocida', '') !== '') {
+            self::paginaSinInstalacion();
+            return;
+        }
         try {
             $basePath = (string) Config::get('app.base_path', '');
             Session::start(); // se conecta a la base (sesiones): queda dentro del try para registrar si falla
@@ -51,6 +68,21 @@ final class App
             self::registrar($e);
             self::paginaSinBase();
         }
+    }
+
+    /** Subdominio que apunta al sistema pero todavía no tiene una instalación creada en el panel. */
+    private static function paginaSinInstalacion(): void
+    {
+        if (!headers_sent()) {
+            http_response_code(404);
+            header('Content-Type: text/html; charset=utf-8');
+            header('Cache-Control: no-store');
+        }
+        echo '<!doctype html><html lang="es-AR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+            . '<title>Sin instalación</title><style>body{font:16px/1.5 Arial,sans-serif;background:#f3f5f9;color:#18202b;margin:0}'
+            . '.c{max-width:460px;margin:12vh auto;padding:24px;background:#fff;border-radius:14px;box-shadow:0 8px 24px -14px rgba(20,30,50,.35)}</style></head>'
+            . '<body><div class="c"><h1>Esta dirección todavía no está habilitada</h1><p>No hay ningún sistema instalado en '
+            . htmlspecialchars((string) Config::get('instancia.desconocida', ''), ENT_QUOTES) . '. Si recién lo contrataste, en unos minutos va a estar listo.</p></div></body></html>';
     }
 
     /** Si no se pudo ni empezar (ej. la base no respondió): una página simple, sin tocar la base, que invita a reintentar. */
@@ -171,7 +203,7 @@ final class App
     /** Deja el error en storage/logs (no se muestra al usuario). */
     public static function registrar(\Throwable $e): void
     {
-        $dir = self::root() . '/storage/logs';
+        $dir = self::storage('logs');
         if (!is_dir($dir)) {
             @mkdir($dir, 0775, true);
         }

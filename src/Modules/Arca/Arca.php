@@ -221,7 +221,7 @@ final class Arca
     /** Una línea JSON por cada intercambio con ARCA, en storage/logs/afip-AAAA-MM.log (sin token ni firma). */
     public static function registrar(string $url, string $accion, string $enviado, string $recibido, float $segundos): void
     {
-        $dir = App::root() . '/storage/logs';
+        $dir = App::storage('logs');
         if (!is_dir($dir)) {
             @mkdir($dir, 0775, true);
         }

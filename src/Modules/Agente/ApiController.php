@@ -134,7 +134,7 @@ final class ApiController
                 return self::json(['ok' => false, 'error' => $n > self::MAX_BYTES ? 'El envío es demasiado grande.' : 'No llegó ningún archivo.'], $n > self::MAX_BYTES ? 413 : 400);
             }
         }
-        $dir = App::root() . '/storage/migracion/api_' . bin2hex(random_bytes(8));
+        $dir = App::storage('migracion/api_') . bin2hex(random_bytes(8));
         try {
             $zip = new \ZipArchive();
             if ($zip->open($tmp) !== true) {
