@@ -32,7 +32,7 @@ final class SistemaController
             return new Response(403);
         }
         $estado = self::migrator()->status();
-        $dir = App::root() . '/storage';
+        $dir = App::storage();
         return Response::html(View::render('sistema/index', [
             'title' => 'Sistema',
             'nav' => 'sistema',
@@ -62,7 +62,7 @@ final class SistemaController
      */
     private static function ultimosErrores(int $cuantos): array
     {
-        $dir = App::root() . '/storage/logs';
+        $dir = App::storage('logs');
         $out = [];
         foreach ([date('Y-m'), date('Y-m', strtotime('first day of last month'))] as $mes) {
             $f = $dir . '/app-' . $mes . '.log';
@@ -142,7 +142,7 @@ final class SistemaController
             Session::flash('error', 'Elegí el .zip con los DBF (si pesa mucho, el hosting puede rechazarlo: máximo ' . ini_get('upload_max_filesize') . ').');
             return Response::redirect(url('/sistema#migracion-vfp'));
         }
-        $dir = App::root() . '/storage/migracion/' . bin2hex(random_bytes(8));
+        $dir = App::storage('migracion/') . bin2hex(random_bytes(8));
         try {
             $n = self::extraerDbf((string) $f['tmp_name'], $dir);
             if ($n === 0) {

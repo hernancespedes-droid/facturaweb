@@ -63,5 +63,29 @@ $base = [
 ];
 
 $local = __DIR__ . '/local.php';
+$cfg = is_file($local) ? array_replace_recursive($base, require $local) : $base;
 
-return is_file($local) ? array_replace_recursive($base, require $local) : $base;
+/*
+ * Varias instalaciones con el mismo código (Sistema → Instalaciones de clientes). Cada cliente tiene su dirección
+ * (cliente.orgysis.site), su base y su carpeta storage/instancias/<dirección>/ con su config.php. Si la dirección del
+ * pedido tiene esa carpeta, se usa SOLO su configuración (nunca la de local.php: base, mail, ARCA y Mercado Pago son del cliente).
+ * Por consola (bin/*.php) se elige con la variable FACTURAWEB_HOST=cliente.orgysis.site.
+ */
+$host = strtolower((string) (getenv('FACTURAWEB_HOST') ?: ($_SERVER['HTTP_HOST'] ?? '')));
+$host = (string) preg_replace('/:\d+$/', '', $host);
+$raizInstancias = dirname(__DIR__) . '/storage/instancias';
+$hostValido = $host !== '' && strlen($host) <= 190
+    && preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/', $host) === 1;
+if ($hostValido && is_file($raizInstancias . '/' . $host . '/config.php')) {
+    $instancia = require $raizInstancias . '/' . $host . '/config.php';
+    $cfg = array_replace_recursive($base, is_array($instancia) ? $instancia : []);
+    $cfg['instancia'] = ['host' => $host, 'dir' => $raizInstancias . '/' . $host];
+    return $cfg;
+}
+// Una vez creada alguna instalación, local.php (la principal) solo responde en sus propias direcciones: un subdominio
+// nuevo sin instalación todavía no puede mostrar los datos de la principal.
+$principal = is_file($raizInstancias . '/_principal.php') ? (array) require $raizInstancias . '/_principal.php' : [];
+if ($principal !== [] && $host !== '' && !in_array($host, $principal, true)) {
+    $cfg['instancia'] = ['desconocida' => $host];
+}
+return $cfg;

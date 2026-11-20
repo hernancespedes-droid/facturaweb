@@ -26,3 +26,4 @@
 *.p12
 !lib/afip_fe/tests/**
 /storage/afip_simulado/
+/storage/instancias/

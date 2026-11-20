@@ -31,7 +31,7 @@ final class Licencia
 
     public static function archivo(): string
     {
-        return (string) Config::get('licencia.archivo', App::root() . '/storage/licencia.json');
+        return (string) Config::get('licencia.archivo', App::storage('licencia.json'));
     }
 
     /** Clave pública de O&S (base64): config/local.php → licencia.clave_publica, o config/licencia_publica.txt del código. */

@@ -3,7 +3,17 @@
 Cada cliente es **una instalación propia**: su subdominio, su carpeta, su base, su certificado y punto de venta de ARCA y su licencia.
 El código es el mismo para todos. Este manual es el camino que se repite; lo que cambia de un cliente a otro va en su ficha.
 
-## Cómo se trabaja un alta
+## Lo rápido: desde la web (0.28.0)
+1. Panel del hosting: crear una **base vacía** con su usuario.
+2. En la instalación principal (oys.orgysis.site), como Master: **Sistema → Instalaciones de clientes → + Nuevo cliente** (empresa, subdominio, base, usuarios). Crea las tablas,
+   el Master, un Administrador con clave provisoria y la configuración del cliente.
+3. Panel del hosting: crear el **subdominio** apuntando a la **misma carpeta `…/public`** que la principal y activar su SSL.
+4. Entrar a `https://<subdominio>` y seguir con Parámetros/Sucursales, migración del VFP (Sistema), licencia y ARCA (modo y mail se cambian desde el panel, «Mail, ARCA y licencia»).
+5. Actualizar: GIT una sola vez + **Aplicar cambios en todas** en el panel.
+
+El camino de abajo (una carpeta y un clon de GIT por cliente) sigue sirviendo para un cliente en otro hosting.
+
+## Cómo se trabaja un alta (manual, otro hosting)
 1. `php bin/alta-cliente.php --nombre="Razón social" --cuit=<11 dígitos> --dominio=<dominio.com.ar> --salida=<carpeta fuera del repo>`
    deja `config/local.php` listo, `PASOS.md` (la lista con los datos del cliente) y `ficha.md`. Las plantillas están en `docs/clientes/`.
 2. Se sigue `PASOS.md` marcando cada paso. **Todo lo que salga distinto de lo esperado se anota en `ficha.md`, sección Lecciones, en el momento.**
@@ -41,7 +51,7 @@ El código es el mismo para todos. Este manual es el camino que se repite; lo qu
 Con la ficha de cada alta se llena la tabla de tiempos reales. Una vez que haya 2 o 3 altas se promedian y se reemplazan las estimaciones del skill `facturaweb-proyecto` por números medidos.
 
 ## Lo que todavía no está automatizado (siguientes mejoras, por prioridad)
-1. **Actualizar todas las instalaciones de una vez** (hoy: GIT + «Aplicar cambios» en cada una; con más de 3 clientes conviene un script que recorra `docs/instalaciones.md`).
+1. ~~Actualizar todas las instalaciones de una vez~~: hecho en 0.28.0 (panel de instalaciones) para los clientes que comparten el código.
 2. **Renovación automática de licencias** (hoy manual; luego un pequeño servicio o un archivo que la instalación consulta).
 3. Importador de maestros desde Excel para clientes que no vienen del VFP.
 4. Alta de la base y el hosting por API (hoy son pasos manuales en el panel).

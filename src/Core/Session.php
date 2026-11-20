@@ -28,7 +28,7 @@ final class Session
         // /instalar corre con la base vacía (todavía no existe la tabla sesiones): ahí las sesiones van en archivos.
         $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
         if (Config::get('auth.sesiones', 'base') === 'archivos' || str_ends_with(rtrim($path, '/'), '/instalar')) {
-            $dir = App::root() . '/storage/sessions';
+            $dir = App::storage('sessions');
             if (is_dir($dir) && is_writable($dir)) {
                 session_save_path($dir);
             }
