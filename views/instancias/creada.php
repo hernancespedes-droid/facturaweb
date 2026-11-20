@@ -14,6 +14,13 @@
     </ol>
 </section>
 
+<?php if (($r['cliente'] ?? null) !== null): ?>
+<p class="alerta alerta-ok">Quedó como cliente <a href="<?= e(url('/clientes/' . $r['cliente'])) ?>"><b><?= (int) $r['cliente'] ?></b></a> del master<?= ($r['aviso_cliente'] ?? null) !== null ? ' (' . e($r['aviso_cliente']) . ')' : '' ?>.
+    <a href="<?= e(url('/comprobantes/nuevo?tipo=FC&cliente=' . $r['cliente'])) ?>">Facturarle</a></p>
+<?php elseif (($r['aviso_cliente'] ?? null) !== null): ?>
+<p class="alerta alerta-error"><?= e($r['aviso_cliente']) ?></p>
+<?php endif; ?>
+
 <section class="card regenerar hay">
     <div>
         <h2>Administrador del cliente</h2>
@@ -28,7 +35,7 @@
         <li><b>Tablas → Parámetros</b> y <b>Sucursales</b>: domicilio, inicio de actividades y el punto de venta con la numeración que sigue.</li>
         <li><b>Si viene del VFP</b>: Sistema → Migración desde el sistema VFP (subís un .zip con los DBF; primero «simular»).</li>
         <li><b>Licencia</b>: Sistema → Licencia (si la exigiste).</li>
-        <li><b>ARCA</b>: certificado y punto de venta propios; el modo se cambia desde «Mail, ARCA y licencia» en el panel.</li>
+        <li><b>ARCA</b>: certificado y punto de venta propios; el modo se cambia desde «Administrar» en el master.</li>
     </ul>
     <p class="small muted">Base creada con <?= (int) $r['cambios'] ?> cambio(s) de estructura.</p>
 </section>

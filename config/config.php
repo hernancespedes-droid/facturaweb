@@ -84,8 +84,9 @@ if ($hostValido && is_file($raizInstancias . '/' . $host . '/config.php')) {
 }
 // Una vez creada alguna instalación, local.php (la principal) solo responde en sus propias direcciones: un subdominio
 // nuevo sin instalación todavía no puede mostrar los datos de la principal.
-$principal = is_file($raizInstancias . '/_principal.php') ? (array) require $raizInstancias . '/_principal.php' : [];
-if ($principal !== [] && $host !== '' && !in_array($host, $principal, true)) {
+// En la carpeta de los clientes (dos carpetas: master y clientes) el archivo existe vacío: ahí ninguna dirección usa local.php.
+$principal = is_file($raizInstancias . '/_principal.php') ? (array) require $raizInstancias . '/_principal.php' : null;
+if ($principal !== null && $host !== '' && !in_array($host, $principal, true)) {
     $cfg['instancia'] = ['desconocida' => $host];
 }
 return $cfg;

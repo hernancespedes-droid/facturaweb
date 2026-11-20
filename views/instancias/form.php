@@ -23,7 +23,23 @@ $v = static fn (string $k, string $def = ''): string => e((string) ($datos[$k] ?
                 <?php endforeach; ?></select><?= $err('iva') ?></label>
             <label class="field"><span>Licencia mensual</span>
                 <span><input type="checkbox" name="licencia" value="1" <?= !empty($datos['licencia']) ? 'checked' : '' ?>> Exigir licencia (suscripción)</span></label>
+            <label class="field"><span>Domicilio</span><input name="domicilio" value="<?= $v('domicilio') ?>" maxlength="80"></label>
+            <label class="field"><span>Localidad</span><input name="localidad" value="<?= $v('localidad') ?>" maxlength="40"></label>
+            <label class="field"><span>Teléfono</span><input name="telefono" value="<?= $v('telefono') ?>" maxlength="60"></label>
+            <label class="field"><span>Mail para mandarle las facturas de O&amp;S</span><input name="email" type="email" value="<?= $v('email') ?>"><?= $err('email') ?></label>
         </div>
+        <p class="small muted">Con estos datos también se crea como <b>cliente del master</b>, para facturarle la suscripción (si ya hay uno con ese CUIT, se usa ese).</p>
+    </section>
+
+    <section class="card">
+        <h2>Módulos que contrata</h2>
+        <input type="hidden" name="modulos_enviados" value="1">
+        <div class="grid-2">
+        <?php foreach (\App\Core\Modulos::LISTA as $k => $m): ?>
+            <label><input type="checkbox" name="modulos[<?= e($k) ?>]" value="1" <?= !empty($datos['modulos'][$k]) ? 'checked' : '' ?>> <?= e($m['nombre']) ?></label>
+        <?php endforeach; ?>
+        </div>
+        <p class="small muted">Facturación, clientes, artículos, tablas y ARCA van siempre. Se cambian después desde «Administrar».</p>
     </section>
 
     <section class="card">

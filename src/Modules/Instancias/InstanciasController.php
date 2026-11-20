@@ -39,6 +39,14 @@ final class InstanciasController
             'principal' => InstanciasService::principal(),
             'hostActual' => self::hostActual($req),
             'resultado' => $resultado,
+            'master' => InstanciasService::codigo(\App\App::root()),
+            'clientes' => InstanciasService::codigo(InstanciasService::carpetaClientes()),
+            'dosCarpetas' => InstanciasService::dosCarpetas(),
+            'carpetaClientes' => InstanciasService::carpetaClientes(),
+            'hayToken' => Promocion::hayToken(),
+            'rama' => Promocion::rama(),
+            'enCarpetaMaster' => InstanciasService::enCarpetaMaster(),
+            'bajas' => InstanciasService::bajas(),
         ]));
     }
 
@@ -47,7 +55,7 @@ final class InstanciasController
         if (!self::puede()) {
             return new Response(403);
         }
-        return self::form($req, ['iva' => '1', 'licencia' => '1', 'master_usuario' => 'oys', 'master_nombre' => 'O&S Sistemas', 'admin_usuario' => 'admin',
+        return self::form($req, ['modulos' => array_map(static fn (array $m) => $m['por_omision'] ? '1' : '', \App\Core\Modulos::LISTA), 'iva' => '1', 'licencia' => '1', 'master_usuario' => 'oys', 'master_nombre' => 'O&S Sistemas', 'admin_usuario' => 'admin',
             'db_host' => (string) Config::get('db.host', 'localhost'), 'mail_port' => '587', 'mail_secure' => 'tls'], []);
     }
 
@@ -64,7 +72,7 @@ final class InstanciasController
             return self::form($req, $datos, $r['errores'], 422);
         }
         return Response::html(View::render('instancias/creada', ['title' => 'Instalación creada', 'nav' => 'instancias', 'r' => $r,
-            'carpetaPublica' => dirname(__DIR__, 3) . '/public']));
+            'carpetaPublica' => InstanciasService::carpetaClientes() . '/public']));
     }
 
     /** @param array<string,mixed> $datos @param array<string,string> $errores */
@@ -86,7 +94,14 @@ final class InstanciasController
             return new Response(404);
         }
         $m = (array) ($c['mail'] ?? []);
-        $datos = ['afip_modo' => (string) ($c['afip']['modo'] ?? 'interno'), 'afip_config' => (string) ($c['afip']['config'] ?? ''),
+        $sus = (array) ($c['suscripcion'] ?? []);
+        $mods = [];
+        foreach (\App\Core\Modulos::LISTA as $k => $d) {
+            $mods[$k] = ($c['modulos'][$k] ?? $d['por_omision']) ? '1' : '';
+        }
+        $datos = ['suscripcion' => (string) ($sus['estado'] ?? 'activa'), 'suscripcion_mensaje' => (string) ($sus['mensaje'] ?? ''),
+            'sin_emision_desde' => (string) ($sus['sin_emision_desde'] ?? ''), 'bloqueo_desde' => (string) ($sus['bloqueo_desde'] ?? ''), 'modulos' => $mods,
+            'efectivo' => Suscripcion::estado($sus),'afip_modo' => (string) ($c['afip']['modo'] ?? 'interno'), 'afip_config' => (string) ($c['afip']['config'] ?? ''),
             'licencia' => !empty($c['licencia']['exigir']) ? '1' : '', 'mail_host' => $m['host'] ?? '', 'mail_port' => (string) ($m['port'] ?? 587),
             'mail_secure' => $m['secure'] ?? 'tls', 'mail_user' => $m['user'] ?? '', 'mail_from' => $m['from'] ?? '', 'mail_from_name' => $m['from_name'] ?? ''];
         return self::editarVista($host, $datos, [], (string) ($m['pass'] ?? '') !== '');
@@ -116,7 +131,8 @@ final class InstanciasController
     {
         return Response::html(View::render('instancias/editar', ['title' => 'Editar ' . $host, 'nav' => 'instancias', 'host' => $host, 'datos' => $datos,
             'errores' => $errores, 'tieneClaveMail' => $tieneClaveMail,
-            'rutaAfipSugerida' => InstanciasService::raiz() . '/' . $host . '/afip/config_afip.php']), $status);
+            'rutaAfipSugerida' => InstanciasService::raiz() . '/' . $host . '/afip/config_afip.php',
+            'info' => json_decode((string) @file_get_contents(InstanciasService::raiz() . '/' . $host . '/info.json'), true) ?: []]), $status);
     }
 
     /** Aplica los cambios de base en la principal y en todos los clientes (después de actualizar el código con GIT). */
@@ -127,6 +143,79 @@ final class InstanciasController
         }
         Session::set('instancias_resultado', InstanciasService::actualizarTodas());
         Session::flash('ok', 'Listo: se revisaron todas las instalaciones (detalle abajo).');
+        return Response::redirect(url('/instancias'));
+    }
+
+    /** Vincula como cliente del master una instalación que no lo tiene (las creadas antes de 0.29.0). */
+    public static function crearCliente(Request $req, array $params): Response
+    {
+        if (!self::puede()) {
+            return new Response(403);
+        }
+        $host = (string) ($req->post['host'] ?? '');
+        try {
+            InstanciasService::config($host);
+        } catch (\RuntimeException) {
+            return new Response(404);
+        }
+        $r = InstanciasService::crearCliente($host);
+        Session::flash($r['cliente'] !== null ? 'ok' : 'error', $r['cliente'] !== null ? 'Cliente ' . $r['cliente'] . ' vinculado a ' . $host . '. ' . ($r['aviso_cliente'] ?? '') : (string) $r['aviso_cliente']);
+        return Response::redirect(url('/instancias/editar?host=' . rawurlencode($host)));
+    }
+
+    public static function copia(Request $req, array $params): Response
+    {
+        if (!self::puede()) {
+            return new Response(403);
+        }
+        try {
+            $c = InstanciasService::copia((string) ($req->query['host'] ?? ''));
+        } catch (\RuntimeException) {
+            return new Response(404);
+        }
+        return new Response(200, $c['contenido'], ['Content-Type' => 'application/gzip', 'Content-Disposition' => 'attachment; filename="' . $c['nombre'] . '"',
+            'Cache-Control' => 'no-store']);
+    }
+
+    public static function baja(Request $req, array $params): Response
+    {
+        if (!self::puede()) {
+            return new Response(403);
+        }
+        $host = (string) ($req->post['host'] ?? '');
+        try {
+            InstanciasService::config($host);
+        } catch (\RuntimeException) {
+            return new Response(404);
+        }
+        $error = InstanciasService::baja($host, (string) ($req->post['confirmacion'] ?? ''), (string) (Auth::usuario()['usuario'] ?? ''));
+        if ($error !== null) {
+            Session::flash('error', $error);
+            return Response::redirect(url('/instancias/editar?host=' . rawurlencode($host)));
+        }
+        Session::flash('ok', 'Baja hecha: se borraron los datos de ' . $host . '. Falta borrar en el panel del hosting su subdominio y su base (ya vacía).');
+        return Response::redirect(url('/instancias'));
+    }
+
+    /** Mueve la rama de los clientes al commit que corre el master (ver Promocion). */
+    public static function pasarAClientes(Request $req, array $params): Response
+    {
+        if (!self::puede()) {
+            return new Response(403);
+        }
+        $r = Promocion::pasarAClientes((string) Promocion::commit(\App\App::root()));
+        Session::flash($r['ok'] ? 'ok' : 'error', $r['mensaje'] . ($r['ok'] ? ' Ahora actualizá la carpeta de clientes con GIT en el hosting y tocá «Aplicar cambios en todas».' : ''));
+        return Response::redirect(url('/instancias'));
+    }
+
+    public static function mover(Request $req, array $params): Response
+    {
+        if (!self::puede()) {
+            return new Response(403);
+        }
+        $hechas = InstanciasService::moverACarpetaClientes();
+        Session::flash('ok', $hechas === [] ? 'No había nada para mover.' : 'Pasadas a la carpeta de clientes: ' . implode(', ', $hechas)
+            . '. Ahora apuntá su subdominio a ' . InstanciasService::carpetaClientes() . '/public.');
         return Response::redirect(url('/instancias'));
     }
 

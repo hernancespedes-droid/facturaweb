@@ -18,12 +18,16 @@ final class InstanciasTest extends DbTestCase
     private const BASE = 'facturaweb_test_inst';
 
     private ?string $principalPrevio = null;
+    private ?string $bajasPrevio = null;
+    private ?string $tmp = null;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $f = InstanciasService::raiz() . '/_principal.php';
+        $f = \App\App::root() . '/storage/instancias/_principal.php';
         $this->principalPrevio = is_file($f) ? (string) file_get_contents($f) : null;
+        $b = InstanciasService::raiz() . '/_bajas.json';
+        $this->bajasPrevio = is_file($b) ? (string) file_get_contents($b) : null;
         $_SERVER['HTTP_HOST'] = self::PRINCIPAL;
     }
 
@@ -33,9 +37,18 @@ final class InstanciasTest extends DbTestCase
         foreach ([self::HOST, 'tlleno.prueba.test'] as $h) {
             $this->borrar(InstanciasService::raiz() . '/' . $h);
         }
-        $f = InstanciasService::raiz() . '/_principal.php';
+        $f = \App\App::root() . '/storage/instancias/_principal.php';
         $this->principalPrevio === null ? @unlink($f) : file_put_contents($f, $this->principalPrevio);
-        Config::set('instancia', []);
+        $b = InstanciasService::raiz() . '/_bajas.json';
+        $this->bajasPrevio === null ? @unlink($b) : file_put_contents($b, $this->bajasPrevio);
+        if ($this->tmp !== null) {
+            $this->borrar($this->tmp);
+        }
+        \App\Core\Db::pdo()->exec("DELETE FROM clientes WHERE cuit = 30712345671");
+        \App\Modules\Instancias\Promocion::$transporte = null;
+        foreach (['instancia', 'suscripcion', 'modulos', 'panel'] as $k) {
+            Config::set($k, []);
+        }
         parent::tearDown();
     }
 
@@ -166,8 +179,156 @@ final class InstanciasTest extends DbTestCase
         }
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
         foreach ($it as $f) {
-            $f->isDir() ? rmdir($f->getPathname()) : unlink($f->getPathname());
+            $f->isDir() && !$f->isLink() ? rmdir($f->getPathname()) : unlink($f->getPathname());
         }
         rmdir($dir);
+    }
+
+    public function testCadaClienteNuevoQuedaComoClienteDelMasterYSeDaDeBaja(): void
+    {
+        $pdo = $this->baseCliente();
+        if ($pdo === null) {
+            echo "      (se saltea: falta la base " . self::BASE . ")\n";
+            return;
+        }
+        $this->loginComo($this->crearUsuario('t_mas', 'master'));
+        $res = $this->post('/instancias/nueva', $this->datos(['email' => 'pagos@cliente.test', 'domicilio' => 'Calle 1', 'modulos_enviados' => '1',
+            'modulos' => ['stock' => '1', 'caja' => '1']]));
+        $this->assertStringContainsString('Quedó como cliente', $res->body);
+        $cli = \App\Core\Db::pdo()->query('SELECT codigo, razon_social, iva, emailfc, domicilio FROM clientes WHERE cuit = 30712345671')->fetch();
+        $this->assertSame(['Cliente de Prueba SA', 1, 'pagos@cliente.test', 'Calle 1'], [$cli['razon_social'], (int) $cli['iva'], $cli['emailfc'], $cli['domicilio']]);
+        $this->assertStringContainsString('/comprobantes/nuevo?tipo=FC&amp;cliente=' . $cli['codigo'], $this->get('/instancias')->body);
+        $c = InstanciasService::config(self::HOST);
+        $this->assertSame([true, false, false], [$c['modulos']['stock'], $c['modulos']['kiosco'], $c['modulos']['agente']]);
+        $this->assertSame('activa', $c['suscripcion']['estado']);
+
+        // Suscripción y módulos desde «Administrar».
+        $this->post('/instancias/editar', ['host' => self::HOST, 'afip_modo' => 'interno', 'suscripcion' => 'aviso', 'suscripcion_mensaje' => 'Debés noviembre',
+            'sin_emision_desde' => '2030-01-10', 'bloqueo_desde' => '', 'modulos_enviados' => '1', 'modulos' => ['kiosco' => '1']]);
+        $c = InstanciasService::config(self::HOST);
+        $this->assertSame(['aviso', 'Debés noviembre', '2030-01-10'], [$c['suscripcion']['estado'], $c['suscripcion']['mensaje'], $c['suscripcion']['sin_emision_desde']]);
+        $this->assertSame([false, true], [$c['modulos']['stock'], $c['modulos']['kiosco']]);
+        $this->assertStringContainsString('Aviso de pago pendiente', $this->get('/instancias')->body);
+
+        // Copia de la base del cliente.
+        $copia = $this->get('/instancias/copia', ['host' => self::HOST]);
+        $this->assertSame(200, $copia->status);
+        $sql = (string) gzdecode($copia->body);
+        $this->assertStringContainsString('CREATE TABLE `parametros`', $sql);
+        $this->assertStringContainsString('Cliente de Prueba SA', $sql);
+
+        // Baja: solo escribiendo la dirección; borra tablas y carpeta y deja el registro.
+        $this->post('/instancias/baja', ['host' => self::HOST, 'confirmacion' => 'otra cosa']);
+        $this->assertTrue(is_dir(InstanciasService::raiz() . '/' . self::HOST), 'sin la confirmación no se borra nada');
+        $this->assertRedirect('/instancias', $this->post('/instancias/baja', ['host' => self::HOST, 'confirmacion' => self::HOST]));
+        $this->assertFalse(is_dir(InstanciasService::raiz() . '/' . self::HOST));
+        $this->assertSame([], $pdo->query('SHOW TABLES')->fetchAll());
+        $bajas = InstanciasService::bajas();
+        $this->assertSame([self::HOST, 'Cliente de Prueba SA'], [end($bajas)['host'], end($bajas)['nombre']]);
+        $this->assertStringContainsString('dados de baja', $this->get('/instancias')->body);
+    }
+
+    public function testEstadosDeLaSuscripcionAvanzanConLasFechas(): void
+    {
+        $s = ['estado' => 'aviso', 'sin_emision_desde' => '2026-12-10', 'bloqueo_desde' => '2026-12-20'];
+        $this->assertSame('aviso', \App\Modules\Instancias\Suscripcion::estado($s, '2026-12-09'));
+        $this->assertSame('sin_emision', \App\Modules\Instancias\Suscripcion::estado($s, '2026-12-10'));
+        $this->assertSame('bloqueada', \App\Modules\Instancias\Suscripcion::estado($s, '2026-12-25'));
+        $this->assertSame('bloqueada', \App\Modules\Instancias\Suscripcion::estado(['estado' => 'bloqueada', 'sin_emision_desde' => '2030-01-01'], '2026-12-01'), 'nunca retrocede sola');
+        $this->assertSame('activa', \App\Modules\Instancias\Suscripcion::estado([], '2026-12-01'));
+    }
+
+    public function testEnUnClienteSuspendidoNoSeEmiteYBloqueadoSoloEntraElMaster(): void
+    {
+        $adm = $this->crearUsuario('t_adm', 'admin');
+        $mas = $this->crearUsuario('t_mas', 'master');
+        Config::set('instancia', ['host' => self::HOST, 'dir' => sys_get_temp_dir()]);
+
+        Config::set('suscripcion', ['estado' => 'aviso', 'mensaje' => 'Debés noviembre']);
+        \App\Modules\Licencia\Licencia::exigirParaEmitir();
+        $this->loginComo($adm);
+        $this->assertStringContainsString('Debés noviembre', $this->get('/clientes')->body, 'el cartel aparece en todas las pantallas');
+
+        Config::set('suscripcion', ['estado' => 'sin_emision']);
+        try {
+            \App\Modules\Licencia\Licencia::exigirParaEmitir();
+            $this->assertTrue(false, 'sin emitir: no tendría que dejar emitir');
+        } catch (\App\Modules\Licencia\LicenciaVencida $e) {
+            $this->assertStringContainsString('no se pueden emitir', $e->getMessage());
+        }
+        $this->assertSame(200, $this->get('/clientes')->status, 'sin emitir: se sigue consultando');
+
+        Config::set('suscripcion', ['estado' => 'bloqueada']);
+        $res = $this->get('/clientes');
+        $this->assertSame(403, $res->status);
+        $this->assertStringContainsString('Servicio suspendido', $res->body);
+        $this->assertSame(404, $this->get('/portal')->status);
+        $this->assertSame(404, $this->get('/api/v1/ping')->status);
+        $this->loginComo($mas);
+        $this->assertSame(200, $this->get('/clientes')->status, 'el Master de O&S entra igual');
+    }
+
+    public function testModulosApagadosPorClienteYElMasterConTodo(): void
+    {
+        $this->loginComo($this->crearUsuario('t_mas', 'master'));
+        $this->assertSame(200, $this->get('/stock')->status);
+        Config::set('instancia', ['host' => self::HOST, 'dir' => sys_get_temp_dir()]);
+        Config::set('modulos', ['stock' => false, 'caja' => true]);
+        $this->assertSame(404, $this->get('/stock')->status);
+        $this->assertSame(404, $this->get('/stock/ajuste')->status);
+        $this->assertFalse(\App\Core\Menu::visible('stock'));
+        $this->assertSame(200, $this->get('/caja')->status);
+        $this->assertSame(404, $this->get('/agente')->status, 'el agente viene apagado si no se eligió');
+        Config::set('modulos', ['stock' => true, 'caja' => false]);
+        $this->assertSame(404, $this->get('/listados/caja-diaria')->status, 'la caja diaria es del módulo caja aunque esté en /listados');
+        $this->assertSame(200, $this->get('/listados/ventas-diarias')->status);
+    }
+
+    public function testPasarAClientesMueveLaRamaEstableAlCommitDelMaster(): void
+    {
+        $this->tmp = sys_get_temp_dir() . '/fw_git_' . bin2hex(random_bytes(4));
+        $sha = str_repeat('ab', 20);
+        mkdir($this->tmp . '/.git/refs/heads', 0775, true);
+        file_put_contents($this->tmp . '/.git/HEAD', "ref: refs/heads/main\n");
+        file_put_contents($this->tmp . '/.git/packed-refs', "# pack-refs\n{$sha} refs/heads/main\n");
+        $P = \App\Modules\Instancias\Promocion::class;
+        $this->assertSame($sha, $P::commit($this->tmp), 'lee el commit de packed-refs');
+        $this->assertSame('main', $P::ramaDe($this->tmp));
+        file_put_contents($this->tmp . '/.git/refs/heads/main', str_repeat('cd', 20) . "\n");
+        $this->assertSame(str_repeat('cd', 20), $P::commit($this->tmp));
+
+        $this->assertFalse($P::pasarAClientes($sha)['ok'], 'sin token no hace nada');
+        Config::set('panel', ['github_token' => 'tok']);
+        $pedidos = [];
+        $P::$transporte = static function (string $m, string $url, array $cab, ?string $cuerpo) use (&$pedidos): array {
+            $pedidos[] = [$m, $url, json_decode((string) $cuerpo, true)];
+            return ['status' => 200, 'body' => '{}'];
+        };
+        $this->assertTrue($P::pasarAClientes($sha)['ok']);
+        $this->assertSame(['PATCH', 'https://api.github.com/repos/hernancespedes-droid/facturaweb/git/refs/heads/estable', ['sha' => $sha, 'force' => false]], $pedidos[0]);
+        $P::$transporte = static fn (): array => ['status' => 422, 'body' => '{"message":"Update is not a fast forward"}'];
+        $r = $P::pasarAClientes($sha);
+        $this->assertFalse($r['ok']);
+        $this->assertStringContainsString('no se pisa nada', $r['mensaje']);
+    }
+
+    public function testDosCarpetasLasInstalacionesVanALaDeClientes(): void
+    {
+        $pdo = $this->baseCliente();
+        if ($pdo === null) {
+            echo "      (se saltea: falta la base " . self::BASE . ")\n";
+            return;
+        }
+        $this->tmp = sys_get_temp_dir() . '/fw_clientes_' . bin2hex(random_bytes(4));
+        mkdir($this->tmp . '/storage', 0775, true);
+        symlink(\App\App::root() . '/database', $this->tmp . '/database');
+        file_put_contents($this->tmp . '/VERSION', "0.1.0\n");
+        Config::set('panel', ['carpeta_clientes' => $this->tmp]);
+        $this->loginComo($this->crearUsuario('t_mas', 'master'));
+        $this->assertStringContainsString('Clientes: <b>0.1.0</b>', $this->get('/instancias')->body);
+        $this->assertStringContainsString('Listo: ' . self::HOST, $this->post('/instancias/nueva', $this->datos())->body);
+        $this->assertTrue(is_file($this->tmp . '/storage/instancias/' . self::HOST . '/config.php'));
+        $this->assertSame([], require $this->tmp . '/storage/instancias/_principal.php', 'en la carpeta de clientes ninguna dirección usa su local.php');
+        $this->assertFalse(is_dir(\App\App::root() . '/storage/instancias/' . self::HOST));
     }
 }
