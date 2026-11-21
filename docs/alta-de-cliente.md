@@ -21,7 +21,7 @@ El código es el mismo para todos. Este manual es el camino que se repite; lo qu
 3. Si ya había clientes creados en la carpeta del master, el panel muestra «Pasar a la carpeta de clientes»: tocarlo y apuntar sus subdominios a `facturador_clientes/public`.
 
 **Cada cambio pedido a Code:**
-1. Code hace el PR a `main`; se fusiona. Ferozo → GIT → `facturador_web` → actualizar. Los cambios de base se aplican solos con el primer ingreso (0.37.1). **Se prueba en el master.**
+1. Code hace el PR a `main`; se fusiona. Ferozo → GIT → `facturador_web` → actualizar. Los cambios de base se aplican solos con el primer ingreso (0.38.1). **Se prueba en el master.**
 2. Si está bien: Instalaciones de clientes → **Pasar a clientes** (mueve `estable` al commit exacto que corre el master; sin token, pedírselo a Code).
 3. Ferozo → GIT → `facturador_clientes` → actualizar. Cada cliente aplica solo sus cambios de base con su primer ingreso; **Aplicar cambios en todas** lo adelanta para todos de una vez (opcional).
 4. Si la función nueva no la tienen que tener todos: viene como **módulo** apagado (`Core\Modulos`) y se prende por cliente en «Administrar → Módulos».

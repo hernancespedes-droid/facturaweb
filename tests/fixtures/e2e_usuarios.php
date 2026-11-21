@@ -58,6 +58,8 @@ $limpiar = static function () use ($pdo, $copia): void {
     $pdo->exec("DELETE FROM stock_movimientos WHERE articulo LIKE 'E2E%'");
     $pdo->exec("DELETE FROM stock_saldos WHERE articulo LIKE 'E2E%'");
     $pdo->exec("DELETE FROM articulos WHERE codigo LIKE 'E2E%'");
+    $pdo->exec("DELETE FROM importaciones WHERE archivo LIKE 'e2e-%'");
+    $pdo->exec("DELETE FROM importacion_modelos WHERE nombre LIKE 'E2E%'");
     $pdo->exec("DELETE FROM vendedores WHERE descripcion LIKE '%E2E%'");
     $pdo->exec("DELETE FROM usuarios WHERE usuario LIKE 'e2e\\_%'");
 };

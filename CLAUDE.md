@@ -118,7 +118,15 @@ bloqueada, en `Licencia::exigirParaEmitir`, `Guard::auth` y `App::handle`). **Fu
 (claves `apariencia.*` en `configuracion`, fuera de la lista general; imágenes `logo_web`/`logo_pantalla`/`logo_icono` en `imagenes`, servidas por `/marca/logo` y `/marca/icono` sin sesión).
 Colores nuevos en `app.css`: siempre con `var(--brand)` / `color-mix(...)` y `var(--on-brand)` para el texto sobre el color, nunca el azul fijo. La marca del cliente va arriba y O&S firma al pie.
 
-## Base que se actualiza sola (0.37.1)
+## Importar desde Excel, CSV y TXT (0.38.0)
+
+`Modules/Importacion` (Sistema → Importar datos, permiso `importar.datos` + el de cada destino en `Destinos::PERMISO`): `Lector` (xlsx con ZipArchive/XMLReader, CSV/TXT con separador y
+codificación detectados; números del Excel con coma decimal), `Destinos` (campos por destino: clientes y artículos reutilizan `campos()` de sus servicios; sinónimos de títulos),
+`Importador` (todo en una transacción con SAVEPOINT por fila; probar = rollback; todo o nada salvo «parcial»), `Modelos` (`importacion_modelos`: campo → título de columna).
+Clientes/artículos: al actualizar solo cambian las columnas elegidas y con dato. Comprobantes históricos: `subdiario` canal `I` + `importacion_id`, `iva`, `ctact` solo con saldo, sin caja ni stock;
+la clave para no duplicar es tipo + letra + punto de venta + número + fecha. Registro en `importaciones`. Campo nuevo en clientes/artículos: si debe importarse, sumarle sinónimos en `Destinos`.
+
+## Base que se actualiza sola (0.38.1)
 
 `Core\AutoMigracion::asegurar()` corre al principio de `App::handle` (salvo `/salud` e `/instalar`): si la firma (versión + migraciones) no coincide con
 `sistema_estado`, aplica lo pendiente con el candado `fw_migrar:<base>` (el mismo de «Aplicar cambios»); los demás pedidos ven «Actualizando» (503). Si falla, no bloquea: queda en
