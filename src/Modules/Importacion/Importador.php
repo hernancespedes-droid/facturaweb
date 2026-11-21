@@ -44,12 +44,13 @@ final class Importador
 
     /** @var array<string,array<string,mixed>> */
     private array $campos;
-    /** @var array{filas:int,nuevas:int,actualizadas:int,salteadas:int,con_error:int,errores:array<int,array{0:int,1:string}>,avisos:array<int,array{0:int,1:string}>,grabado:bool,importacion_id:?int} */
+    /** @var array{filas:int,nuevas:int,actualizadas:int,salteadas:int,con_error:int,errores:array<int,array{0:int,1:string}>,avisos:array<int,array{0:int,1:string}>,grabado:bool,importacion_id:?int,costos:array<int,string>} */
     private array $r;
     private int $filaActual = 0;
     /** @var array<string,int> clave ya vista en el archivo => fila */
     private array $vistas = [];
     private ?int $importacionId = null;
+    private ?int $usuarioId = null;
     private ?int $proximoCliente = null;
     /** @var array<string,array<string,string>> tabla => nombre normalizado => código */
     private array $porNombre = [];
@@ -95,7 +96,8 @@ final class Importador
      */
     public function ejecutar(array $tabla, bool $simular, ?int $usuarioId, string $archivo): array
     {
-        $this->r = ['filas' => 0, 'nuevas' => 0, 'actualizadas' => 0, 'salteadas' => 0, 'con_error' => 0, 'errores' => [], 'avisos' => [], 'grabado' => false, 'importacion_id' => null];
+        $this->r = ['filas' => 0, 'nuevas' => 0, 'actualizadas' => 0, 'salteadas' => 0, 'con_error' => 0, 'errores' => [], 'avisos' => [], 'grabado' => false, 'importacion_id' => null, 'costos' => []];
+        $this->usuarioId = $usuarioId;
         $faltan = $this->faltanObligatorios();
         if ($faltan !== []) {
             throw new \RuntimeException('Elegí la columna de: ' . implode(', ', $faltan) . '.');
@@ -483,9 +485,9 @@ final class Importador
             throw new FilaInvalida(['El código «' . ($f['codigo'] ?? '') . '» no sirve: hasta 15 caracteres, sin barras ni signos ? # %.']);
         }
         $this->repetida('a' . $codigo, "El artículo {$codigo}");
-        $st = $this->pdo->prepare('SELECT codigo, rubro FROM articulos WHERE codigo = ?');
+        $st = $this->pdo->prepare('SELECT * FROM articulos WHERE codigo = ?');
         $st->execute([$codigo]);
-        $existente = $st->fetch() ?: null;
+        $existente = $st->fetch(\PDO::FETCH_ASSOC) ?: null;
         if ($existente !== null && ($this->op['existentes'] ?? 'actualizar') === 'saltear') {
             return 'salteadas';
         }
@@ -521,9 +523,18 @@ final class Importador
         $v['actualizacion'] = date('Y-m-d H:i:s');
         if ($alta) {
             $this->insertar('articulos', ['codigo' => $codigo] + $v);
+            if ((float) ($v['costo'] ?? 0) > 0) {
+                $this->r['costos'][] = $codigo; // después se pregunta si se calculan los precios (D-133)
+            }
             return 'nuevas';
         }
         $this->actualizar('articulos', $v, 'codigo', $codigo);
+        $antes = \App\Modules\Articulos\Precios::valores($existente);
+        $despues = \App\Modules\Articulos\Precios::valores($v + $existente);
+        (new \App\Modules\Articulos\Precios($this->pdo))->registrar($codigo, $antes, $despues, 'IMPORTACION', $this->usuarioId);
+        if (abs($antes['costo'] - $despues['costo']) >= 0.00005) {
+            $this->r['costos'][] = $codigo;
+        }
         return 'actualizadas';
     }
 

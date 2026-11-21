@@ -104,6 +104,14 @@ Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_c
 `Listados/Estadistica` (agrupar por artículo, rubro, cliente, vendedor, mes…, ranking y detalle; `/listados/estadistica` y `/listados/rentabilidad`), `Listados/ListaCostos` (`/listados/costos`), `Stock/MovimientosStock` (trazabilidad con saldo corrido y resumen; `/stock/movimientos`) y `Stock/Existencias` (por depósito a una fecha; `/stock/existencias`).
 **Todo INSERT nuevo en `estadistica` lleva `costo`** (unitario en pesos al emitir, `Listados\Costos::unitarios`, D-62). Costos, márgenes y valorizados solo con el permiso `listados.costos`. La estadística no cuenta la factura de un presupuesto (`solo_subdiario = 1`) y resta NC/NX (D-63).
 
+## Precios con margen sobre el costo (0.49.0)
+
+`Articulos/Precios`: margen % sobre el costo por lista (`margen_l1|l2|l3|oferta` en `articulos` → `rubros` → `parametros`, NULL = hereda; D-130), IVA si la empresa es RI y
+`parametros.precios_con_iva` (D-131), redondeo hacia arriba `parametros.precio_redondeo` (D-132). `articulos.precio_automatico`: `ArticulosService::guardar` recalcula (D-133).
+`Precios::aplicar` cambia costo/precios con la fila bloqueada y anota en `articulos_precios_historial` (usa la transacción de quien llama). **Todo cambio nuevo de `articulos.costo`
+pasa por `Precios::aplicar` o `registrar`.** Para preguntar por los precios después de cambiar costos: `ArticulosController::preguntarPrecios($codigos, $motivo, $volver)` → `/articulos/precios?pendientes=1`.
+Permiso `articulos.precios` (costo, márgenes, automático, `/articulos/precios`; el ingreso de stock con costo).
+
 ## Tablero de inicio (0.40.0)
 
 `Modules/Tablero`: `Tablero::datos()` arma todo lo del inicio según permisos y módulos (D-90; «venta» = lo vendido de la caja diaria, D-91; avisos, D-92) y `Graficos` dibuja los SVG en el servidor
@@ -172,9 +180,9 @@ escribe la URL del master y la clave de cada cliente (al entrar al panel o a la 
 `sistema_estado`, aplica lo pendiente con el candado `fw_migrar:<base>` (el mismo de «Aplicar cambios»); los demás pedidos ven «Actualizando» (503). Si falla, no bloquea: queda en
 `App::storage('automigracion_error.json')`, el Master lo ve en Sistema y `/salud` da `migracion_error`. Por eso las migraciones **tienen que ser aditivas e idempotentes**: se aplican sin que nadie mire.
 
-## Cargar sin saltos (0.48.0)
+## Cargar sin saltos (0.50.0)
 
-`public/assets/carga.js` (en `layout.php`, todas las pantallas): en un `form[method=post]` Enter pasa al campo siguiente y desde el último al botón principal (D-129); no envía.
+`public/assets/carga.js` (en `layout.php`, todas las pantallas): en un `form[method=post]` Enter pasa al campo siguiente y desde el último al botón principal (D-134); no envía.
 Quedan con Enter normal: textarea, formularios de un campo, GET (filtros) y `data-enter="enviar"` (en el form o el campo, p. ej. el ingreso). Un manejador propio de Enter
 (buscadores) tiene que llamar `preventDefault()`: `carga.js` escucha en `window` y respeta `defaultPrevented`. Al volver a la misma ruta después de enviar, restaura altura y foco
 (o va al primer `.has-error` / `.field-error`) y muestra los `main > .alerta` flotando (`.avisos-flotantes`).

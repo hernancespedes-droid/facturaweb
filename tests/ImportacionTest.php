@@ -257,6 +257,14 @@ final class ImportacionTest extends ComprobantesTestCase
         $this->assertStringContainsString('Falta la descripción', $r['errores'][0][1]);
         $r = $this->importar('articulos', [['Código', 'Precio'], ['T-NUEVO', '2000'], ['T-ART', '150']]);
         $this->assertSame(['2000.0000', 'ARTICULO DE PRUEBA'], [$this->uno("SELECT precio_de_venta_1 FROM articulos WHERE codigo = 'T-NUEVO'"), $this->uno("SELECT descripcion FROM articulos WHERE codigo = 'T-ART'")]);
+        $this->assertSame([], $r['costos']);
+
+        // Costos: los que cambian quedan para preguntar por los precios y en el historial
+        $r = $this->importar('articulos', [['Código', 'Costo', 'Margen'], ['T-NUEVO', '800', '25']]);
+        $this->assertSame(['T-NUEVO'], $r['costos']);
+        $this->assertSame(['800.0000', '25.00'], [$this->uno("SELECT costo FROM articulos WHERE codigo = 'T-NUEVO'"), $this->uno("SELECT margen_l1 FROM articulos WHERE codigo = 'T-NUEVO'")]);
+        $this->assertSame('IMPORTACION', $this->uno("SELECT origen FROM articulos_precios_historial WHERE articulo = 'T-NUEVO'"));
+        Db::pdo()->exec("DELETE FROM articulos_precios_historial WHERE articulo = 'T-NUEVO'");
     }
 
     // ------------------------------------------------------------------ stock

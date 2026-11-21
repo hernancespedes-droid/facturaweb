@@ -1,4 +1,4 @@
-// Recorrido de navegador: cargar sin que la página salte (0.48.0, public/assets/carga.js).
+// Recorrido de navegador: cargar sin que la página salte (0.50.0, public/assets/carga.js).
 //   node e2e/carga.js   levanta su propio servidor en el puerto 8085
 // Enter pasa al campo siguiente en los formularios que graban (no envía ni recarga), desde el último va al botón,
 // el ingreso sigue entrando con Enter, y al grabar la página vuelve a la altura donde se estaba con el aviso a la vista.

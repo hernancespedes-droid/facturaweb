@@ -446,14 +446,15 @@ final class ComprasService
                 $ins->bindValue(5, $a['contenido'], PDO::PARAM_LOB);
                 $ins->execute();
             }
+            $costos = [];
             if (($c['items'] ?? []) !== []) {
-                $this->grabarItems($id, $c, $usuarioId);
+                $costos = $this->grabarItems($id, $c, $usuarioId);
             }
             if ($c['forma'] !== 'C') {
                 $this->registrarPago($id, $c, $c['forma'] === 'E' ? 'E' : 'O', $c['total'], $c['detalle_pago'], $usuarioId, $turno, $c['fecha']);
             }
             $this->pdo->commit();
-            return ['ok' => true, 'id' => $id];
+            return ['ok' => true, 'id' => $id, 'costos' => $costos];
         } catch (\Throwable $e) {
             $this->pdo->rollBack();
             throw $e;
@@ -463,11 +464,15 @@ final class ComprasService
     /**
      * Dentro de la transacción: renglones, stock (la nota de crédito devuelve) y costo del artículo.
      * DECISIÓN D-118: el costo del artículo se reemplaza por el costo unitario de la compra (sin IVA si se computa el crédito; con IVA si no) solo si el
-     * artículo está en pesos, la compra no es una nota de crédito y se tildó «Actualizar el costo». No cambia los precios de venta. El stock se mueve
+     * artículo está en pesos, la compra no es una nota de crédito y se tildó «Actualizar el costo». No cambia los precios de venta: después de grabar se
+     * pregunta en «Actualizar precios» (D-133). El stock se mueve
      * solo con el control de stock encendido y en los artículos que lo controlan.
      */
-    private function grabarItems(int $compraId, array $c, int $usuarioId): void
+    /** @return array<int,string> artículos cuyo costo cambió (para preguntar por los precios, D-133) */
+    private function grabarItems(int $compraId, array $c, int $usuarioId): array
     {
+        $precios = new \App\Modules\Articulos\Precios($this->pdo);
+        $cambiaron = [];
         $stock = new \App\Modules\Stock\StockService($this->pdo);
         $mueve = \App\Modules\Stock\StockService::activo() && $c['deposito_id'] !== null;
         $nc = $c['tipo'] === 'NC';
@@ -482,13 +487,15 @@ final class ComprasService
             }
             $anterior = null;
             if ($c['actualizar_costo'] && !$nc && $it['moneda'] === '$') {
-                $q = $this->pdo->prepare('SELECT costo FROM articulos WHERE codigo = ? FOR UPDATE');
-                $q->execute([$it['articulo']]);
-                $anterior = (float) $q->fetchColumn();
-                $this->pdo->prepare('UPDATE articulos SET costo = ? WHERE codigo = ?')->execute([$it['costo_unitario'], $it['articulo']]);
+                $r = $precios->aplicar($it['articulo'], (float) $it['costo_unitario'], false, 'COMPRA', $usuarioId ?: null, $titulo); // solo el costo, con historial
+                $anterior = $r['antes']['costo'];
+                if ($r['cambio']) {
+                    $cambiaron[] = $it['articulo'];
+                }
             }
             $ins->execute([$compraId, $it['articulo'], $it['descripcion'], $it['cantidad'], $it['costo_unitario'], $it['total'], $c['deposito_id'], $anterior, $mov]);
         }
+        return $cambiaron;
     }
 
     /** Pago dentro de la transacción: el efectivo mueve la caja (egreso; ingreso si es una nota de crédito). */

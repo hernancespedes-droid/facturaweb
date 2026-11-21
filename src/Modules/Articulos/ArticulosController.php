@@ -32,12 +32,13 @@ final class ArticulosController
 
     public static function nuevo(Request $req, array $params): Response
     {
-        return self::form(null, ['estado' => 'AC', 'moneda' => '$', 'grabado' => '1', 'incluirlista' => '1', 'controla_stock' => '1', 'alicuota' => '21', 'unidad_venta' => '01'], []);
+        return self::form(null, ['estado' => 'AC', 'moneda' => '$', 'grabado' => '1', 'incluirlista' => '1', 'controla_stock' => '1', 'alicuota' => '21', 'unidad_venta' => '01',
+            'precio_automatico' => '1'], []); // D-133: los artículos nuevos nacen con el precio automático
     }
 
     public static function crear(Request $req, array $params): Response
     {
-        $r = (new ArticulosService())->guardar(null, $req->post);
+        $r = (new ArticulosService())->guardar(null, $req->post, puede('articulos.precios'), \App\Modules\Auth\Auth::id());
         if (!$r['ok']) {
             return self::form(null, $req->post, $r['errores'], 422);
         }
@@ -58,12 +59,74 @@ final class ArticulosController
         if ($a === null) {
             return new Response(404);
         }
-        $r = $svc->guardar((string) $a['codigo'], $req->post);
+        $r = $svc->guardar((string) $a['codigo'], $req->post, puede('articulos.precios'), \App\Modules\Auth\Auth::id());
         if (!$r['ok']) {
             return self::form($a, $req->post + $a, $r['errores'], 422);
         }
         Session::flash('ok', 'Cambios guardados.');
         return Response::redirect(self::urlFicha((string) $a['codigo']));
+    }
+
+    /** Clave de sesión con los artículos cuyo costo acaba de cambiar (compra, importación) y falta preguntar por los precios. */
+    public const PENDIENTES = 'precios.pendientes';
+
+    /** Deja para «Actualizar precios» los artículos cuyo costo cambió. @param array<int,string> $codigos */
+    public static function preguntarPrecios(array $codigos, string $motivo, string $volver): ?string
+    {
+        $codigos = array_values(array_unique($codigos));
+        if ($codigos === [] || !puede('articulos.precios')) {
+            return null;
+        }
+        // solo se pregunta por los que cambiarían de precio (si ninguna lista tiene margen, no hay nada que preguntar)
+        $svc = new ArticulosService();
+        $precios = new Precios();
+        $codigos = array_values(array_filter($codigos, static function (string $c) use ($svc, $precios): bool {
+            $a = $svc->obtener($c);
+            return $a !== null && $precios->calcular($a)['cambia'];
+        }));
+        if ($codigos === []) {
+            return null;
+        }
+        Session::set(self::PENDIENTES, ['codigos' => array_slice($codigos, 0, 1000), 'motivo' => $motivo, 'volver' => $volver]);
+        return url('/articulos/precios') . '?pendientes=1';
+    }
+
+    /** Actualizar precios: vista previa de lo que cambia con los márgenes y elegir cuáles grabar. */
+    public static function precios(Request $req, array $params): Response
+    {
+        $f = array_map(static fn ($x) => is_string($x) ? trim($x) : '', array_intersect_key($req->query, array_flip(['q', 'rubro', 'proveedor', 'ver', 'pendientes'])));
+        $pend = null;
+        if (($f['pendientes'] ?? '') === '1') {
+            $pend = Session::get(self::PENDIENTES);
+            if (!is_array($pend)) {
+                return Response::redirect(url('/articulos/precios'));
+            }
+            $f['codigos'] = $pend['codigos'];
+        }
+        $f['ver'] = in_array($f['ver'] ?? '', ['automaticos', 'todos', 'cambian'], true) ? $f['ver'] : 'automaticos';
+        $svc = new Precios();
+        return Response::html(View::render('articulos/precios', ['title' => 'Actualizar precios', 'nav' => 'articulos_precios', 'f' => $f, 'r' => $svc->propuesta($f),
+            'cfg' => $svc->config(), 'pend' => $pend, 'rubros' => Validador::opciones('rubros')]));
+    }
+
+    public static function actualizarPrecios(Request $req, array $params): Response
+    {
+        $pend = Session::get(self::PENDIENTES);
+        $volver = ($req->post['pendientes'] ?? '') === '1' && is_array($pend) ? (string) $pend['volver'] : url('/articulos/precios');
+        if (($req->post['accion'] ?? '') === 'no') {
+            Session::forget(self::PENDIENTES);
+            Session::flash('ok', 'Los precios quedaron como estaban (solo cambió el costo).');
+            return Response::redirect($volver);
+        }
+        $codigos = array_values(array_filter((array) ($req->post['codigos'] ?? []), 'is_string'));
+        if ($codigos === []) {
+            Session::flash('error', 'Tildá los artículos a los que querés actualizarles el precio.');
+            return Response::redirect(url('/articulos/precios') . (($req->post['pendientes'] ?? '') === '1' ? '?pendientes=1' : ''));
+        }
+        $n = (new Precios())->actualizar($codigos, ($req->post['automatico'] ?? '') === '1', \App\Modules\Auth\Auth::id());
+        Session::forget(self::PENDIENTES);
+        Session::flash('ok', $n === 1 ? 'Se actualizó el precio de 1 artículo.' : 'Se actualizaron los precios de ' . $n . ' artículos.');
+        return Response::redirect($volver);
     }
 
     /** La foto del artículo (JPEG): ?t=g grande (zoom) o ?t=c chica. La ven todos los que trabajan con artículos (rutas con permisos en routes.php). */
@@ -127,6 +190,9 @@ final class ArticulosController
             'errores' => $errores,
             'refs' => $refs,
             'puedeEditar' => puede('articulos.editar'),
+            'puedePrecios' => puede('articulos.precios'),
+            'precios' => (new Precios())->datosFicha(),
+            'historial' => $a === null ? [] : (new Precios())->historial((string) $a['codigo']),
             'foto' => $a === null ? null : (Foto::urls([(string) $a['codigo']])[(string) $a['codigo']] ?? null),
         ]), $status);
     }
