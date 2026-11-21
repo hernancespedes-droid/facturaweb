@@ -5,7 +5,7 @@ y `docs/analisis-migracion.md`. Esto es solo lo técnico del repositorio.
 
 > **No modificar ningún `.sh` de `bin/`** (`package.sh`, `test.sh`, `setup-dev.sh`, `dev-server.sh`, `env.sh`, `pruebas.sh`, `empaquetar.sh`) **ni agregar uno nuevo.**
 > El hosting (Ferozo, sin SSH) les cambia los permisos y GIT se niega a sincronizar si una versión nueva los toca («local changes would be overwritten»).
-> Pasó con 0.11.1 y otra vez el 21/11/2026 (sumar tres renglones a `pruebas.sh` dejó el servidor trabado en 0.32; arreglado en 0.43.1).
+> Pasó con 0.11.1 y otra vez el 21/11/2026 (sumar tres renglones a `pruebas.sh` dejó el servidor trabado en 0.32; arreglado en 0.44.1).
 > `tests/ScriptsCongeladosTest.php` lo controla con el hash de cada uno. Un recorrido de navegador nuevo se suma en la lista de `e2e/extras.js`
 > (lo llama `e2e/cuenta-corriente.js` al final); cualquier otra herramienta va en PHP o node, en un archivo nuevo.
 
@@ -148,6 +148,13 @@ codificación detectados; números del Excel con coma decimal), `Destinos` (camp
 `Importador` (todo en una transacción con SAVEPOINT por fila; probar = rollback; todo o nada salvo «parcial»), `Modelos` (`importacion_modelos`: campo → título de columna).
 Clientes/artículos: al actualizar solo cambian las columnas elegidas y con dato. Comprobantes históricos: `subdiario` canal `I` + `importacion_id`, `iva`, `ctact` solo con saldo, sin caja ni stock;
 la clave para no duplicar es tipo + letra + punto de venta + número + fecha. Registro en `importaciones`. Campo nuevo en clientes/artículos: si debe importarse, sumarle sinónimos en `Destinos`.
+
+## Tickets de soporte (0.44.0)
+
+`Modules/Soporte`: los tickets viven **solo en la base del master** (`soporte_tickets`, `soporte_mensajes` con `interno`, `soporte_adjuntos`). `SoporteService` (lado master: crear, responder, bandeja,
+avisos por mail a `configuracion.soporte.mail_aviso` y al `usuario_mail` del ticket; `$enviador` para pruebas), `SoporteApi` (`/api/v1/soporte/…`, cabeceras `X-FW-Instancia` + `X-FW-Clave`, solo en la principal)
+y `SoporteCliente` (lo que usa la pantalla: directo en la principal, por HTTP en un cliente con `soporte.url`/`soporte.clave` de su config; `$transporte` para pruebas). `InstanciasService::asegurarSoporte()`
+escribe la URL del master y la clave de cada cliente (al entrar al panel o a la bandeja). Cliente: Ayuda → Soporte (`soporte.usar`, módulo `soporte`); master: Sistema → Tickets de soporte (Master en la principal).
 
 ## Base que se actualiza sola (0.40.1)
 
