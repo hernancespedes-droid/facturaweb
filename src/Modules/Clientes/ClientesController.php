@@ -8,6 +8,7 @@ use App\Core\Validador;
 use App\Core\View;
 use App\Http\Request;
 use App\Http\Response;
+use App\Modules\Arca\Padron;
 use App\Modules\Configuracion\Configuracion;
 
 /** Rutas con Guard::permiso('clientes.ver'); las que graban, con 'clientes.editar' (ver routes.php). */
@@ -73,6 +74,20 @@ final class ClientesController
         return Response::redirect(url('/clientes/' . (int) $params['codigo']));
     }
 
+    /** Datos de un CUIT para el alta: clientes que ya lo tienen + padrón de ARCA (JSON). ?forzar=1 vuelve a preguntar a ARCA. */
+    public static function padron(Request $req, array $params): Response
+    {
+        @set_time_limit(60);
+        return Response::json((new AltaCliente())->propuesta((string) ($req->query['cuit'] ?? ''), ($req->query['forzar'] ?? '') === '1'));
+    }
+
+    /** Alta rápida desde una venta (JSON): devuelve el cliente listo para elegirlo, o los errores por campo. */
+    public static function rapido(Request $req, array $params): Response
+    {
+        $r = (new AltaCliente())->crear($req->post);
+        return Response::json($r, $r['ok'] ? 200 : 422);
+    }
+
     /** @param array<string,mixed>|null $c */
     private static function form(?array $c, array $datos, array $errores, int $status = 200): Response
     {
@@ -91,6 +106,8 @@ final class ClientesController
             'refs' => $refs,
             'proximo' => $c === null ? (new ClientesService())->proximoCodigo() : null,
             'puedeEditar' => puede('clientes.editar'),
+            'padron' => $c !== null && !empty($c['cuit']) ? Padron::guardado((string) $c['cuit']) : null,
+            'padronDisponible' => Padron::disponible(),
         ]), $status);
     }
 }
