@@ -162,6 +162,7 @@ bloqueada, en `Licencia::exigirParaEmitir`, `Guard::auth` y `App::handle`). **Fu
 
 `Configuracion/Apariencia`: nombre, color (`--brand`, `--brand-2`, `--on-brand` calculados con contraste) y logo de cada instalación en barra, ingreso, pestaña y portal
 (claves `apariencia.*` en `configuracion`, fuera de la lista general; imágenes `logo_web`/`logo_pantalla`/`logo_icono` en `imagenes`, servidas por `/marca/logo` y `/marca/icono` sin sesión).
+Menú horizontal o lateral (`apariencia.menu`, `Apariencia::menu()` → `<body class="menu-…">`, 0.52.0, D-136; estilos `body.menu-lateral` en `app.css`, plegado en `app.js`).
 Colores nuevos en `app.css`: siempre con `var(--brand)` / `color-mix(...)` y `var(--on-brand)` para el texto sobre el color, nunca el azul fijo. La marca del cliente va arriba y O&S firma al pie.
 
 ## Importar desde Excel, CSV y TXT (0.38.0)
