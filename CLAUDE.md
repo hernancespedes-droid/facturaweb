@@ -85,6 +85,12 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `Modules/MercadoPago/MercadoPago` es el único que habla con la API (modos `mp.modo` apagado|simulado|produccion en `config/local.php`; `MercadoPago::$transporte` permite probar sin red). `MercadoPagoService`: «Cobrar con Mercado Pago» deja la venta en un cobro `pendiente` (tabla `mp_cobros`, sin claves) y **solo se emite al acreditarse el pago** (`confirmar` → `emitir`, idempotente con el token como clave de operación; `CajaService::$actor` pone al cajero cuando no hay sesión). La notificación va por `/api/v1/mercadopago/webhook` (sin sesión ni CSRF) con firma HMAC verificada y el pago se vuelve a consultar en Mercado Pago. `ComprobantesService::armar` acepta `$autorizoPrevio` (solo desde el código) para la autorización de stock ya resuelta.
 
+## Ingresos de Mercado Pago (0.41.0)
+
+`MercadoPago/IngresosService`: todo pago aprobado que entra a la cuenta (sea o no una venta de la web) va a `mp_ingresos` una sola vez (`mp_pago_id` único). Llega por la notificación (`notificacion` llama a `registrar`
+antes de `confirmar`) y por `consultarSiToca()` (una por minuto, turno tomado con UPDATE condicionado sobre `interno.mp_ingresos_consulta`; la disparan `/mercadopago/ingresos/novedades` y `bin/mp-ingresos.php`).
+Campanita y carteles: `views/layout.php` + `public/assets/mp-ingresos.js` (con `mercadopago.ingresos`); vistos por usuario en `mp_ingresos_vistos`. Mail opcional a `configuracion.mercadopago.ingresos_mails`.
+
 ## Alta de clientes desde el CUIT (0.37.0)
 
 `Arca/Padron` consulta la constancia de inscripción (`ws_sr_constancia_inscripcion`, `getPersona_v2`, mismo certificado y `Arca::afip()->wsaa`) y la normaliza (condición de IVA → `clientes.iva`, D-70); guarda cada respuesta en `padron_consultas` (caché `afip.padron_dias`, 30). `ArcaSimulador::padron` contesta sin internet (ver los CUIT de ejemplo en su docblock; `Padron::$transporte` para pruebas).
