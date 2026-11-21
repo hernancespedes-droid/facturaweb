@@ -8,7 +8,8 @@ use App\Core\Qr;
 
 /**
  * Ticket de cambio: lista lo comprado SIN importes (sirve para regalar: quien lo recibe no ve cuánto costó) con un código —también en QR— para que en el
- * mostrador se lea el comprobante y se haga el cambio. Sale en la parte de arriba de una hoja A4 para recortarlo.
+ * mostrador se lea el comprobante y se haga el cambio. Respeta la impresión de Parámetros como el resto de los comprobantes (D-141): en A4 sale arriba
+ * de la hoja para recortarlo; con impresora de ticket (t80 / t50) sale en una hoja de 80 o 50 mm de ancho, tan larga como haga falta.
  */
 final class TicketCambioPdf
 {
@@ -16,9 +17,23 @@ final class TicketCambioPdf
     private const ANCHO = 100.0;
     private const MAX_RENGLONES = 40;
 
-    /** @param array<string,mixed> $h comprobante de ComprobantesService::obtener() @param array<string,mixed> $emisor ComprobantesService::emisor() */
-    public static function generar(array $h, array $emisor): string
+    /** Papel del ticket: el pedido (?papel=a4|t80|t50) o el de Parámetros (`parametros.impresion`). @param array<string,mixed> $emisor */
+    public static function papel(?string $pedido, array $emisor): string
     {
+        $p = $pedido ?? (string) ($emisor['impresion'] ?? 'a4');
+        return in_array($p, ['a4', 't80', 't50'], true) ? $p : 'a4';
+    }
+
+    /**
+     * @param array<string,mixed> $h comprobante de ComprobantesService::obtener() @param array<string,mixed> $emisor ComprobantesService::emisor()
+     * @param ?string $papel a4|t80|t50; sin él, el de Parámetros
+     */
+    public static function generar(array $h, array $emisor, ?string $papel = null): string
+    {
+        $papel = self::papel($papel, $emisor);
+        if ($papel !== 'a4') {
+            return self::angosto($h, $emisor, $papel === 't50' ? 50 : 80);
+        }
         $pdf = new Pdf();
         $m = self::X;
         $w = self::ANCHO;
@@ -78,5 +93,68 @@ final class TicketCambioPdf
         $pdf->texto($m + 36, $y + 15, $pdf->ajustar($codigo, $w - 40, 10, true), 10, true, 'L', $w - 40);
         $pdf->texto($m + 36, $y + 22, 'Se lee en «Cambio de mercadería»', 7.5, false, 'L', $w - 40, 0.35);
         return $pdf->salida('Ticket de cambio ' . $codigo);
+    }
+
+    /** Ticket de 80 o 50 mm: dos pasadas, la primera mide el alto y la segunda dibuja en una hoja de ese largo. @param array<string,mixed> $h @param array<string,mixed> $emisor */
+    private static function angosto(array $h, array $emisor, int $mm): string
+    {
+        $alto = self::dibujarAngosto(null, $h, $emisor, $mm);
+        $pdf = new Pdf(false, (float) $mm, $alto + 6);
+        self::dibujarAngosto($pdf, $h, $emisor, $mm);
+        return $pdf->salida('Ticket de cambio ' . CambiosService::codigo($h));
+    }
+
+    /** @param array<string,mixed> $h @param array<string,mixed> $emisor @return float el alto usado */
+    private static function dibujarAngosto(?Pdf $pdf, array $h, array $emisor, int $mm): float
+    {
+        $medir = $pdf ?? new Pdf(false, (float) $mm, 5000.0);
+        $m = 2.0;
+        $w = $mm - 2 * $m;
+        $chico = $mm === 50 ? 6.5 : 7.5;
+        $normal = $mm === 50 ? 7.5 : 8.5;
+        $y = $m + 1; // $y = arriba del renglón que sigue (el texto se dibuja sobre su línea de base)
+        $linea = static function (string $s, float $tam, bool $negrita = false, string $al = 'L', float $sangria = 0.0) use (&$y, $medir, $pdf, $m, $w): void {
+            foreach ($medir->partir($s, $w - $sangria, $tam, $negrita) ?: [''] as $k => $l) {
+                $extra = $k > 0 && $al === 'L' ? 3.0 : 0.0;
+                $pdf?->texto($m + $sangria + $extra, $y + $tam * 0.36, $l, $tam, $negrita, $al, $w - $sangria - $extra);
+                $y += $tam * 0.46;
+            }
+        };
+        $sep = static function () use (&$y, $pdf, $m, $w): void {
+            $y += 1.2;
+            $pdf?->linea($m, $y, $m + $w, $y, 0.2);
+            $y += 1.8;
+        };
+
+        $nombre = trim((string) ($emisor['empresa'] ?? '')) !== '' ? (string) $emisor['empresa'] : 'Empresa sin cargar';
+        $linea($nombre, $normal + 2.5, true, 'C');
+        foreach (array_filter([(string) ($emisor['tk_direccion'] ?? ''), trim((string) ($emisor['tk_telefono'] ?? '')) !== '' ? 'Tel.: ' . $emisor['tk_telefono'] : '']) as $l) {
+            $linea($l, $chico, false, 'C');
+        }
+        $sep();
+        $linea('TICKET DE CAMBIO', $normal + 3, true, 'C');
+        $linea('Compra del ' . fecha($h['fecha']), $chico, false, 'C');
+        $linea(\App\Modules\Comprobantes\Tipos::titulo($h['tipo'], $h['letra']) . ' ' . numero_visible($h), $normal, true, 'C');
+        $sep();
+        foreach (array_slice($h['items'], 0, self::MAX_RENGLONES) as $it) {
+            $cant = rtrim(rtrim(number_format((float) $it['unidades'], 3, ',', ''), '0'), ',');
+            $linea($cant . ' x ' . (string) $it['observaciones'], $normal);
+            $y += 0.6;
+        }
+        $mas = count($h['items']) - self::MAX_RENGLONES;
+        if ($mas > 0) {
+            $linea('… y ' . $mas . ' renglón(es) más', $chico);
+        }
+        $sep();
+        $linea('Presentá este ticket para cambiar la mercadería por otra de igual o mayor valor.', $chico, false, 'C');
+        $y += 2;
+        $codigo = CambiosService::codigo($h);
+        $lado = $mm === 50 ? 26.0 : 32.0;
+        $pdf?->qr(Qr::matriz($codigo), $m + ($w - $lado) / 2, $y, $lado);
+        $y += $lado + 3;
+        $linea('Código de cambio', $chico, false, 'C');
+        $linea($codigo, $normal + 1, true, 'C');
+        $linea('Se lee en «Cambio de mercadería»', $chico - 0.5, false, 'C');
+        return $y;
     }
 }
