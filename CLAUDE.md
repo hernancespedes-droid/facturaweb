@@ -96,6 +96,12 @@ Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_c
 `Listados/Estadistica` (agrupar por artículo, rubro, cliente, vendedor, mes…, ranking y detalle; `/listados/estadistica` y `/listados/rentabilidad`), `Listados/ListaCostos` (`/listados/costos`), `Stock/MovimientosStock` (trazabilidad con saldo corrido y resumen; `/stock/movimientos`) y `Stock/Existencias` (por depósito a una fecha; `/stock/existencias`).
 **Todo INSERT nuevo en `estadistica` lleva `costo`** (unitario en pesos al emitir, `Listados\Costos::unitarios`, D-62). Costos, márgenes y valorizados solo con el permiso `listados.costos`. La estadística no cuenta la factura de un presupuesto (`solo_subdiario = 1`) y resta NC/NX (D-63).
 
+## Tablero de inicio (0.40.0)
+
+`Modules/Tablero`: `Tablero::datos()` arma todo lo del inicio según permisos y módulos (D-90; «venta» = lo vendido de la caja diaria, D-91; avisos, D-92) y `Graficos` dibuja los SVG en el servidor
+(colores por variables CSS: `--g-marca` = color del cliente legible, `--g-comp` gris de comparación, `--g-1..5` paleta fija validada para «Cómo te pagaron»). `public/assets/tablero.js` pone la guía y el cartel
+(`data-tip` con renglones separados por «|»). Otro módulo suma su tarjeta con `Tablero::EXTRAS` (modulo, permiso, vista), sin tocar `home.php`.
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.
@@ -126,7 +132,7 @@ codificación detectados; números del Excel con coma decimal), `Destinos` (camp
 Clientes/artículos: al actualizar solo cambian las columnas elegidas y con dato. Comprobantes históricos: `subdiario` canal `I` + `importacion_id`, `iva`, `ctact` solo con saldo, sin caja ni stock;
 la clave para no duplicar es tipo + letra + punto de venta + número + fecha. Registro en `importaciones`. Campo nuevo en clientes/artículos: si debe importarse, sumarle sinónimos en `Destinos`.
 
-## Base que se actualiza sola (0.38.1)
+## Base que se actualiza sola (0.40.1)
 
 `Core\AutoMigracion::asegurar()` corre al principio de `App::handle` (salvo `/salud` e `/instalar`): si la firma (versión + migraciones) no coincide con
 `sistema_estado`, aplica lo pendiente con el candado `fw_migrar:<base>` (el mismo de «Aplicar cambios»); los demás pedidos ven «Actualizando» (503). Si falla, no bloquea: queda en

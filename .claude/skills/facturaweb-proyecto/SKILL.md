@@ -38,7 +38,7 @@ description: Contexto, decisiones y estado del proyecto FacturaWeb (facturador w
 | 4 | Cta. cte. y cheques (recibos, imputación, ajustes, cartera) | **Hecha: versión 0.10.0** (nota `docs/entregas/0.10.0-etapa4-cuenta-corriente.md`); falta la prueba de Hernán, que los recibos viajen al VFP |
 | 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | **Casi hecha**: subdiario de IVA ventas en pantalla/Excel (0.4.2) e **impreso para el libro** (0.15.0), cobranzas/deuda/cheques (0.10.0), **Libro IVA Digital ventas (0.11.0)**; falta probar el libro en el Portal IVA |
 | 6 | Pase a producción OYS: histórico completo, control de saldos contra VFP, capacitación | Pendiente |
-| 7 | Producto: alta de instalaciones, licencia de suscripción, actualización masiva | **En curso (0.38.1)**: oys.orgysis.site = sitio master; la base de cada instalación se actualiza sola con el primer pedido (`Core\AutoMigracion`, D-59); Instalaciones de clientes (alta, cliente en el master para facturar, suscripción aviso/sin emitir/bloqueada, baja con copia, módulos por cliente, dos carpetas main/estable con «Pasar a clientes»); falta importador de Excel y renovación automática de licencias |
+| 7 | Producto: alta de instalaciones, licencia de suscripción, actualización masiva | **En curso (0.40.1)**: oys.orgysis.site = sitio master; la base de cada instalación se actualiza sola con el primer pedido (`Core\AutoMigracion`, D-59); Instalaciones de clientes (alta, cliente en el master para facturar, suscripción aviso/sin emitir/bloqueada, baja con copia, módulos por cliente, dos carpetas main/estable con «Pasar a clientes»); falta importador de Excel y renovación automática de licencias |
 
 Estimación con IA (horas de sesión): 1) 4–6 · 2) 6–9 · 3) 1,5–3 + WSFEX 3–5 · 4) 6–9 · 5) 4–6 · 6) 3–5 · 7) 2–4.
 Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de saldos migrados.
@@ -87,10 +87,10 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 - **Ya facturando en ARCA producción** (Hernán emitió factura y nota de crédito): alias OYS (CUIT 20-11499319-1), certificado propio de la web, **punto de venta 7**
   (el 4 es del VFP: no se toca). Config de ARCA fuera de `public_html` (`afip_oys/` en el hosting). Modo en `config/local.php` (`afip.modo`).
 - **Hosting de prueba**: DonWeb (Ferozo) con GIT, **sin SSH**; repo en `public_html/facturador_web/`, subdominio `facturador.oesteparts.site`
-  apuntando a `public/`. Se actualiza con GIT → botón `>_`; desde la 0.38.1 la base se actualiza sola con el primer pedido (si falla, Sistema lo avisa al Master y se usa **Aplicar cambios**). No activar el webhook de auto-despliegue.
+  apuntando a `public/`. Se actualiza con GIT → botón `>_`; desde la 0.40.1 la base se actualiza sola con el primer pedido (si falla, Sistema lo avisa al Master y se usa **Aplicar cambios**). No activar el webhook de auto-despliegue.
 - **Rama `main` + pull requests** (igual que oesteparts): cada cambio en una rama `claude/…`, PR a `main` y fusión. Versión en `VERSION` (0.4.0 etapa 3, 0.4.1
   códigos de artículo/buscador/texto por renglón, 0.4.2 subdiario de IVA ventas, 0.5.0 stock, 0.6.0 agente VFP→web, 0.6.1 buscadores en stock, 0.7.0 el agente sube clientes y artículos, 0.7.1 ventana «Lista» para buscar artículos, 0.7.2 lupa y lista de clientes, 0.8.0 web→VFP, 0.9.0 alta de clientes y licencia, 0.10.0 cuenta corriente y recibos, 0.11.0 Libro IVA Digital, 0.11.1 arreglo de GIT en Ferozo, 0.12.0 logo en los comprobantes,
-  0.12.1 scripts de `bin/` congelados, 0.13.0 portal de clientes, 0.14.0/0.14.1 grillas con orden, Excel y alto de pantalla, 0.15.0 subdiario impreso para el libro, 0.15.1 imputador en dos paneles, 0.15.2 web a pantalla completa, 0.16.0 presupuesto y ventas diarias, 0.17.0 pago al final y vuelto, 0.18.0 caja diaria, 0.19.0 stock en los buscadores, 0.20.0 ticket de cambio, 0.21.0 varias formas de pago y presupuestos sin IVA, 0.22.0 modo Kiosco, 0.23.0 reservas de stock con autorización y foto del producto, 0.23.1 «Dev Senior» en lo visible, 0.24.0 impresión A4/ticket, 0.25.0 caja, 0.26.0 kiosco: orden, precio y venta sin stock, 0.27.0 Mercado Pago, 0.28.0 instalaciones de clientes, 0.29.0 sitio master, 0.31.0 apariencia por cliente, 0.32.0 listados de estadística, stock y costos, 0.37.0 alta por CUIT, 0.38.0 importadores, 0.38.1 base que se actualiza sola).
+  0.12.1 scripts de `bin/` congelados, 0.13.0 portal de clientes, 0.14.0/0.14.1 grillas con orden, Excel y alto de pantalla, 0.15.0 subdiario impreso para el libro, 0.15.1 imputador en dos paneles, 0.15.2 web a pantalla completa, 0.16.0 presupuesto y ventas diarias, 0.17.0 pago al final y vuelto, 0.18.0 caja diaria, 0.19.0 stock en los buscadores, 0.20.0 ticket de cambio, 0.21.0 varias formas de pago y presupuestos sin IVA, 0.22.0 modo Kiosco, 0.23.0 reservas de stock con autorización y foto del producto, 0.23.1 «Dev Senior» en lo visible, 0.24.0 impresión A4/ticket, 0.25.0 caja, 0.26.0 kiosco: orden, precio y venta sin stock, 0.27.0 Mercado Pago, 0.28.0 instalaciones de clientes, 0.29.0 sitio master, 0.31.0 apariencia por cliente, 0.32.0 listados de estadística, stock y costos, 0.37.0 alta por CUIT, 0.38.0 importadores, 0.40.0 tablero de inicio, 0.40.1 base que se actualiza sola).
 - **Scripts congelados**: no tocar `bin/package.sh`, `bin/test.sh`, `bin/setup-dev.sh`, `bin/dev-server.sh` ni `bin/env.sh` (si cambian, el GIT de Ferozo no
   actualiza). Los vivos son `bin/pruebas.sh` (pruebas) y `bin/empaquetar.sh` (paquete).
 - **Hecho más allá de las etapas**: artículos con EAN-13/DUN-14/SKU/unidades por bulto; buscador de artículos en renglones y stock; texto adicional por renglón;
@@ -134,7 +134,7 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 
 - Pedido: que cada cliente personalice su cuenta y su logo se vea en todo el sistema. **Decisión de Hernán: la marca del cliente arriba (logo, nombre, color) y «FacturaWeb · Organización & Sistemas» al pie.**
 - Hecho en 0.31.0: Sistema → Configuración → Apariencia (`Configuracion/Apariencia`), migración 0031. Sin ramas ni copias: todo en la base de cada instalación. Pendiente: verla o fijarla desde el panel del master.
-- Numeración coordinada entre hilos del 21/11: 0.30.0 actualización automática de base (0030; salió como 0.38.1 porque otras versiones se fusionaron antes), 0.31.0 apariencia (0031), 0.38.0 importadores Excel/CSV/TXT (0038; la 0.32.0 fue de listados y la 0.37.0 del padrón).
+- Numeración coordinada entre hilos del 21/11: 0.30.0 actualización automática de base (0030; salió como 0.40.1 porque otras versiones se fusionaron antes), 0.31.0 apariencia (0031), 0.38.0 importadores Excel/CSV/TXT (0038; la 0.32.0 fue de listados y la 0.37.0 del padrón).
 
 ## Importadores desde Excel, CSV y TXT (Hernán, 21/11/2026, versión 0.38.0)
 
@@ -210,3 +210,9 @@ El mail de cada factura agrega la dirección del portal cuando está activo.
 Hernán aprobó la propuesta (estadística con ranking, rentabilidad, costos y márgenes, movimientos de stock con trazabilidad, existencias a una fecha) y las decisiones D-62 a D-65:
 el costo se graba al vender (`estadistica.costo`), permiso nuevo `listados.costos` (Administrador y Master), presupuestos incluidos con filtro «Solo fiscales».
 Quedan para después: historial de cambios de costo (tabla nueva) y comparativo contra el año anterior.
+
+## Tablero de inicio con gráficos (0.40.0, 21/11/2026)
+Hernán aprobó la maqueta (https://claude.ai/artifact/6Qdh1shkrW2owbXnS47vcn) y pidió fusionar al terminar. El inicio muestra la venta del período (hoy, mes, mes pasado, 12 meses; por sucursal)
+contra el período anterior, tarjetas (hoy, ticket promedio, margen, cobrado, deuda, turno), venta acumulada del mes contra el anterior, venta por mes, lo más vendido, mejores clientes,
+cómo te pagaron, avisos para atender y accesos rápidos; abajo, «Todo el menú». Decisiones D-90 a D-92 a confirmar. Compras suma su propia tarjeta con `Tablero::EXTRAS`.
+
