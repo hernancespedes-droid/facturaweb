@@ -18,6 +18,9 @@ $estiloMarca = Apariencia::estilo();
 $colorMarca = Apariencia::color();
 // Tema que eligió este usuario en este navegador (botón Dark/Light): cookie "tema", claro si no eligió.
 $tema = ($_COOKIE['tema'] ?? '') === 'oscuro' ? 'oscuro' : 'claro';
+// Menú lateral contraído a una franja de íconos (botón «Contraer menú»): cookie "menu_contraido" de este navegador (D-139).
+$menuLateral = $usuarioActual !== null && Apariencia::menu() === 'lateral';
+$menuContraido = $menuLateral && ($_COOKIE['menu_contraido'] ?? '') === '1';
 $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] === 0;
 // Campanita de ingresos de Mercado Pago (permiso mercadopago.ingresos, con Mercado Pago encendido)
 $mpAvisos = null;
@@ -42,7 +45,7 @@ if ($alDia && Menu::visible('mp_ingresos')) {
     <script src="<?= e(asset('assets/grilla.js')) ?>" defer></script>
     <script src="<?= e(asset('assets/carga.js')) ?>" defer></script>
 </head>
-<body class="menu-<?= $usuarioActual !== null ? Apariencia::menu() : 'horizontal' ?>">
+<body class="menu-<?= $menuLateral ? 'lateral' : 'horizontal' ?><?= $menuContraido ? ' menu-contraido' : '' ?>">
     <header class="topbar">
         <div class="wrap topbar-in">
             <a class="brand<?= $logoUrl !== null ? ' brand-con-logo' : '' ?>" href="<?= e(url('/')) ?>" title="<?= e($nombreSistema) ?>">
@@ -54,12 +57,19 @@ if ($alDia && Menu::visible('mp_ingresos')) {
                 <input type="checkbox" id="menu-toggle" class="menu-toggle" aria-label="Abrir menú">
                 <label for="menu-toggle" class="menu-btn" aria-hidden="true"><span></span><span></span><span></span></label>
                 <nav class="menu" aria-label="Menú principal">
+                    <?php if ($menuLateral): ?>
+                        <button type="button" class="menu-contraer" data-menu-contraer aria-expanded="<?= $menuContraido ? 'false' : 'true' ?>"
+                            aria-label="<?= $menuContraido ? 'Expandir menú' : 'Contraer menú' ?>" title="<?= $menuContraido ? 'Expandir menú' : 'Contraer menú' ?>">
+                            <svg class="menu-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
+                            <span>Contraer menú</span>
+                        </button>
+                    <?php endif; ?>
                     <?php if ($alDia): ?>
                         <a href="<?= e(url('/')) ?>" class="menu-inicio <?= $navActual === 'inicio' ? 'activo' : '' ?>"><?= Menu::icono('inicio') ?><span>Inicio</span></a>
                         <?php foreach (Menu::grupos() as $grupo => $items): $activo = isset($items[$navActual]) || ($grupo === 'Tablas' && $navActual === 'tablas'); ?>
                             <div class="menu-grupo <?= $activo ? 'activo' : '' ?>" data-grupo="<?= e($grupo) ?>">
                                 <button type="button" class="menu-grupo-btn" aria-expanded="false"><span class="menu-grupo-ico"><?= Menu::iconoGrupo($grupo) ?></span><span class="menu-grupo-txt"><?= e($grupo) ?></span></button>
-                                <div class="menu-sub">
+                                <div class="menu-sub" data-titulo="<?= e($grupo) ?>">
                                     <?php foreach ($items as $clave => $o): ?>
                                         <a href="<?= e(url($o['ruta'])) ?>" class="<?= $navActual === $clave ? 'activo' : '' ?>"><?= Menu::icono($clave, $grupo) ?><span><?= e($o['texto']) ?></span></a>
                                     <?php endforeach; ?>

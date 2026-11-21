@@ -306,4 +306,24 @@ final class AparienciaTest extends DbTestCase
             $this->assertStringContainsString('<svg class="menu-ico"', \App\Core\Menu::icono($k, $o['grupo']));
         }
     }
+
+    public function testMenuLateralContraidoSeRecuerdaPorNavegador(): void
+    {
+        $this->loginComo($this->crearUsuario('t_adm_contr', 'admin'));
+        $this->assertStringNotContainsString('data-menu-contraer', $this->get('/')->body, 'con menú horizontal no hay botón de contraer');
+        Db::pdo()->exec("INSERT INTO configuracion (clave, valor, tipo, descripcion) VALUES ('apariencia.menu', 'lateral', 'texto', 'menú') ON DUPLICATE KEY UPDATE valor = 'lateral'");
+        Configuracion::reset();
+        $html = $this->get('/')->body;
+        $this->assertStringContainsString('<body class="menu-lateral">', $html);
+        $this->assertStringContainsString('data-menu-contraer', $html);
+        $this->assertStringContainsString('data-titulo="', $html, 'los grupos llevan su nombre para el desplegable al costado');
+        $_COOKIE['menu_contraido'] = '1';
+        try {
+            $html = $this->get('/')->body;
+            $this->assertStringContainsString('<body class="menu-lateral menu-contraido">', $html, 'el servidor lo dibuja contraído: no salta al cargar');
+            $this->assertStringContainsString('aria-label="Expandir menú"', $html);
+        } finally {
+            unset($_COOKIE['menu_contraido']);
+        }
+    }
 }

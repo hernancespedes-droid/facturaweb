@@ -110,7 +110,7 @@ h2 { font-size: 1.3rem; margin: 24px 0 10px; text-transform: uppercase; color: #
 .menu > a.menu-user { text-transform: none; letter-spacing: 0; font: 500 .9rem/1 var(--f-body); }
 .menu-sep { flex: 1; }
 .menu form { margin: 0; }
-.menu-toggle, .menu-btn { display: none; }
+.menu-toggle, .menu-btn, .menu-contraer { display: none; }
 .empresa-switch select { padding: 7px 10px; min-width: 120px; }
 .chip {
   display: inline-block; padding: 5px 10px; border: 1px solid var(--line-2); border-radius: 999px;
@@ -492,6 +492,45 @@ details.plegable[open] > summary { margin-bottom: 12px; }
     background: var(--panel); border-right: 1px solid var(--line);
   }
   body.menu-lateral > main, body.menu-lateral > .pie { margin-left: 250px; width: auto; }
+  body.menu-lateral .menu, body.menu-lateral > main, body.menu-lateral > .pie { transition: width .18s ease, margin-left .18s ease; }
+  /* Botón «Contraer menú» (D-139) */
+  body.menu-lateral .menu-contraer {
+    display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 4px; padding: 7px 8px; border: 0; border-radius: 10px; cursor: pointer;
+    background: none; color: var(--muted); font: 500 .82rem/1.2 var(--f-body); text-align: left;
+  }
+  body.menu-lateral .menu-contraer:hover { background: var(--panel-2); color: var(--text); }
+  body.menu-lateral .menu-contraer .menu-ico { flex: none; width: 30px; transition: transform .18s; }
+  /* Contraído: franja de 66 px con los íconos; cada grupo despliega sus opciones al costado y el nombre aparece al pasar el mouse. */
+  body.menu-lateral.menu-contraido .menu { width: 66px; padding: 10px 8px 14px; overflow: visible; }
+  body.menu-lateral.menu-contraido > main, body.menu-lateral.menu-contraido > .pie { margin-left: 66px; }
+  body.menu-lateral.menu-contraido .menu-contraer { justify-content: center; padding: 7px 0; }
+  body.menu-lateral.menu-contraido .menu-contraer .menu-ico { transform: rotate(180deg); }
+  body.menu-lateral.menu-contraido .menu-contraer span,
+  body.menu-lateral.menu-contraido .menu-grupo-txt,
+  body.menu-lateral.menu-contraido .menu-grupo-btn::after,
+  body.menu-lateral.menu-contraido .menu .chip,
+  body.menu-lateral.menu-contraido .menu > a.menu-user { display: none; }
+  body.menu-lateral.menu-contraido .menu-grupo-btn, body.menu-lateral.menu-contraido .menu > a.menu-inicio { justify-content: center; padding: 6px 0; position: relative; }
+  body.menu-lateral.menu-contraido .menu-grupo { position: relative; }
+  body.menu-lateral.menu-contraido .menu-grupo > .menu-sub {
+    display: none; position: absolute; left: 100%; top: -6px; z-index: 30; min-width: 230px; margin: 0 0 0 4px; padding: 6px;
+    flex-direction: column; gap: 1px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+  }
+  body.menu-lateral.menu-contraido .menu-grupo > .menu-sub::before {
+    content: attr(data-titulo); padding: 6px 10px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--text); font: 600 .9rem/1.2 var(--f-body);
+  }
+  body.menu-lateral.menu-contraido .menu-grupo:hover > .menu-sub, body.menu-lateral.menu-contraido .menu-grupo.abierto > .menu-sub { display: flex; }
+  body.menu-lateral.menu-contraido .menu-grupo:hover > .menu-grupo-btn, body.menu-lateral.menu-contraido .menu-grupo.abierto > .menu-grupo-btn { background: var(--panel-2); }
+  body.menu-lateral.menu-contraido .menu-sub a { white-space: nowrap; }
+  body.menu-lateral.menu-contraido .menu-sub a.activo::before { display: none; }
+  /* Nombre de «Inicio» al pasar el mouse */
+  body.menu-lateral.menu-contraido .menu > a.menu-inicio > span {
+    display: none; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); z-index: 30; padding: 6px 10px; border-radius: 8px;
+    background: var(--text); color: var(--bg); font: 600 .85rem/1 var(--f-body); white-space: nowrap; pointer-events: none;
+  }
+  body.menu-lateral.menu-contraido .menu > a.menu-inicio:hover > span { display: block; }
+  body.menu-lateral.menu-contraido .menu form .btn { padding-left: 0; padding-right: 0; font-size: .72rem; }
+  [data-tema="claro"] body.menu-lateral.menu-contraido .menu-grupo > .menu-sub { box-shadow: 0 12px 30px rgba(20, 30, 50, .15); }
   body.menu-lateral .menu-sep { flex: 1; min-height: 14px; }
   body.menu-lateral .empresa-switch select, body.menu-lateral .menu .btn { width: 100%; }
   /* Horizontal: sin íconos en la barra (ocupa menos); sí en las opciones que despliega. */
