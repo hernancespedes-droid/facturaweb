@@ -527,6 +527,45 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.goto(urlFactura);
     ok(await page.isDisabled('#mail button[type=submit]'), 'sin SMTP configurado el botón Enviar está deshabilitado');
 
+    // Listados 0.32.0: estadística (con ranking y detalle), rentabilidad, costos, movimientos de stock y existencias
+    await page.goto(BASE + '/listados/estadistica?agrupar=cliente');
+    ok((await page.textContent('h1')).includes('Estadística de ventas'), 'estadística: abre');
+    ok((await page.textContent('table')).includes('CLIENTE E2E SRL'), 'estadística por cliente: aparece el cliente de las ventas');
+    ok((await page.textContent('thead')).includes('Margen'), 'estadística: el administrador ve el margen');
+    await page.fill('input[name=articulo]', 'articulo e2');
+    await page.waitForSelector('.sugerencias li[role=option]');
+    await page.click('.sugerencias li[role=option]');
+    ok((await page.inputValue('input[name=articulo]')) === 'E2E-001', 'estadística: el filtro de artículo es el buscador (el usuario elige)');
+    await page.selectOption('select[name=agrupar]', 'articulo');
+    await page.check('input[name=detalle]');
+    await Promise.all([page.waitForNavigation(), page.click('form.filtros button[type=submit]')]);
+    ok(page.url().includes('articulo=E2E-001'), 'estadística: filtra por el artículo elegido');
+    ok((await page.textContent('body')).includes('Detalle: cada renglón vendido'), 'estadística: muestra el detalle');
+    await page.screenshot({ path: path.join(CAPTURAS, 'estadistica.png'), fullPage: true });
+    await page.goto(BASE + '/listados/rentabilidad?agrupar=rubro');
+    ok((await page.textContent('thead')).includes('% del margen'), 'rentabilidad: abre con el margen');
+    await page.goto(BASE + '/listados/costos?q=E2E');
+    ok((await page.textContent('table')).includes('E2E-001'), 'costos y márgenes: lista los artículos');
+    await page.screenshot({ path: path.join(CAPTURAS, 'costos.png'), fullPage: true });
+    await page.goto(BASE + '/stock/movimientos?articulo=E2E-001&desde=01/01/2000');
+    ok((await page.textContent('.imputador-resumen')).includes('Saldo inicial'), 'movimientos de stock: con un artículo muestra el saldo');
+    ok((await page.textContent('table')).includes('stock inicial e2e'), 'movimientos de stock: el ingreso con su motivo');
+    await page.screenshot({ path: path.join(CAPTURAS, 'movimientos-stock.png'), fullPage: true });
+    await page.goto(BASE + '/stock/existencias?q=E2E&valorizar=costo');
+    ok((await page.textContent('table')).includes('E2E-001'), 'existencias por depósito: aparece el artículo');
+    {
+      const cel = await browser.newContext({ ...devices['Pixel 7'] });
+      const pe = await cel.newPage();
+      await login(pe, 'e2e_admin');
+      for (const ruta of ['/listados/estadistica', '/stock/movimientos', '/stock/existencias', '/listados/costos']) {
+        await pe.goto(BASE + ruta);
+        ok(await pe.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: ' + ruta + ' sin scroll horizontal');
+      }
+      await pe.goto(BASE + '/listados/estadistica');
+      await pe.screenshot({ path: path.join(CAPTURAS, 'celular-estadistica.png'), fullPage: true });
+      await cel.close();
+    }
+
     // Borrar el vendedor que usa un cliente: no deja.
     await page.goto(BASE + '/tablas/vendedores?q=E2E');
     await page.click('text=ZZ');

@@ -40,10 +40,15 @@ final class Menu
         $o['ventas_diarias'] = ['texto' => 'Ventas diarias', 'ruta' => '/listados/ventas-diarias', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         $o['iva_ventas'] = ['texto' => 'Subdiario IVA ventas', 'ruta' => '/listados/iva-ventas', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         $o['libro_iva'] = ['texto' => 'Libro IVA Digital (ventas)', 'ruta' => '/listados/libro-iva-digital', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
+        $o['estadistica'] = ['texto' => 'Estadística de ventas', 'ruta' => '/listados/estadistica', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
+        $o['rentabilidad'] = ['texto' => 'Rentabilidad de ventas', 'ruta' => '/listados/rentabilidad', 'permiso' => 'listados.costos', 'grupo' => 'Listados'];
+        $o['lista_costos'] = ['texto' => 'Costos y márgenes', 'ruta' => '/listados/costos', 'permiso' => 'listados.costos', 'grupo' => 'Listados'];
         foreach (Definiciones::todas() as $t => $d) {
             $o[$t] = ['texto' => $d['titulo'], 'ruta' => '/tablas/' . $t, 'permiso' => 'tablas.' . $t, 'grupo' => 'Tablas'];
         }
         $o['stock'] = ['texto' => 'Saldos de stock', 'ruta' => '/stock', 'permiso' => 'stock.ver', 'grupo' => 'Stock'];
+        $o['stock_movimientos'] = ['texto' => 'Movimientos de stock', 'ruta' => '/stock/movimientos', 'permiso' => 'stock.ver', 'grupo' => 'Stock'];
+        $o['stock_existencias'] = ['texto' => 'Existencias por depósito', 'ruta' => '/stock/existencias', 'permiso' => 'stock.ver', 'grupo' => 'Stock'];
         $o['stock_ventas_sin_stock'] = ['texto' => 'Ventas sin stock', 'ruta' => '/stock/ventas-sin-stock', 'permiso' => 'stock.ver', 'grupo' => 'Stock'];
         $o['stock_ajuste'] = ['texto' => 'Ingreso, egreso o ajuste', 'ruta' => '/stock/ajuste', 'permiso' => 'stock.mover', 'grupo' => 'Stock'];
         $o['stock_transferir'] = ['texto' => 'Transferencia entre depósitos', 'ruta' => '/stock/transferir', 'permiso' => 'stock.mover', 'grupo' => 'Stock'];

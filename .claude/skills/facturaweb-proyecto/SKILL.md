@@ -190,3 +190,8 @@ El mail de cada factura agrega la dirección del portal cuando está activo.
 - Si hace falta anular comprobantes sin CAE y qué hacer con el crédito 0.
 - SMTP de la casilla que envía las facturas.
 - Hosting/dominio de la instalación de OYS (`facturador.oys.com.ar`, base propia) y desde qué rama despliega Ferozo.
+
+## Listados de estadística, stock y costos (0.32.0, 21/11/2026)
+Hernán aprobó la propuesta (estadística con ranking, rentabilidad, costos y márgenes, movimientos de stock con trazabilidad, existencias a una fecha) y las decisiones D-62 a D-65:
+el costo se graba al vender (`estadistica.costo`), permiso nuevo `listados.costos` (Administrador y Master), presupuestos incluidos con filtro «Solo fiscales».
+Quedan para después: historial de cambios de costo (tabla nueva) y comparativo contra el año anterior.

@@ -1210,3 +1210,14 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 .mp-qr svg { width: min(18rem, 70vw); height: auto; background: #fff; padding: .5rem; border-radius: .5rem; }
 .mp-link input { width: min(32rem, 100%); }
 .mp-estado { font-size: 1.1rem; }
+
+/* Listados (0.32.0): vista de impresión sin menú ni filtros, grillas enteras */
+.solo-imprimir { display: none; }
+@media print {
+  .topbar, .no-imprimir, .grilla-barra, .paginador, .page-head .acciones, .sugerencias { display: none !important; }
+  .solo-imprimir { display: block; }
+  .table-wrap { max-height: none !important; overflow: visible !important; box-shadow: none; }
+  @page { size: A4 landscape; margin: 10mm; }
+}
+/* En el celular los totales ya están en el recuadro de arriba: el pie de la grilla no entra como tarjeta */
+@media (max-width: 760px) { .table-cards.pie-solo-escritorio tfoot { display: none; } }

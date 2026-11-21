@@ -938,6 +938,7 @@ final class ComprobantesService
                     'alicuota' => $g['alicuota'], 'monto' => $g['base'], 'importe' => $g['importe'], 'actualizacion' => $ahora]);
             }
 
+            $costos = \App\Modules\Listados\Costos::unitarios($this->pdo, array_map(static fn (array $it) => (string) ($it['articulo'] ?? ''), $c['items']), $cbte['fecha']); // D-62
             foreach ($c['items'] as $i => $it) {
                 $this->insertar('estadistica', [
                     'subdiario_id' => $id, 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'sucursal' => $cbte['sucursal'], 'prefijo' => $cbte['prefijo'],
@@ -945,7 +946,7 @@ final class ComprobantesService
                     'unidades' => $it['cantidad'], 'unidades_ori' => $it['cantidad'], 'lista' => 'E', 'precio' => $it['precio'],
                     'precio_siniva' => $it['precio_siniva'], 'porcentaje_descuento' => $c['descuento'], 'observaciones' => $it['descripcion'], 'texto_impresion' => ($it['texto'] ?? '') !== '' ? $it['texto'] : null,
                     'total_item' => $it['importe'], 'total_siniva' => $it['neto'], 'cliente' => $cli['codigo'], 'grabado' => $it['exento'] ? 0 : 1,
-                    'por_iva' => $it['alicuota'], 'actualizacion' => $ahora,
+                    'por_iva' => $it['alicuota'], 'actualizacion' => $ahora, 'costo' => $costos[(string) ($it['articulo'] ?? '')] ?? 0,
                 ]);
             }
 
