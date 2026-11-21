@@ -140,6 +140,20 @@ final class MigracionTest extends DbTestCase
         $this->assertSame(2, $r['articulos_precios']['grabadas'], 'la columna "articulos" se toma como "articulo"');
     }
 
+    public function testLaListaDePreciosPasaAlPrecioDelArticuloSinPisarLoCargado(): void
+    {
+        $pdo = Db::pdo();
+        $pdo->exec("INSERT INTO articulos (codigo, descripcion, precio_de_venta_1) VALUES ('M-1', 'SIN PRECIO', 0), ('M-2', 'CON PRECIO', 500)");
+        DbfFalso::escribir($this->dir . '/articulos_precios.dbf', [['ARTICULOS', 'C', 15], ['NUM_LISTA', 'N', 2], ['VALOR', 'N', 12, 2]],
+            [['ARTICULOS' => 'M-1', 'NUM_LISTA' => 1, 'VALOR' => 43900], ['ARTICULOS' => 'M-1', 'NUM_LISTA' => 2, 'VALOR' => 40000],
+             ['ARTICULOS' => 'M-2', 'NUM_LISTA' => 1, 'VALOR' => 999]]);
+        $r = (new MigradorVfp($pdo, $this->dir))->migrar(['articulos_precios'], true);
+        $this->assertSame(2, $r['precios de lista']['grabadas']);
+        $p = $pdo->query("SELECT codigo, precio_de_venta_1 + 0, precio_de_venta_2 + 0 FROM articulos WHERE codigo LIKE 'M-%' ORDER BY codigo")->fetchAll(\PDO::FETCH_NUM);
+        $this->assertSame([['M-1', '43900', '40000'], ['M-2', '500', '0']], array_map(static fn ($f) => [$f[0], (string) (float) $f[1], (string) (float) $f[2]], $p));
+        $pdo->exec('DELETE FROM articulos_precios');
+    }
+
     public function testComprobantesEnNegroSeSumanComoPresupuestosSinDuplicar(): void
     {
         $sub = [['FECHA', 'D'], ['TIPO', 'C', 2], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 3], ['PREFIJO', 'N', 4], ['COMPROBANT', 'N', 8], ['CLIENTE', 'N', 6],

@@ -180,6 +180,9 @@ final class MigradorVfp
             if (array_intersect($tablas, ['caja', 'ctact', 'cobra', 'imputaciones']) !== []) {
                 $this->vincularCuentaCorriente();
             }
+            if (array_intersect($tablas, ['articulos', 'articulos_precios']) !== []) {
+                $this->preciosDeLista();
+            }
             if ($this->comoPresupuestos) {
                 // Los presupuestos nuevos de la web siguen la numeración de los que se trajeron.
                 foreach (['PR' => 'ultimo_presupuesto', 'NX' => 'ultima_nc_x'] as $tipo => $col) {
@@ -412,6 +415,23 @@ final class MigradorVfp
             'iva' => isset($this->nuevosSinFecha[$k($fila, 'comprobante', false)]),
             default => true,
         };
+    }
+
+    /**
+     * Algunos VFP guardan el precio solo en articulos_precios (Gogolinas: lista 1 = precio final) y dejan en 0 los del artículo, que son los que usan la
+     * factura y el kiosco. La lista N pasa a precio_de_venta_N (1 a 3) solo donde el artículo tiene 0: nunca pisa un precio cargado. D-94.
+     */
+    private function preciosDeLista(): void
+    {
+        $r = &$this->iniciar('precios de lista');
+        foreach ([1, 2, 3] as $n) {
+            $this->ejecutar("UPDATE articulos a JOIN articulos_precios p ON p.articulo = a.codigo AND p.num_lista = {$n}
+                                SET a.precio_de_venta_{$n} = p.valor WHERE a.precio_de_venta_{$n} = 0 AND p.valor > 0", []);
+            $r['grabadas'] += $this->filasAfectadas;
+        }
+        if ($r['grabadas'] > 0) {
+            $this->aviso($r, "Se copiaron {$r['grabadas']} precio(s) de articulos_precios al precio de venta de los artículos que lo tenían en 0.");
+        }
     }
 
     /** Códigos usados que no están en su tabla: se agregan (los catálogos simples) o se avisa. */
