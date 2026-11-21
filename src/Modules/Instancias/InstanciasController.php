@@ -30,6 +30,7 @@ final class InstanciasController
         if (!self::puede()) {
             return new Response(403);
         }
+        InstanciasService::asegurarSoporte(\App\Modules\Soporte\SoporteController::urlMaster()); // dirección y clave de soporte de cada cliente
         $resultado = Session::get('instancias_resultado');
         Session::forget('instancias_resultado');
         return Response::html(View::render('instancias/index', [

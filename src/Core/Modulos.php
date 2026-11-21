@@ -29,6 +29,8 @@ final class Modulos
             'compras_presupuesto', 'compras_iva', 'proveedores', 'compras_centros'], 'rutas' => ['/compras'], 'por_omision' => false],
         'mercadopago' => ['nombre' => 'Mercado Pago (cobros e ingresos a la cuenta)', 'menu' => ['mp', 'mp_ingresos'], 'rutas' => ['/mercadopago', '/api/v1/mercadopago'], 'por_omision' => true],
         'agente' => ['nombre' => 'Agente de sincronización con el VFP', 'menu' => ['agente'], 'rutas' => ['/agente', '/api/v1/vfp', '/api/v1/ping'], 'por_omision' => false],
+        // DECISIÓN D-76: soporte prendido por omisión en todos los clientes; se apaga por cliente desde el master.
+        'soporte' => ['nombre' => 'Tickets de soporte a O&S', 'menu' => ['soporte'], 'rutas' => ['/soporte'], 'por_omision' => true],
         'portal' => ['nombre' => 'Portal de clientes (bajan sus facturas)', 'menu' => [], 'rutas' => ['/portal'], 'por_omision' => true],
     ];
 

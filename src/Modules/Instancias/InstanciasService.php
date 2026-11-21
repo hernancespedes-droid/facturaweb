@@ -275,6 +275,58 @@ final class InstanciasService
     }
 
     /**
+     * Soporte (0.44.0): cada cliente necesita la dirección del master y su clave para mandar tickets ('soporte' => ['url', 'clave'] en su config).
+     * Se completa sola al entrar al panel o a la bandeja de soporte; la clave no cambia una vez creada. Devuelve cuántos configs se escribieron.
+     */
+    public static function asegurarSoporte(string $urlMaster): int
+    {
+        $urlMaster = rtrim($urlMaster, '/');
+        if (!self::disponible() || $urlMaster === '') {
+            return 0;
+        }
+        $n = 0;
+        foreach (glob(self::raiz() . '/*/config.php') ?: [] as $archivo) {
+            $host = basename(dirname($archivo));
+            try {
+                $c = self::config($host);
+            } catch (\Throwable) {
+                continue;
+            }
+            $s = (array) ($c['soporte'] ?? []);
+            if ((string) ($s['clave'] ?? '') !== '' && (string) ($s['url'] ?? '') === $urlMaster) {
+                continue;
+            }
+            $c['soporte'] = ['url' => $urlMaster, 'clave' => (string) ($s['clave'] ?? '') !== '' ? (string) $s['clave'] : 'fws_' . bin2hex(random_bytes(24))];
+            try {
+                self::escribirPhp($archivo, $c);
+                $n++;
+            } catch (\Throwable $e) {
+                App::registrar($e);
+            }
+        }
+        return $n;
+    }
+
+    /** Clave de soporte de un cliente (la que tiene en su config), o null si no existe la instalación o no tiene. */
+    public static function claveSoporte(string $host): ?string
+    {
+        try {
+            $c = self::config($host);
+        } catch (\Throwable) {
+            return null;
+        }
+        $k = (string) ($c['soporte']['clave'] ?? '');
+        return $k !== '' ? $k : null;
+    }
+
+    /** Nombre del cliente (info.json) o la dirección. */
+    public static function nombreDe(string $host): string
+    {
+        $info = self::hostValido($host) ? json_decode((string) @file_get_contents(self::raiz() . '/' . $host . '/info.json'), true) : null;
+        return is_array($info) && (string) ($info['nombre'] ?? '') !== '' ? (string) $info['nombre'] : $host;
+    }
+
+    /**
      * Aplica los cambios de base pendientes en la principal y en cada cliente (después de actualizar el código con GIT).
      *
      * @return array<string,string> dirección → resultado
