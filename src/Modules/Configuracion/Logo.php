@@ -50,6 +50,37 @@ final class Logo
      */
     public static function guardar(string $archivo, ?int $usuarioId): ?string
     {
+        $orig = self::leer($archivo);
+        if (is_string($orig)) {
+            return $orig;
+        }
+        [$w, $h] = [imagesx($orig), imagesy($orig)];
+        $escala = min(1.0, self::MAX_ANCHO / $w, self::MAX_ALTO / $h);
+        $nw = max(1, (int) round($w * $escala));
+        $nh = max(1, (int) round($h * $escala));
+        $lienzo = imagecreatetruecolor($nw, $nh);
+        imagefill($lienzo, 0, 0, (int) imagecolorallocate($lienzo, 255, 255, 255)); // lo transparente queda blanco
+        imagecopyresampled($lienzo, $orig, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        ob_start();
+        imagejpeg($lienzo, null, 90);
+        $jpeg = (string) ob_get_clean();
+        imagedestroy($lienzo);
+
+        self::grabar('logo', 'image/jpeg', $jpeg, $nw, $nh, $usuarioId);
+        // Copia para la pantalla (barra, ingreso, portal): PNG que conserva lo transparente (Apariencia).
+        $png = self::png($orig, Apariencia::PANTALLA_ANCHO, Apariencia::PANTALLA_ALTO);
+        self::grabar(Apariencia::IMG_WEB, 'image/png', $png['datos'], $png['ancho'], $png['alto'], $usuarioId);
+        imagedestroy($orig);
+        self::reset();
+        Apariencia::regenerarIcono($usuarioId);
+        return null;
+    }
+
+    /**
+     * Valida un archivo subido y lo abre con gd. Devuelve la imagen o el error para mostrar.
+     */
+    public static function leer(string $archivo): \GdImage|string
+    {
         if (!is_file($archivo) || filesize($archivo) === 0) {
             return 'Elegí la imagen del logo.';
         }
@@ -74,31 +105,53 @@ final class Logo
         if ($orig === false) {
             return 'No se pudo leer la imagen. Probá guardarla como PNG o JPG.';
         }
+        return $orig;
+    }
+
+    /**
+     * PNG con transparencia que entra en $maxW x $maxH (sin agrandar). Con $cuadrado, centrado en un lienzo cuadrado
+     * transparente de $maxW de lado (ícono de la pestaña).
+     *
+     * @return array{datos:string,ancho:int,alto:int}
+     */
+    public static function png(\GdImage $orig, int $maxW, int $maxH, bool $cuadrado = false): array
+    {
         [$w, $h] = [imagesx($orig), imagesy($orig)];
-        $escala = min(1.0, self::MAX_ANCHO / $w, self::MAX_ALTO / $h);
+        $escala = $cuadrado ? min($maxW / $w, $maxH / $h) : min(1.0, $maxW / $w, $maxH / $h);
         $nw = max(1, (int) round($w * $escala));
         $nh = max(1, (int) round($h * $escala));
-        $lienzo = imagecreatetruecolor($nw, $nh);
-        imagefill($lienzo, 0, 0, (int) imagecolorallocate($lienzo, 255, 255, 255)); // lo transparente queda blanco
-        imagecopyresampled($lienzo, $orig, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        [$lw, $lh] = $cuadrado ? [$maxW, $maxW] : [$nw, $nh];
+        $lienzo = imagecreatetruecolor($lw, $lh);
+        imagealphablending($lienzo, false);
+        imagesavealpha($lienzo, true);
+        imagefill($lienzo, 0, 0, (int) imagecolorallocatealpha($lienzo, 0, 0, 0, 127));
+        imagealphablending($lienzo, true);
+        imagecopyresampled($lienzo, $orig, intdiv($lw - $nw, 2), intdiv($lh - $nh, 2), 0, 0, $nw, $nh, $w, $h);
+        imagealphablending($lienzo, false);
         ob_start();
-        imagejpeg($lienzo, null, 90);
-        $jpeg = (string) ob_get_clean();
-        imagedestroy($orig);
+        imagepng($lienzo, null, 9);
+        $png = (string) ob_get_clean();
         imagedestroy($lienzo);
+        return ['datos' => $png, 'ancho' => $lw, 'alto' => $lh];
+    }
 
+    /** Graba una imagen en la tabla imagenes (base64). */
+    public static function grabar(string $clave, string $tipo, string $datos, int $ancho, int $alto, ?int $usuarioId): void
+    {
         Db::pdo()->prepare(
-            "INSERT INTO imagenes (clave, tipo, datos, ancho, alto, actualizado_por) VALUES ('logo', 'image/jpeg', ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE tipo = VALUES(tipo), datos = VALUES(datos), ancho = VALUES(ancho), alto = VALUES(alto), actualizado_por = VALUES(actualizado_por)"
-        )->execute([base64_encode($jpeg), $nw, $nh, $usuarioId]);
-        self::reset();
-        return null;
+            "INSERT INTO imagenes (clave, tipo, datos, ancho, alto, actualizado_por) VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE tipo = VALUES(tipo), datos = VALUES(datos), ancho = VALUES(ancho), alto = VALUES(alto),
+                                     actualizado_por = VALUES(actualizado_por), actualizado_en = CURRENT_TIMESTAMP"
+        )->execute([$clave, $tipo, base64_encode($datos), $ancho, $alto, $usuarioId]);
+        Apariencia::reset();
     }
 
     public static function quitar(): void
     {
-        Db::pdo()->exec("DELETE FROM imagenes WHERE clave = 'logo'");
+        Db::pdo()->prepare('DELETE FROM imagenes WHERE clave IN (?, ?)')->execute(['logo', Apariencia::IMG_WEB]);
         self::reset();
+        Apariencia::reset();
+        Apariencia::regenerarIcono(null);
     }
 
     /**

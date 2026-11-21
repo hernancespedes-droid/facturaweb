@@ -53,14 +53,81 @@ final class ConfiguracionController
         return Response::redirect(url('/configuracion#logo'));
     }
 
-    /** @param array<int,array<string,mixed>> $lista */
-    private static function form(array $lista, array $errores, int $status = 200): Response
+    /** Apariencia: nombre, color y opciones del logo (Apariencia::guardar valida). */
+    public static function guardarApariencia(Request $req, array $params): Response
+    {
+        $err = Apariencia::guardar($req->post, Auth::id());
+        if ($err !== []) {
+            return self::form(Configuracion::listar(), [], 422, $err, $req->post);
+        }
+        Session::flash('ok', 'Apariencia guardada.');
+        return Response::redirect(url('/configuracion#apariencia'));
+    }
+
+    public static function subirLogoPantalla(Request $req, array $params): Response
+    {
+        $f = $req->files['logo'] ?? null;
+        if (!is_array($f) || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            Session::flash('error', is_array($f) && in_array($f['error'] ?? 0, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+                ? 'La imagen pesa más de lo que acepta el hosting (' . ini_get('upload_max_filesize') . ').' : 'Elegí la imagen del logo.');
+            return Response::redirect(url('/configuracion#apariencia'));
+        }
+        $err = Apariencia::guardarLogoPantalla((string) $f['tmp_name'], Auth::id());
+        Session::flash($err === null ? 'ok' : 'error', $err ?? 'Logo de la pantalla guardado.');
+        return Response::redirect(url('/configuracion#apariencia'));
+    }
+
+    public static function quitarLogoPantalla(Request $req, array $params): Response
+    {
+        Apariencia::quitarLogoPantalla();
+        Session::flash('ok', 'Se quitó el logo de la pantalla: vuelve a verse el de los comprobantes.');
+        return Response::redirect(url('/configuracion#apariencia'));
+    }
+
+    /** El logo que va en pantalla. Con ?v= (la versión) el navegador lo guarda un año. */
+    public static function marcaLogo(Request $req, array $params): Response
+    {
+        $c = Apariencia::claveLogo();
+        return self::imagen($c === null ? null : Apariencia::datos($c), $req);
+    }
+
+    public static function marcaIcono(Request $req, array $params): Response
+    {
+        if (Apariencia::claveLogo() === null) {
+            return self::imagen(null, $req);
+        }
+        $i = Apariencia::datos(Apariencia::IMG_ICONO);
+        if ($i === null) { // logo cargado antes de la 0.31.0: el ícono se hace la primera vez
+            Apariencia::regenerarIcono(null);
+            $i = Apariencia::datos(Apariencia::IMG_ICONO);
+        }
+        return self::imagen($i, $req);
+    }
+
+    /** @param array{tipo:string,datos:string}|null $img */
+    private static function imagen(?array $img, Request $req): Response
+    {
+        if ($img === null || !in_array($img['tipo'], ['image/png', 'image/jpeg'], true)) {
+            return new Response(404, '', ['Content-Type' => 'text/plain; charset=utf-8', 'Cache-Control' => 'no-store']);
+        }
+        $cache = isset($req->query['v']) ? 'public, max-age=31536000, immutable' : 'public, max-age=300';
+        return new Response(200, $img['datos'], ['Content-Type' => $img['tipo'], 'Cache-Control' => $cache, 'X-Content-Type-Options' => 'nosniff']);
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $lista
+     * @param array<string,string> $erroresApariencia
+     * @param array<string,mixed>|null $apariencia lo que se mandó (para no perderlo si hay error)
+     */
+    private static function form(array $lista, array $errores, int $status = 200, array $erroresApariencia = [], ?array $apariencia = null): Response
     {
         return Response::html(View::render('configuracion/index', [
             'title' => 'Configuración',
             'nav' => 'configuracion',
             'lista' => $lista,
             'errores' => $errores,
+            'erroresApariencia' => $erroresApariencia,
+            'apariencia' => $apariencia,
         ]), $status);
     }
 }

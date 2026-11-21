@@ -4,9 +4,12 @@
 ?>
 <section class="auth">
     <div class="card auth-card">
+        <?php $logoUrl = \App\Modules\Configuracion\Apariencia::urlLogo(); $nombreCliente = \App\Modules\Configuracion\Apariencia::nombre(); ?>
         <div class="auth-brand">
-            <p class="auth-sub">Factura<b>Web</b></p>
-            <p class="eyebrow">Organización &amp; Sistemas</p>
+            <?php if ($logoUrl !== null): ?><img src="<?= e($logoUrl) ?>" alt="<?= e(\App\Modules\Configuracion\Apariencia::nombreSistema()) ?>" class="<?= \App\Modules\Configuracion\Apariencia::logoPlaca() ? 'brand-logo-placa' : '' ?>"><?php endif; ?>
+            <?php if ($nombreCliente !== ''): ?><p class="auth-sub auth-cliente"><?= e($nombreCliente) ?></p>
+            <?php elseif ($logoUrl === null): ?><p class="auth-sub">Factura<b>Web</b></p><?php endif; ?>
+            <?php if (!\App\Modules\Configuracion\Apariencia::personalizada()): ?><p class="eyebrow">Organización &amp; Sistemas</p><?php endif; /* con marca propia, O&S firma al pie */ ?>
         </div>
         <h1>Ingresar</h1>
         <?php if ($error !== null): ?>

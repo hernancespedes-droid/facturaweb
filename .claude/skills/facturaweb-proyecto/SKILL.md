@@ -130,6 +130,12 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
    Facturación → Cambio de mercadería (`/cambios`, permiso `cambios.hacer`): se lee el código o el número, se elige qué devuelve y qué se lleva y **solo se cobra la diferencia**. El cambio es un comprobante interno `CM` (letra X, `ctact.tico` 5, `subdiario.cambio_de`, `estadistica.linea_origen`): devuelve stock, saca stock, no es fiscal.
 5. **Modo Kiosco** — HECHA en 0.22.0 (D-50): `parametros.kiosco` («Habilitar modo Kiosco»), permiso `kiosco.usar` por rol (Roles → Kiosco), `/kiosco` con tarjetas de productos (stock por depósito, rubros, pistola) y carrito siempre visible (localStorage); «Cobrar» arma un presupuesto (`origen = kiosco`) y sigue el flujo de «Cómo se paga» del presupuesto; `/kiosco/emitir` solo emite presupuestos del kiosco. **Con esto el pedido de mostrador está completo.**
 
+## Apariencia por cliente (Hernán, 21/11/2026, versión 0.31.0)
+
+- Pedido: que cada cliente personalice su cuenta y su logo se vea en todo el sistema. **Decisión de Hernán: la marca del cliente arriba (logo, nombre, color) y «FacturaWeb · Organización & Sistemas» al pie.**
+- Hecho en 0.31.0: Sistema → Configuración → Apariencia (`Configuracion/Apariencia`), migración 0031. Sin ramas ni copias: todo en la base de cada instalación. Pendiente: verla o fijarla desde el panel del master.
+- Numeración coordinada entre hilos del 21/11: 0.30.0 actualización automática de base (0030), 0.31.0 apariencia (0031), 0.32.0 importadores Excel/CSV/TXT (0032).
+
 ## Pedido de Hernán del 19/11 (orden: 0.23.1 renombre → 0.24.0 ticket/A4 → 0.25.0 caja → 0.26.0 kiosco orden y precio → 0.27.0 Mercado Pago → 0.28.0 padrón IIBB → 0.29.0 alta por CUIT)
 
 - Respuestas de Hernán: renombre solo visible (HECHO 0.23.1); precio en kiosco con privilegio; ticket con QR+CAE solo si es ARCA, internos «no válido como factura»; **caja**: permiso por rol para movimientos manuales (por omisión Master y Administrador), **tope por omisión de $ 10.000.000 en Parámetros**, arqueos por turno y cambio de cajero; **Mercado Pago**: cuenta del cliente por instalación, QR y link de pago, y **transferencia** como forma de pago tipo billetera que diga «transferencia»; **padrón IIBB**: ARBA y AGIP, aplica percepciones automáticamente si están cargadas, con una pregunta en Parámetros «¿percibe?» (el cliente puede dejar de ser agente aunque tenga datos cargados).
