@@ -412,7 +412,7 @@ final class Importador
             $existente = $hay[0] ?? null;
         }
         if ($existente === null && $codigo === null && ($f['razon_social'] ?? '') !== '' && (($f['cuit'] ?? '') === '' || !Valida::cuit($f['cuit']))) {
-            // Sin código ni CUIT: el mismo nombre es el mismo cliente (así volver a importar el archivo no lo duplica). DECISIÓN D-71, aprobada por Hernán.
+            // Sin código ni CUIT: el mismo nombre es el mismo cliente (así volver a importar el archivo no lo duplica). DECISIÓN D-81, aprobada por Hernán.
             $this->repetida('r' . mb_strtolower($f['razon_social']), 'El cliente «' . $f['razon_social'] . '»');
             $st = $this->pdo->prepare('SELECT codigo, iva, cuit FROM clientes WHERE razon_social = ? AND cuit IS NULL ORDER BY activo DESC, codigo LIMIT 1');
             $st->execute([$f['razon_social']]);
@@ -771,7 +771,7 @@ final class Importador
     }
 
     /**
-     * El cliente del comprobante: por código, después por CUIT, después por razón social (exacta); si no está y se pidió, se crea. DECISIÓN D-70, aprobada por Hernán.
+     * El cliente del comprobante: por código, después por CUIT, después por razón social (exacta); si no está y se pidió, se crea. DECISIÓN D-80, aprobada por Hernán.
      *
      * @param array<string,string> $f
      * @return array<string,mixed>

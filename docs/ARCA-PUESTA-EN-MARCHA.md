@@ -31,6 +31,10 @@ php bin/afip-csr.php --cuit=20114993191 --org="ioszpe enrique daniel" --cn="orga
 4. **Certificado propio para la web:** no usar el del escritorio (ARCA da un solo ticket de acceso por certificado y se trabarían).
    Si ARCA rechaza el CSR por el país, regenerar con `--pais=ar`.
 
+5. **Padrón para el alta de clientes por CUIT (0.37.0):** ARCA → **Administrador de relaciones de clave fiscal** → **Nueva relación** →
+   servicio **«Consulta de constancia de inscripción»** (`ws_sr_constancia_inscripcion`) → representante: el certificado de la web (alias OYS).
+   Se prueba en Sistema → ARCA → «Probar conexión» (paso «Padrón»). Sin esto la factura anda igual; la ventana «Nuevo cliente» avisa y se carga a mano.
+
 ## 2. Punto de venta propio de la web
 
 ARCA → **Administración de puntos de venta y domicilios** → **A/B/M de puntos de venta** → agregar uno con sistema

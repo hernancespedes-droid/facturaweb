@@ -38,7 +38,7 @@ description: Contexto, decisiones y estado del proyecto FacturaWeb (facturador w
 | 4 | Cta. cte. y cheques (recibos, imputación, ajustes, cartera) | **Hecha: versión 0.10.0** (nota `docs/entregas/0.10.0-etapa4-cuenta-corriente.md`); falta la prueba de Hernán, confirmar D-28…D-32 y que los recibos viajen al VFP |
 | 5 | Listados (subdiario, cobranzas, deuda, Libro IVA digital) a Excel | **Casi hecha**: subdiario de IVA ventas en pantalla/Excel (0.4.2) e **impreso para el libro** (0.15.0), cobranzas/deuda/cheques (0.10.0), **Libro IVA Digital ventas (0.11.0)**; falta probar el libro en el Portal IVA |
 | 6 | Pase a producción OYS: histórico completo, control de saldos contra VFP, capacitación | Pendiente |
-| 7 | Producto: alta de instalaciones, licencia de suscripción, actualización masiva | **En curso (0.29.0)**: oys.orgysis.site = sitio master; Instalaciones de clientes (alta, cliente en el master para facturar, suscripción aviso/sin emitir/bloqueada, baja con copia, módulos por cliente, dos carpetas main/estable con «Pasar a clientes»); importadores Excel/CSV/TXT hechos en 0.33.0; falta renovación automática de licencias |
+| 7 | Producto: alta de instalaciones, licencia de suscripción, actualización masiva | **En curso (0.29.0)**: oys.orgysis.site = sitio master; Instalaciones de clientes (alta, cliente en el master para facturar, suscripción aviso/sin emitir/bloqueada, baja con copia, módulos por cliente, dos carpetas main/estable con «Pasar a clientes»); importadores Excel/CSV/TXT hechos en 0.38.0; falta renovación automática de licencias |
 
 Estimación con IA (horas de sesión): 1) 4–6 · 2) 6–9 · 3) 1,5–3 + WSFEX 3–5 · 4) 6–9 · 5) 4–6 · 6) 3–5 · 7) 2–4.
 Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de saldos migrados.
@@ -134,19 +134,20 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
 
 - Pedido: que cada cliente personalice su cuenta y su logo se vea en todo el sistema. **Decisión de Hernán: la marca del cliente arriba (logo, nombre, color) y «FacturaWeb · Organización & Sistemas» al pie.**
 - Hecho en 0.31.0: Sistema → Configuración → Apariencia (`Configuracion/Apariencia`), migración 0031. Sin ramas ni copias: todo en la base de cada instalación. Pendiente: verla o fijarla desde el panel del master.
-- Numeración coordinada entre hilos del 21/11: 0.30.0 actualización automática de base (0030), 0.31.0 apariencia (0031), 0.33.0 importadores Excel/CSV/TXT (0033; la 0.32.0 fue de listados).
+- Numeración coordinada entre hilos del 21/11: 0.30.0 actualización automática de base (0030), 0.31.0 apariencia (0031), 0.38.0 importadores Excel/CSV/TXT (0038; la 0.32.0 fue de listados y la 0.37.0 del padrón).
 
-## Importadores desde Excel, CSV y TXT (Hernán, 21/11/2026, versión 0.33.0)
+## Importadores desde Excel, CSV y TXT (Hernán, 21/11/2026, versión 0.38.0)
 
 - Para clientes nuevos que no vienen del VFP (el VFP sigue por el migrador DBF). Sistema → Importar datos: clientes, artículos y precios, stock (dejar en la cantidad o sumar)
   y comprobantes históricos (subdiario; lee directo la planilla «Mis comprobantes» de ARCA). Sin código por cliente: cada cliente guarda su **modelo** (qué columna va a cada dato, por título).
 - Siempre se puede **probar** sin grabar; con errores no se graba nada salvo «importar igual las demás». Volver a importar el mismo archivo no duplica.
-- Decisiones de Claude D-66 a D-71 (`docs/decisiones-pendientes.md`). Nota: `docs/entregas/0.33.0-importadores.md`. Pendiente: importar saldos iniciales de cuenta corriente sin
+- Decisiones de Claude D-66 a D-69, D-80 y D-81 (`docs/decisiones-pendientes.md`). Nota: `docs/entregas/0.38.0-importadores.md`. Pendiente: importar saldos iniciales de cuenta corriente sin
   comprobante (hoy: un comprobante con saldo), recibos y cheques; .xls viejo (hay que guardarlo como .xlsx/CSV).
 
 ## Pedido de Hernán del 19/11 (orden: 0.23.1 renombre → 0.24.0 ticket/A4 → 0.25.0 caja → 0.26.0 kiosco orden y precio → 0.27.0 Mercado Pago → 0.28.0 padrón IIBB → 0.29.0 alta por CUIT)
 
 - Respuestas de Hernán: renombre solo visible (HECHO 0.23.1); precio en kiosco con privilegio; ticket con QR+CAE solo si es ARCA, internos «no válido como factura»; **caja**: permiso por rol para movimientos manuales (por omisión Master y Administrador), **tope por omisión de $ 10.000.000 en Parámetros**, arqueos por turno y cambio de cajero; **Mercado Pago**: cuenta del cliente por instalación, QR y link de pago, y **transferencia** como forma de pago tipo billetera que diga «transferencia»; **padrón IIBB**: ARBA y AGIP, aplica percepciones automáticamente si están cargadas, con una pregunta en Parámetros «¿percibe?» (el cliente puede dejar de ser agente aunque tenga datos cargados).
+- **0.37.0 HECHA (D-70…D-72, pedido de Hernán 21/11): alta de clientes desde el CUIT** con el padrón de ARCA (constancia de inscripción `ws_sr_constancia_inscripcion`, `Arca/Padron`, caché `padron_consultas`): ventana «Nuevo cliente» en factura, presupuesto y kiosco (`public/assets/alta-cliente.js`, `views/clientes/_alta_rapida.php`), «Traer datos de ARCA» en la ficha, permiso `clientes.alta`. **Falta que Hernán asocie el servicio al certificado de la web en ARCA** (sin eso, la ventana explica y se carga a mano). El padrón IIBB (ARBA/AGIP) sigue pendiente.
 - **ARCA ya factura en real** (aviso de Hernán 19/11; el QR de ARCA verificado OK). Falta probar el ticket 80/50 con la impresora térmica y el Libro IVA Digital en el Portal IVA a fin de mes.
 - 0.27.0 HECHA (D-57, D-58): `Modules/MercadoPago` (adaptador `MercadoPago` con modos apagado/simulado/produccion, `MercadoPagoService`: el cobro queda pendiente y la venta se emite recién al acreditarse; webhook firmado `/api/v1/mercadopago/webhook`), formas de pago `MP` y `TR` (tipo 10), permisos `mercadopago.cobrar/administrar`, credenciales solo en `config/local.php`. **Sin probar con cuenta real.** Siguen: 0.28.0 padrón IIBB (ARBA y AGIP, aplica percepciones si «percibe» en Parámetros), 0.29.0 alta por CUIT.
 - 0.26.0 HECHA (D-55, D-56): `articulos.orden_kiosco`, permisos `kiosco.precio` / `kiosco.sin_stock` / `stock.vender_sin_stock` (`ReservasService::autorizaPorPermiso`), `KioscoService::fijarPrecios` (sin permiso, precio de lista siempre), informe Stock → Ventas sin stock. 

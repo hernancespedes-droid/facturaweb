@@ -1,4 +1,4 @@
-// Recorrido de navegador de los importadores (0.33.0): subir un CSV de clientes, columnas sugeridas solas, probar, importar,
+// Recorrido de navegador de los importadores (0.38.0): subir un CSV de clientes, columnas sugeridas solas, probar, importar,
 // comprobantes con el formato de «Mis comprobantes» de ARCA y la pantalla de columnas en el celular.
 //   node e2e/importacion.js   (usa e2e_admin de tests/fixtures/e2e_usuarios.php; limpia todo lo "E2E" al terminar)
 const { chromium, devices } = require('playwright');
