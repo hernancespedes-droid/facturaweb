@@ -18,6 +18,7 @@ $cliente = (int) ($info['cliente'] ?? 0);
         <h1><?= e($host) ?></h1>
     </div>
     <div class="acciones">
+        <a class="btn btn-ghost" href="<?= e(url('/instancias/usuarios?host=' . rawurlencode($host))) ?>">Usuarios y contraseñas</a>
         <?php if ($cliente > 0): ?>
             <a class="btn btn-ghost" href="<?= e(url('/clientes/' . $cliente)) ?>">Cliente <?= $cliente ?></a>
             <a class="btn" href="<?= e(url('/comprobantes/nuevo?tipo=FC&cliente=' . $cliente)) ?>">Facturarle</a>

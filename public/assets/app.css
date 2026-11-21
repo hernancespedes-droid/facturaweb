@@ -1622,3 +1622,8 @@ tr.mp-no-visto td { background: color-mix(in srgb, var(--ok) 10%, transparent); 
 .avisos-flotantes .alerta-warn { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); }
 .aviso-cerrar { position: absolute; top: 6px; right: 6px; border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; padding: 6px 8px; cursor: pointer; border-radius: 6px; }
 .aviso-cerrar:hover, .aviso-cerrar:focus-visible { color: var(--text); background: var(--panel-2); }
+
+/* Contraseña temporal recién generada desde el master (0.59.0, D-142). */
+.clave-temporal { border-color: color-mix(in srgb, var(--brand) 55%, transparent); background: color-mix(in srgb, var(--brand) 7%, var(--panel)); }
+.clave-temporal-valor { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.clave-temporal-valor code { font-size: 1.5rem; letter-spacing: .08em; padding: .3rem .7rem; user-select: all; overflow-wrap: anywhere; }

@@ -10,7 +10,9 @@ $cliente = $t['instancia_nombre'] !== '' ? $t['instancia_nombre'] : ($t['instanc
         <?= $t['prioridad'] === 'urgente' ? '<span class="badge badge-off">Urgente</span>' : '' ?> · <?= e(SoporteService::TIPOS[$t['tipo']] ?? $t['tipo']) ?></p>
     <p><b>Cliente:</b> <?= e($cliente) ?><?= $t['instancia'] !== '' ? ' (<a href="https://' . e($t['instancia']) . '" target="_blank" rel="noopener">' . e($t['instancia']) . '</a>)' : '' ?>
         · <b>Usuario:</b> <?= e($t['usuario']) ?><?= $t['usuario_mail'] !== '' ? ' &lt;' . e($t['usuario_mail']) . '&gt;' : ' <span class="muted">(sin mail: no se le avisa)</span>' ?>
-        · <b>Versión:</b> <?= e($t['version']) ?></p>
+        · <b>Versión:</b> <?= e($t['version']) ?>
+        <?php if ($t['instancia'] !== '' && is_file(\App\Modules\Instancias\InstanciasService::raiz() . '/' . $t['instancia'] . '/config.php')): ?>
+            · <a href="<?= e(url('/instancias/usuarios?host=' . rawurlencode($t['instancia']) . '&ticket=' . $id)) ?>">Usuarios y contraseñas de esta instalación</a><?php endif; ?></p>
     <?php if ($t['pantalla'] !== ''): ?><p><b>Pantalla:</b> <code><?= e($t['pantalla']) ?></code></p><?php endif; ?>
     <?php if (($t['aviso_error'] ?? null) !== null): ?><p class="texto-error">Último mail de aviso que no salió: <?= e($t['aviso_error']) ?></p><?php endif; ?>
 </section>

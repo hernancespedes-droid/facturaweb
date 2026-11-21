@@ -164,6 +164,68 @@ final class InstanciasController
         return Response::redirect(url('/instancias/editar?host=' . rawurlencode($host)));
     }
 
+    /** Usuarios de la base del cliente, para resetear la contraseña de quien la perdió (UsuariosCliente). */
+    public static function usuarios(Request $req, array $params): Response
+    {
+        if (!self::puede()) {
+            return new Response(403);
+        }
+        $host = (string) ($req->query['host'] ?? '');
+        try {
+            InstanciasService::config($host);
+        } catch (\RuntimeException) {
+            return new Response(404);
+        }
+        $error = null;
+        try {
+            $usuarios = UsuariosCliente::listar($host);
+        } catch (\PDOException $e) {
+            \App\App::registrar($e);
+            $usuarios = [];
+            $error = 'No se pudo leer la base del cliente (' . $e->getMessage() . ').';
+        }
+        $hecho = Session::get('instancias_clave');
+        Session::forget('instancias_clave');
+        return Response::html(View::render('instancias/usuarios', ['title' => 'Usuarios de ' . $host, 'nav' => 'instancias', 'host' => $host,
+            'usuarios' => $usuarios, 'error' => $error, 'hecho' => is_array($hecho) && ($hecho['host'] ?? '') === $host ? $hecho : null,
+            'historial' => UsuariosCliente::historial($host), 'tickets' => UsuariosCliente::ticketsAbiertos($host),
+            'ticket' => (int) ($req->query['ticket'] ?? 0), 'info' => json_decode((string) @file_get_contents(InstanciasService::raiz() . '/' . $host . '/info.json'), true) ?: []]));
+    }
+
+    public static function resetear(Request $req, array $params): Response
+    {
+        if (!self::puede()) {
+            return new Response(403);
+        }
+        $host = (string) ($req->post['host'] ?? '');
+        try {
+            InstanciasService::config($host);
+        } catch (\RuntimeException) {
+            return new Response(404);
+        }
+        $ticket = (int) ($req->post['ticket'] ?? 0);
+        $yo = Auth::usuario() ?? [];
+        try {
+            $r = UsuariosCliente::resetear($host, (int) ($req->post['usuario_id'] ?? 0), ['id' => (int) ($yo['id'] ?? 0), 'usuario' => (string) ($yo['usuario'] ?? '')],
+                !empty($req->post['reactivar'][(string) (int) ($req->post['usuario_id'] ?? 0)]), (string) ($req->post['motivo'] ?? ''), $ticket > 0 ? $ticket : null, (string) ($req->server['REMOTE_ADDR'] ?? ''));
+        } catch (\PDOException $e) {
+            \App\App::registrar($e);
+            $r = ['ok' => false, 'error' => 'No se pudo cambiar en la base del cliente (' . $e->getMessage() . ').'];
+        }
+        $volver = url('/instancias/usuarios?host=' . rawurlencode($host) . ($ticket > 0 ? '&ticket=' . $ticket : ''));
+        if (!$r['ok']) {
+            Session::flash('error', (string) $r['error']);
+            return Response::redirect($volver);
+        }
+        // Se muestra una sola vez en la pantalla siguiente (como «Resetear contraseña» de Usuarios) y se borra de la sesión.
+        Session::set('instancias_clave', ['host' => $host, 'usuario' => $r['usuario'], 'nombre' => $r['nombre'], 'clave' => $r['clave'],
+            'reactivado' => $r['reactivado'], 'ticket' => $ticket > 0 ? $ticket : null]);
+        if ($r['aviso'] !== null) {
+            Session::flash('error', (string) $r['aviso']);
+        }
+        return Response::redirect($volver);
+    }
+
     public static function copia(Request $req, array $params): Response
     {
         if (!self::puede()) {

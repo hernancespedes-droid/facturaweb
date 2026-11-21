@@ -15,6 +15,8 @@ return function (Router $r): void {
     $r->post('/instancias/actualizar', Guard::auth([C::class, 'actualizar']));
     $r->post('/instancias/principal', Guard::auth([C::class, 'principal']));
     $r->post('/instancias/cliente', Guard::auth([C::class, 'crearCliente']));
+    $r->get('/instancias/usuarios', Guard::auth([C::class, 'usuarios']));
+    $r->post('/instancias/usuarios/resetear', Guard::auth([C::class, 'resetear']));
     $r->get('/instancias/copia', Guard::auth([C::class, 'copia']));
     $r->post('/instancias/baja', Guard::auth([C::class, 'baja']));
     $r->post('/instancias/pasar-a-clientes', Guard::auth([C::class, 'pasarAClientes']));
