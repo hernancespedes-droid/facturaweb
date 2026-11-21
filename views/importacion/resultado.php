@@ -9,6 +9,9 @@ $verbo = $r['simulado'] ? 'se agregarían' : 'se agregaron';
 
 <?php if ($r['grabado']): ?>
 <div class="alerta alerta-ok" role="status">Listo: <?= $n($r['nuevas']) ?> nuevas y <?= $n($r['actualizadas']) ?> actualizadas de <b><?= e($r['nombre']) ?></b>.</div>
+<?php if (!empty($r['preguntar_precios'])): ?>
+<div class="alerta alerta-info" role="status">Cambió el costo de algunos artículos. <a class="btn" href="<?= e($r['preguntar_precios']) ?>">¿Actualizo los precios con los márgenes?</a></div>
+<?php endif; ?>
 <?php elseif (!$r['simulado'] && $r['con_error'] > 0): ?>
 <div class="alerta alerta-error" role="alert">Hay <?= $n($r['con_error']) ?> fila(s) con error: no se grabó nada. Corregí el archivo, o volvé a las columnas y tildá «importar igual las demás».</div>
 <?php elseif (!$r['simulado']): ?>

@@ -142,6 +142,11 @@ async function sinDesborde(page, texto) {
     ok((await page.textContent('[data-items-suma]')).includes('500,00'), 'suma los artículos');
     await page.check('input[name=forma][value=C]');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Grabar compra")')]);
+    // la compra cambió el costo: pregunta si se actualizan los precios (0.49) y «No» vuelve a la compra
+    if (page.url().includes('/articulos/precios?pendientes=1')) { // con márgenes cargados pregunta por los precios; «No» vuelve a la compra
+      ok((await page.textContent('.alerta-info')).includes('La compra cambió el costo de 1 artículo'), 'graba la compra con artículos y pregunta por los precios');
+      await Promise.all([page.waitForNavigation(), page.click('button[name=accion][value=no]')]);
+    }
     ok(page.url().includes('/compras/ver/'), 'graba la compra con artículos');
     ok(await page.locator('td', { hasText: 'E2E-ABONO' }).count() > 0, 'la compra muestra sus artículos');
 

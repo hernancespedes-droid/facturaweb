@@ -15,7 +15,7 @@ use App\Core\Orden;
 final class ListaCostos
 {
     private const ORDEN = ['codigo' => 'a.codigo', 'descripcion' => 'a.descripcion', 'rubro' => 'a.rubro IS NULL, a.rubro, a.subrubro', 'proveedor' => 'a.proveedor',
-        'costo' => 'a.costo', 'costo_pesos' => 'costo_pesos', 'precio' => 'precio', 'margen' => 'margen_real', 'ficha' => 'a.margen', 'actualizacion' => 'a.actualizacion'];
+        'costo' => 'a.costo', 'costo_pesos' => 'costo_pesos', 'precio' => 'precio', 'margen' => 'margen_real', 'ficha' => 'margen', 'actualizacion' => 'a.actualizacion'];
 
     /** @param array<string,string> $f @return array{0:string,1:array<int,mixed>} */
     private static function filtro(array $f, string $costoPesos, string $precio): array
@@ -77,18 +77,20 @@ final class ListaCostos
         $total = (int) $st->fetchColumn();
         $desde = max(0, ($pagina - 1) * $porPagina);
         $st = $pdo->prepare("SELECT a.codigo, a.descripcion, a.rubro, ru.descripcion AS rubro_desc, a.subrubro, a.proveedor, a.moneda, a.costo, {$costo} AS costo_pesos,
-                {$precio} AS precio, IF(a.costo > 0, ({$precio} - {$costo}) / {$costo} * 100, NULL) AS margen_real, a.margen, a.estado, a.actualizacion"
+                {$precio} AS precio, IF(a.costo > 0, ({$precio} - {$costo}) / {$costo} * 100, NULL) AS margen_real,
+                COALESCE(a.margen_l1, ru.margen_l1, (SELECT p.margen_l1 FROM parametros p WHERE p.id = 1), 0) AS margen, a.estado, a.actualizacion"
             . $from . $where . ' ORDER BY ' . Orden::sql(self::ORDEN, (string) ($f['orden'] ?? ''), 'a.codigo') . " LIMIT {$porPagina} OFFSET {$desde}");
         $st->execute($args);
         return ['filas' => $st->fetchAll(\PDO::FETCH_ASSOC), 'total' => $total, 'cotizacion' => $cot, 'fecha_cotizacion' => $fechaCot, 'con_iva' => $conIva];
     }
 
-    /** ¿Los precios de la ficha incluyen IVA? Lo que elija el usuario; por omisión, sí salvo que la empresa sea responsable inscripta. */
+    /** ¿Los precios de la ficha incluyen IVA? Lo que elija el usuario; por omisión, lo de Parámetros → Precios (D-131; el monotributo y el exento siempre finales). */
     public static function preciosConIva(array $f): bool
     {
         if (in_array($f['precios'] ?? '', ['neto', 'iva'], true)) {
             return $f['precios'] === 'iva';
         }
-        return (new \App\Modules\Comprobantes\ComprobantesService())->emisor()['condicion'] !== 'RI';
+        return (new \App\Modules\Comprobantes\ComprobantesService())->emisor()['condicion'] !== 'RI'
+            || (int) Db::pdo()->query('SELECT precios_con_iva FROM parametros WHERE id = 1')->fetchColumn() === 1;
     }
 }

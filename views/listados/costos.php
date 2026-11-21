@@ -11,7 +11,7 @@ $ver = ['' => 'Todos', 'sin_costo' => 'Sin costo cargado', 'bajo_costo' => 'Prec
     <div><p class="eyebrow">Listados</p><h1>Costos y márgenes</h1></div>
     <div class="acciones"><button type="button" class="btn btn-ghost" onclick="window.print()">Imprimir</button></div>
 </div>
-<p class="small muted no-imprimir">Costo de cada artículo pasado a pesos y el margen real sobre el costo con el precio de lista 1 (sin IVA), comparado con el margen cargado en la ficha.</p>
+<p class="small muted no-imprimir">Costo de cada artículo pasado a pesos y el margen real sobre el costo con el precio de lista 1 (sin IVA), comparado con el margen de la lista 1 (del artículo, su rubro o el general).</p>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros no-imprimir">
     <input type="search" name="q" value="<?= e($f['q'] ?? '') ?>" placeholder="Código o descripción" aria-label="Buscar">
     <?php include __DIR__ . '/_rubros.php'; ?>
@@ -36,7 +36,7 @@ $ver = ['' => 'Todos', 'sin_costo' => 'Sin costo cargado', 'bajo_costo' => 'Prec
     <div class="table-wrap"><table class="table table-cards">
         <thead><tr><?= th_orden('Código', 'codigo', $f, $u) ?><?= th_orden('Descripción', 'descripcion', $f, $u) ?><?= th_orden('Rubro', 'rubro', $f, $u) ?><?= th_orden('Proveedor', 'proveedor', $f, $u) ?>
             <th>Moneda</th><?= th_orden('Costo', 'costo', $f, $u, true) ?><?= th_orden('Costo en $', 'costo_pesos', $f, $u, true) ?><?= th_orden('Precio sin IVA', 'precio', $f, $u, true) ?>
-            <?= th_orden('Margen real', 'margen', $f, $u, true) ?><?= th_orden('Margen ficha', 'ficha', $f, $u, true) ?><th class="num">Diferencia</th><?= th_orden('Actualizado', 'actualizacion', $f, $u, true) ?></tr></thead>
+            <?= th_orden('Margen real', 'margen', $f, $u, true) ?><?= th_orden('Margen lista 1', 'ficha', $f, $u, true) ?><th class="num">Diferencia</th><?= th_orden('Actualizado', 'actualizacion', $f, $u, true) ?></tr></thead>
         <tbody>
         <?php foreach ($r['filas'] as $a): $real = $a['margen_real'] === null ? null : (float) $a['margen_real']; $bajo = $real !== null && $real < 0; ?>
             <tr><td data-label="Código" class="nw"><a href="<?= e(url('/articulos/ficha?codigo=' . rawurlencode((string) $a['codigo']))) ?>"><?= e($a['codigo']) ?></a></td>
@@ -48,7 +48,7 @@ $ver = ['' => 'Todos', 'sin_costo' => 'Sin costo cargado', 'bajo_costo' => 'Prec
                 <td data-label="Costo en $" class="num"><?= e($m($a['costo_pesos'])) ?></td>
                 <td data-label="Precio sin IVA" class="num"><?= e($m($a['precio'])) ?></td>
                 <td data-label="Margen real" class="num"><b class="<?= $bajo ? 'texto-error' : '' ?>"><?= e($pct($real)) ?></b><?= $bajo ? ' <span class="chip">bajo el costo</span>' : '' ?></td>
-                <td data-label="Margen ficha" class="num"><?= e($pct((float) $a['margen'])) ?></td>
+                <td data-label="Margen lista 1" class="num"><?= e($pct((float) $a['margen'])) ?></td>
                 <td data-label="Diferencia" class="num"><?= $real === null ? '—' : e(number_format($real - (float) $a['margen'], 1, ',', '.') . ' pts') ?></td>
                 <td data-label="Actualizado" class="nw"><?= $a['actualizacion'] ? e(date('d/m/Y', (int) strtotime($a['actualizacion']))) : '' ?></td></tr>
         <?php endforeach; ?>
