@@ -360,4 +360,62 @@ final class ComprasListados
             'centros' => $series, 'ventas' => array_values($ventas), 'compras' => $compras, 'conceptos' => $conceptos,
         ];
     }
+
+    /**
+     * Resultado simple, mes a mes: ventas sin IVA (de la estadística, como el tablero) menos compras y gastos (el costo cargado en compras).
+     * DECISIÓN D-128: es un resultado «de caja simple» para que el cliente vea si gana o pierde: no prorratea compras de mercadería que quedan en stock
+     *   ni amortizaciones; las notas de crédito restan. Con el permiso de costos se muestra además el margen de lo vendido (venta menos costo).
+     * @return array{meses:array<int,array<string,mixed>>,conceptos:array<int,array{nombre:string,importe:float}>,centros:array<int,array{nombre:string,importe:float}>,periodo:string,total:array<string,float>}
+     */
+    public static function resultado(string $periodo, int $meses = 12): array
+    {
+        $pdo = Db::pdo();
+        $ini = $periodo . '-01';
+        $fin = date('Y-m-t', (int) strtotime($ini));
+        $desde = date('Y-m-01', (int) strtotime($ini . ' -' . ($meses - 1) . ' months'));
+        $lista = [];
+        for ($i = 0; $i < $meses; $i++) {
+            $lista[] = date('Y-m', (int) strtotime($desde . ' +' . $i . ' months'));
+        }
+        $filas = [];
+        foreach ($lista as $ym) {
+            $filas[$ym] = ['mes' => $ym, 'ventas' => 0.0, 'costo_ventas' => 0.0, 'compras' => 0.0];
+        }
+        try {
+            $r = \App\Modules\Listados\Estadistica::resumen(['desde' => $desde, 'hasta' => $fin, 'agrupar' => 'mes']);
+            foreach ($r['filas'] as $x) {
+                if (isset($filas[$x['grupo']])) {
+                    $filas[$x['grupo']]['ventas'] = round((float) $x['neto'], 2);
+                    $filas[$x['grupo']]['costo_ventas'] = round((float) $x['costo'], 2);
+                }
+            }
+        } catch (\Throwable) {
+            // sin estadística: solo compras
+        }
+        $st = $pdo->prepare("SELECT DATE_FORMAT(fecha, '%Y-%m') AS ym, SUM(IF(tipo = 'NC', -1, 1) * costo) AS costo FROM compras WHERE estado = 'V' AND fecha BETWEEN ? AND ? GROUP BY ym");
+        $st->execute([$desde, $fin]);
+        foreach ($st->fetchAll() as $x) {
+            if (isset($filas[$x['ym']])) {
+                $filas[$x['ym']]['compras'] = round((float) $x['costo'], 2);
+            }
+        }
+        $tot = ['ventas' => 0.0, 'compras' => 0.0, 'resultado' => 0.0, 'costo_ventas' => 0.0];
+        foreach ($filas as &$f) {
+            $f['resultado'] = round($f['ventas'] - $f['compras'], 2);
+            $f['margen'] = abs($f['ventas']) > 0.005 ? round($f['resultado'] / $f['ventas'] * 100, 1) : null;
+            foreach (['ventas', 'compras', 'resultado', 'costo_ventas'] as $k) {
+                $tot[$k] += $f[$k];
+            }
+        }
+        unset($f);
+        $grupo = static function (string $join, string $nombre) use ($pdo, $ini, $fin): array {
+            $st = $pdo->prepare('SELECT ' . $nombre . ' AS nombre, SUM(' . self::SG . " * r.importe) AS importe FROM compras c JOIN compras_reparto r ON r.compra_id = c.id {$join}
+                WHERE c.estado = 'V' AND c.fecha BETWEEN ? AND ? GROUP BY 1 ORDER BY importe DESC");
+            $st->execute([$ini, $fin]);
+            return array_map(static fn ($x) => ['nombre' => (string) $x['nombre'], 'importe' => round((float) $x['importe'], 2)], $st->fetchAll());
+        };
+        return ['periodo' => $periodo, 'meses' => array_values($filas), 'total' => array_map(static fn ($v) => round($v, 2), $tot),
+            'conceptos' => $grupo('JOIN conceptos_gasto cg ON cg.id = r.concepto_id', 'cg.nombre'),
+            'centros' => $grupo('JOIN centros_costo cc ON cc.id = r.centro_id LEFT JOIN centros_costo pc ON pc.id = cc.padre_id', 'COALESCE(pc.nombre, cc.nombre)')];
+    }
 }

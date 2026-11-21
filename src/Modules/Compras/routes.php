@@ -5,6 +5,7 @@ use App\Http\Router;
 use App\Modules\Auth\Guard;
 use App\Modules\Compras\ComprasController as C;
 use App\Modules\Compras\OrdenesPagoController as OP;
+use App\Modules\Compras\ComprasArcaController as AR;
 
 // Compras y centros de costos (0.43.0). compras.ver: tablero, compras y listados. compras.cargar: cargar y anular compras, proveedores.
 // compras.pagar: pagar compras a cuenta corriente. compras.centros: centros, presupuestos, conceptos y plantillas. El Excel va por la misma ruta (?excel=1).
@@ -27,6 +28,14 @@ return function (Router $r): void {
     $r->post('/compras/pagos/mail', Guard::permiso('compras.pagar', [OP::class, 'mail']));
     $r->post('/compras/pagos/anular', Guard::permiso('compras.pagar', [OP::class, 'anular']));
     $r->get('/compras/proveedores/cuenta', Guard::permiso('compras.ver', [OP::class, 'cuenta']));
+    // QR, Mis Comprobantes de ARCA, Libro IVA Digital de compras y resultado del mes (0.47.0)
+    $r->get('/compras/qr', Guard::permiso('compras.cargar', [AR::class, 'qr']));
+    $r->post('/compras/qr', Guard::permiso('compras.cargar', [AR::class, 'qrLeer']));
+    $r->get('/compras/mis-comprobantes', Guard::permiso('compras.ver', [AR::class, 'misComprobantes']));
+    $r->post('/compras/mis-comprobantes', Guard::permiso('compras.cargar', [AR::class, 'misComprobantesImportar']));
+    $r->post('/compras/desde-arca', Guard::permiso('compras.cargar', [AR::class, 'desdeArca']));
+    $r->get('/compras/iva/libro', Guard::permiso('compras.ver', [AR::class, 'libroIva']));
+    $r->get('/compras/resultado', Guard::permiso('compras.ver', [AR::class, 'resultado']));
     $r->get('/compras/a-pagar', Guard::permiso('compras.ver', [C::class, 'aPagar']));
     $r->get('/compras/analisis', Guard::permiso('compras.ver', [C::class, 'analisis']));
     $r->get('/compras/presupuesto', Guard::permiso('compras.ver', [C::class, 'presupuesto']));

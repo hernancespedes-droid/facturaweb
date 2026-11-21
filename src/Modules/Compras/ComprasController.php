@@ -86,7 +86,7 @@ final class ComprasController
     // ------------------------------------------------------------------ cargar
 
     /** @param array<string,mixed> $datos @param array<string,string> $errores */
-    private static function form(array $datos, array $errores, ?string $operacion, int $status = 200): Response
+    public static function form(array $datos, array $errores, ?string $operacion, int $status = 200): Response
     {
         $cs = new CentrosService();
         $prov = (int) ($datos['proveedor'] ?? 0) > 0 ? (new ProveedoresService())->obtener((int) $datos['proveedor']) : null;

@@ -32,7 +32,10 @@ $opcConceptos = static function (int $sel) use ($conceptos): string {
     return $h;
 };
 ?>
-<div class="page-head"><div><p class="eyebrow">Compras</p><h1>Nueva compra o gasto</h1></div></div>
+<div class="page-head"><div><p class="eyebrow">Compras</p><h1>Nueva compra o gasto</h1></div>
+    <div class="acciones"><a class="btn btn-ghost" href="<?= e(url('/compras/qr')) ?>">Leer el QR de la factura</a></div></div>
+<?php if (!empty($d['avisos_arca']) && is_array($d['avisos_arca'])): ?><div class="alerta alerta-info" role="status"><b><?= ($d['origen_arca'] ?? '') === 'qr' ? 'Datos leídos del QR de la factura.' : 'Datos de Mis Comprobantes de ARCA.' ?></b>
+    <?php foreach ($d['avisos_arca'] as $av): ?><br><?= e((string) $av) ?><?php endforeach; ?></div><?php endif; ?>
 <?php if (isset($errores['general'])): ?><div class="alerta alerta-error" role="alert"><?= e($errores['general']) ?></div><?php endif; ?>
 <?php if ($errores !== [] && !isset($errores['general'])): ?><div class="alerta alerta-error" role="alert">Revisá lo marcado en rojo.</div><?php endif; ?>
 

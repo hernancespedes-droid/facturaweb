@@ -59,7 +59,8 @@ async function sinDesborde(page, texto) {
     await page.goto(BASE + '/compras/nueva');
     await Promise.all([page.waitForNavigation(), page.click('text=+ Nuevo proveedor')]);
     await page.fill('input[name=razon_social]', nombre);
-    await page.fill('input[name=cuit]', cuitAlAzar());
+    const cuitProv = cuitAlAzar();
+    await page.fill('input[name=cuit]', cuitProv);
     await page.fill('input[name=plazo_dias]', '30');
     await Promise.all([page.waitForNavigation(), page.click('form.card button[type=submit]')]);
     ok(page.url().includes('/compras/nueva?proveedor='), 'después del alta vuelve a la carga');
@@ -144,6 +145,24 @@ async function sinDesborde(page, texto) {
     ok(page.url().includes('/compras/ver/'), 'graba la compra con artículos');
     ok(await page.locator('td', { hasText: 'E2E-ABONO' }).count() > 0, 'la compra muestra sus artículos');
 
+    // QR de la factura: el enlace pegado abre la compra con los datos (en una compu sin cámara queda pegar el enlace)
+    await page.goto(BASE + '/compras/qr');
+    const qrDatos = { ver: 1, fecha: new Date().toISOString().slice(0, 10), cuit: Number(cuitProv.replace(/\D/g, '')), ptoVta: 12, tipoCmp: 6, nroCmp: 4567,
+      importe: 2420, moneda: 'PES', ctz: 1, tipoDocRec: 80, nroDocRec: 0, tipoCodAut: 'E', codAut: 70417054367476 };
+    await page.fill('[data-qr-texto]', 'https://www.afip.gob.ar/fe/qr/?p=' + Buffer.from(JSON.stringify(qrDatos)).toString('base64'));
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Abrir la compra")')]);
+    ok(await page.locator('text=Datos leídos del QR').count() === 1, 'el QR abre la compra');
+    ok((await page.inputValue('input[name=numero]')) === '4567' && (await page.inputValue('select[name=letra]')) === 'B', 'con el número y la letra del QR');
+    ok((await page.inputValue('input[name=importe]')) === '2.420,00', 'en una factura B propone el total');
+    await page.screenshot({ path: path.join(CAPTURAS, 'compras-qr.png'), fullPage: true });
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Grabar compra")')]);
+    ok(page.url().includes('/compras/ver/'), 'graba la compra leída del QR');
+    await page.goto(BASE + '/compras/resultado');
+    ok(await page.locator('h1', { hasText: 'Resultado del mes' }).count() === 1 && await page.locator('svg.g-svg rect').count() > 0, 'resultado del mes con gráfico');
+    await page.screenshot({ path: path.join(CAPTURAS, 'compras-resultado.png'), fullPage: true });
+    await page.goto(BASE + '/compras/mis-comprobantes');
+    ok(await page.locator('input[type=file][name=archivo]').count() === 1, 'Mis Comprobantes pide el archivo de ARCA');
+
     // Gasto sin comprobante, pagado por otro medio
     await page.goto(BASE + '/compras/nueva');
     await page.type('#prov-proveedor', nombre.slice(0, 18));
@@ -175,7 +194,7 @@ async function sinDesborde(page, texto) {
     const pc = await cel.newPage();
     pc.on('pageerror', e => errores.push(e.message));
     await login(pc, 'e2e_admin');
-    for (const r of ['/compras', '/compras/nueva', '/compras/lista', '/compras/a-pagar', '/compras/centros', '/compras/pagos', '/compras/pagos/nueva', '/compras/proveedores/cuenta']) {
+    for (const r of ['/compras', '/compras/nueva', '/compras/lista', '/compras/a-pagar', '/compras/centros', '/compras/pagos', '/compras/pagos/nueva', '/compras/proveedores/cuenta', '/compras/qr', '/compras/mis-comprobantes', '/compras/resultado']) {
       await pc.goto(BASE + r);
       await sinDesborde(pc, 'celular ' + r);
     }

@@ -48,3 +48,17 @@ $sig = date('Y-m', strtotime($periodo . '-01 +1 month'));
             <th class="num"><?= e($m($t['perc_iva'])) ?></th><th class="num"><?= e($m($t['perc_iibb'])) ?></th><th class="num"><?= e($m($t['perc_otras'])) ?></th><th class="num"><?= e($m($t['total'])) ?></th></tr></tfoot>
     </table></div>
 <?php endif; ?>
+<?php if ($r['filas'] !== []): $lib = \App\Modules\Compras\LibroIvaCompras::generar($periodo); $ul = url('/compras/iva/libro') . '?periodo=' . $periodo . '&archivo='; ?>
+<section class="card">
+    <h2>Libro IVA Digital (compras)</h2>
+    <p class="small">Los dos archivos para importar en el Portal IVA de ARCA (Libro IVA Digital → Compras → Importar): <?= (int) $lib['cantidad'] ?> comprobantes del período.
+        <?php if ($lib['sin_comprobante'] > 0): ?><?= (int) $lib['sin_comprobante'] ?> gastos sin comprobante o tiques no van.<?php endif; ?></p>
+    <?php if ($lib['problemas'] !== []): ?><div class="alerta alerta-warn" role="status"><b>Corregí antes de importar:</b>
+        <?php foreach (array_slice($lib['problemas'], 0, 20) as $pb): ?><br><?= e($pb) ?><?php endforeach; ?><?= count($lib['problemas']) > 20 ? '<br>…' : '' ?></div><?php endif; ?>
+    <div class="toolbar">
+        <?php if (class_exists(\ZipArchive::class)): ?><a class="btn" href="<?= e($ul . 'zip') ?>">Bajar los dos (ZIP)</a><?php endif; ?>
+        <a class="btn btn-ghost" href="<?= e($ul . 'cbte') ?>">Comprobantes</a>
+        <a class="btn btn-ghost" href="<?= e($ul . 'alicuotas') ?>">Alícuotas</a>
+    </div>
+</section>
+<?php endif; ?>
