@@ -85,6 +85,11 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `Modules/MercadoPago/MercadoPago` es el único que habla con la API (modos `mp.modo` apagado|simulado|produccion en `config/local.php`; `MercadoPago::$transporte` permite probar sin red). `MercadoPagoService`: «Cobrar con Mercado Pago» deja la venta en un cobro `pendiente` (tabla `mp_cobros`, sin claves) y **solo se emite al acreditarse el pago** (`confirmar` → `emitir`, idempotente con el token como clave de operación; `CajaService::$actor` pone al cajero cuando no hay sesión). La notificación va por `/api/v1/mercadopago/webhook` (sin sesión ni CSRF) con firma HMAC verificada y el pago se vuelve a consultar en Mercado Pago. `ComprobantesService::armar` acepta `$autorizoPrevio` (solo desde el código) para la autorización de stock ya resuelta.
 
+## Estadística, stock y costos (0.32.0)
+
+`Listados/Estadistica` (agrupar por artículo, rubro, cliente, vendedor, mes…, ranking y detalle; `/listados/estadistica` y `/listados/rentabilidad`), `Listados/ListaCostos` (`/listados/costos`), `Stock/MovimientosStock` (trazabilidad con saldo corrido y resumen; `/stock/movimientos`) y `Stock/Existencias` (por depósito a una fecha; `/stock/existencias`).
+**Todo INSERT nuevo en `estadistica` lleva `costo`** (unitario en pesos al emitir, `Listados\Costos::unitarios`, D-62). Costos, márgenes y valorizados solo con el permiso `listados.costos`. La estadística no cuenta la factura de un presupuesto (`solo_subdiario = 1`) y resta NC/NX (D-63).
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.
@@ -107,7 +112,7 @@ bloqueada, en `Licencia::exigirParaEmitir`, `Guard::auth` y `App::handle`). **Fu
 (claves `apariencia.*` en `configuracion`, fuera de la lista general; imágenes `logo_web`/`logo_pantalla`/`logo_icono` en `imagenes`, servidas por `/marca/logo` y `/marca/icono` sin sesión).
 Colores nuevos en `app.css`: siempre con `var(--brand)` / `color-mix(...)` y `var(--on-brand)` para el texto sobre el color, nunca el azul fijo. La marca del cliente va arriba y O&S firma al pie.
 
-## Base que se actualiza sola (0.31.1)
+## Base que se actualiza sola (0.32.1)
 
 `Core\AutoMigracion::asegurar()` corre al principio de `App::handle` (salvo `/salud` e `/instalar`): si la firma (versión + migraciones) no coincide con
 `sistema_estado`, aplica lo pendiente con el candado `fw_migrar:<base>` (el mismo de «Aplicar cambios»); los demás pedidos ven «Actualizando» (503). Si falla, no bloquea: queda en
