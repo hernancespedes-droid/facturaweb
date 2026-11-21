@@ -65,7 +65,7 @@ final class Configuracion
         return Db::pdo()->query(
             'SELECT c.clave, c.valor, c.tipo, c.descripcion, c.actualizado_en, u.nombre AS actualizado_por
                FROM configuracion c LEFT JOIN usuarios u ON u.id = c.actualizado_por
-              WHERE c.clave NOT LIKE \'interno.%\' ORDER BY c.clave'
+              WHERE c.clave NOT LIKE \'interno.%\' AND c.clave NOT LIKE \'apariencia.%\' ORDER BY c.clave'
         )->fetchAll();
     }
 

@@ -4,11 +4,18 @@
 use App\Core\Menu;
 use App\Core\Session;
 use App\Modules\Auth\Auth;
+use App\Modules\Configuracion\Apariencia;
 
 $usuarioActual = Auth::usuario();
 $flashes = Session::takeFlash();
 $navActual = $nav ?? '';
-$nombreSistema = (string) \App\Core\Config::get('app.name', 'FacturaWeb');
+// Apariencia de esta instalación (Sistema → Configuración → Apariencia): logo, color y nombre del cliente.
+$nombreSistema = Apariencia::nombreSistema();
+$nombreCliente = Apariencia::nombre();
+$logoUrl = Apariencia::urlLogo();
+$iconoUrl = Apariencia::urlIcono();
+$estiloMarca = Apariencia::estilo();
+$colorMarca = Apariencia::color();
 // Tema que eligió este usuario en este navegador (botón Dark/Light): cookie "tema", claro si no eligió.
 $tema = ($_COOKIE['tema'] ?? '') === 'oscuro' ? 'oscuro' : 'claro';
 $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] === 0;
@@ -19,13 +26,20 @@ $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] =
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e(($title ?? '') !== '' ? $title . ' - ' : '') ?><?= e($nombreSistema) ?></title>
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
+    <?php if ($estiloMarca !== ''): ?><style><?= $estiloMarca /* solo #rrggbb validados */ ?></style><?php endif; ?>
+    <?php if ($colorMarca !== null): ?><meta name="theme-color" content="<?= e($colorMarca) ?>"><?php endif; ?>
+    <?php if ($iconoUrl !== null): ?><link rel="icon" type="image/png" href="<?= e($iconoUrl) ?>"><?php endif; ?>
     <script src="<?= e(asset('assets/app.js')) ?>" defer></script>
     <script src="<?= e(asset('assets/grilla.js')) ?>" defer></script>
 </head>
 <body class="menu-horizontal">
     <header class="topbar">
         <div class="wrap topbar-in">
-            <a class="brand" href="<?= e(url('/')) ?>"><span>Factura<b>Web</b></span></a>
+            <a class="brand<?= $logoUrl !== null ? ' brand-con-logo' : '' ?>" href="<?= e(url('/')) ?>" title="<?= e($nombreSistema) ?>">
+                <?php if ($logoUrl !== null): ?><img class="brand-logo<?= Apariencia::logoPlaca() ? ' brand-logo-placa' : '' ?>" src="<?= e($logoUrl) ?>" alt="<?= e($nombreSistema) ?>"><?php endif; ?>
+                <?php if ($nombreCliente !== ''): ?><span class="brand-nombre"><?= e($nombreCliente) ?></span>
+                <?php elseif ($logoUrl === null): ?><span>Factura<b>Web</b></span><?php endif; ?>
+            </a>
             <?php if ($usuarioActual !== null): ?>
                 <input type="checkbox" id="menu-toggle" class="menu-toggle" aria-label="Abrir menú">
                 <label for="menu-toggle" class="menu-btn" aria-hidden="true"><span></span><span></span><span></span></label>
@@ -66,5 +80,6 @@ $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] =
         <?php endforeach; ?>
         <?= $content ?>
     </main>
+    <footer class="pie wrap">Factura<b>Web</b> · Organización &amp; Sistemas</footer>
 </body>
 </html>

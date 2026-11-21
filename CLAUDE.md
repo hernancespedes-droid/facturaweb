@@ -101,6 +101,12 @@ la principal solo responde en las direcciones de `storage/instancias/_principal.
 bloqueada, en `Licencia::exigirParaEmitir`, `Guard::auth` y `App::handle`). **Función nueva que no tienen que tener todos: declararla en `Core\Modulos::LISTA` con `por_omision => false`**
 (menú + prefijos de rutas); el master siempre tiene todo. Nunca romper el formato del config de los clientes: la carpeta de clientes puede estar una versión atrás.
 
+## Apariencia por cliente (0.31.0)
+
+`Configuracion/Apariencia`: nombre, color (`--brand`, `--brand-2`, `--on-brand` calculados con contraste) y logo de cada instalación en barra, ingreso, pestaña y portal
+(claves `apariencia.*` en `configuracion`, fuera de la lista general; imágenes `logo_web`/`logo_pantalla`/`logo_icono` en `imagenes`, servidas por `/marca/logo` y `/marca/icono` sin sesión).
+Colores nuevos en `app.css`: siempre con `var(--brand)` / `color-mix(...)` y `var(--on-brand)` para el texto sobre el color, nunca el azul fijo. La marca del cliente va arriba y O&S firma al pie.
+
 ## Estructura y convenciones
 
 - Módulos en `src/Modules/<Nombre>/` con `routes.php`; vistas en `views/<modulo>/`. Handlers `function (Request $req, array $params): Response`.
