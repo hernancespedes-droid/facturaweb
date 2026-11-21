@@ -234,6 +234,6 @@ Pendiente: verificar con una cuenta real si las transferencias bancarias al CVU 
 
 ## Gogolinas (segundo cliente, 21/11/2026)
 
-- Instalación `gogolinas.orgysis.site` (cliente 3212 del master), misma carpeta que el master por ahora. VFP en `G:\gogolinas` (raíz = facturador; `bup\` = venta en negro con `datosbup.dbc`; `Data\` = sistema de proveedores, no se migra).
-- Migración: maestros desde la raíz (zip de 23 tablas, 5 MB); lo en negro con la casilla «en negro → Presupuestos» (0.45.0, D-93). Los 54 fiscales viejos (hasta abr-2025) no se traen (decisión de Hernán): su `fe_clave` no entra en INT.
+- Instalación `gogolinas.orgysis.site` (cliente 3212 del master), misma carpeta que el master por ahora. VFP en `G:\gogolinas` (raíz = facturador; `bup\` = comprobantes no ARCA con `datosbup.dbc`; `Data\` = sistema de proveedores, no se migra).
+- Migración: maestros desde la raíz (zip de 23 tablas, 5 MB); los comprobantes no ARCA con la casilla «no ARCA → Presupuestos» (0.45.0, D-93). Los 54 fiscales viejos (hasta abr-2025) no se traen (decisión de Hernán): su `fe_clave` no entra en INT.
 - Stock del VFP no confiable (664 de 1.562 artículos en negativo): se arranca con conteo (`conteo_stock_gogolinas.xlsx` → Sistema → Importar datos → Stock, «dejar en esa cantidad»).
