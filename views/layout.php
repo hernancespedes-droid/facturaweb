@@ -42,7 +42,7 @@ if ($alDia && Menu::visible('mp_ingresos')) {
     <script src="<?= e(asset('assets/grilla.js')) ?>" defer></script>
     <script src="<?= e(asset('assets/carga.js')) ?>" defer></script>
 </head>
-<body class="menu-horizontal">
+<body class="menu-<?= $usuarioActual !== null ? Apariencia::menu() : 'horizontal' ?>">
     <header class="topbar">
         <div class="wrap topbar-in">
             <a class="brand<?= $logoUrl !== null ? ' brand-con-logo' : '' ?>" href="<?= e(url('/')) ?>" title="<?= e($nombreSistema) ?>">

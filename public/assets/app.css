@@ -491,7 +491,7 @@ details.plegable[open] > summary { margin-bottom: 12px; }
     flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 2px; padding: 12px 10px 16px; overflow-y: auto;
     background: var(--panel); border-right: 1px solid var(--line);
   }
-  body.menu-lateral > main { margin-left: 230px; }
+  body.menu-lateral > main, body.menu-lateral > .pie { margin-left: 230px; width: auto; }
   body.menu-lateral .menu > a, body.menu-lateral .menu-sub a { padding: 9px 10px; }
   body.menu-lateral .menu-sep { flex: 1; min-height: 14px; }
   body.menu-lateral .empresa-switch select, body.menu-lateral .menu .btn { width: 100%; }

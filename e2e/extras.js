@@ -15,6 +15,7 @@ const RECORRIDOS = [
   'soporte.js',
   'precios.js',
   'carga.js',
+  'menu.js',
 ];
 
 for (const archivo of RECORRIDOS) {

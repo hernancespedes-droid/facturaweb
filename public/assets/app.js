@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
   //    pantalla actual; lo que el usuario abre o cierra se recuerda en este navegador.
   var grupos = document.querySelectorAll('.menu-grupo');
   var desplegable = function () { return !document.body.classList.contains('menu-lateral') && window.matchMedia('(min-width: 821px)').matches; };
-  var PLEGADO = 'oesteparts-menu-plegado';
+  var PLEGADO = 'facturaweb-menu-plegado';
   var guardado = {};
   try { guardado = JSON.parse(localStorage.getItem(PLEGADO) || '{}') || {}; } catch (e) { guardado = {}; }
   var boton = function (g) { return g.querySelector('.menu-grupo-btn'); };

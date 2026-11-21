@@ -39,6 +39,7 @@ $apColorPropio = $ap !== null ? !empty($ap['color_propio']) : $apColor !== null;
 $apColorValor = $ap !== null ? (string) ($ap['color'] ?? '') : (string) ($apColor ?? '#2f6bff');
 $apLogo = $ap !== null ? !empty($ap['logo_en_pantalla']) : Apariencia::logoEnPantalla();
 $apPlaca = $ap !== null ? !empty($ap['logo_placa']) : Apariencia::logoPlaca();
+$apMenu = $ap !== null ? (string) ($ap['menu'] ?? '') : Apariencia::menu();
 $apSugerido = '';
 try { $apSugerido = (string) (\App\Core\Db::pdo()->query('SELECT empresa FROM parametros WHERE id = 1')->fetchColumn() ?: ''); } catch (\PDOException) {}
 $apUrl = Apariencia::urlLogo();
@@ -69,6 +70,14 @@ $apUrl = Apariencia::urlLogo();
             <label class="check"><input type="checkbox" name="logo_en_pantalla" value="1" <?= $apLogo ? 'checked' : '' ?>> Mostrar el logo en la barra y en el ingreso</label>
             <label class="check"><input type="checkbox" name="logo_placa" value="1" <?= $apPlaca ? 'checked' : '' ?>> Poner el logo sobre una placa blanca (para logos oscuros con el fondo oscuro)</label>
         </div>
+        <fieldset class="field">
+            <legend>Menú</legend>
+            <?php foreach (Apariencia::MENUS as $v => $t): ?>
+                <label class="check"><input type="radio" name="menu" value="<?= e($v) ?>" <?= $apMenu === $v ? 'checked' : '' ?>> <?= e($t) ?></label>
+            <?php endforeach; ?>
+            <?php if (isset($apErr['menu'])): ?><p class="field-error"><?= e($apErr['menu']) ?></p><?php endif; ?>
+            <p class="small muted">Lateral: las opciones quedan siempre a la vista a la izquierda y cada grupo se pliega con su título (cada usuario elige cuáles deja abiertos). En el celular el menú es siempre el botón ☰.</p>
+        </fieldset>
         <button class="btn" type="submit">Guardar apariencia</button>
     </form>
 
