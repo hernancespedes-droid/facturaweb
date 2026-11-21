@@ -12,11 +12,12 @@
   var DENOMINACIONES = [20000, 10000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1];
   var REDONDEOS = [100, 500, 1000, 2000, 10000, 20000];
 
+  // Importe en formato argentino: el punto es de miles y la coma decimal (la máscara de app.js convierte en coma el punto que se teclea),
+  // así que todo punto se descarta: 25.000 → 25000, 25.000,50 → 25000,5, 1.234.567 → 1234567, 2,5 → 2,5 (y «2.5000» a medio formatear → 25000).
   function num(txt) {
     txt = String(txt || '').replace(/[\s$]/g, '');
     if (txt === '') return 0;
-    if (txt.indexOf(',') >= 0) txt = txt.replace(/\./g, '').replace(',', '.');
-    else if (/^\d{1,3}(\.\d{3})+$/.test(txt)) txt = txt.replace(/\./g, '');
+    txt = txt.replace(/\./g, '').replace(',', '.');
     var v = parseFloat(txt);
     return isNaN(v) ? 0 : v;
   }

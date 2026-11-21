@@ -558,6 +558,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   var esImporte = function (el) { return el && el.tagName === 'INPUT' && el.getAttribute('inputmode') === 'decimal'; };
   var grupos = function (d) { return d.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); };
+  // En captura (0.57.0): el formato se aplica ANTES que los demás manejadores de «input» (cobro, recibo, cambio, kiosco…), así leen
+  // siempre el valor ya formateado. En burbuja, un manejador del propio formulario leía el valor a medio escribir («2.5000» → 2,5).
   document.addEventListener('input', function (ev) {
     var el = ev.target;
     if (!esImporte(el) || ev.isComposing) return;
@@ -583,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var i = neg ? 1 : 0, cuenta = 0;
     while (i < nuevo.length && cuenta < antes) { if (/[\d,]/.test(nuevo.charAt(i))) cuenta++; i++; }
     try { el.setSelectionRange(i, i); } catch (e) { /* tipo de campo sin selección */ }
-  });
+  }, true);
   document.addEventListener('change', function (ev) {
     if (esImporte(ev.target) && /,$/.test(ev.target.value)) ev.target.value = ev.target.value.slice(0, -1);
   }, true);

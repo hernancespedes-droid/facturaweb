@@ -255,6 +255,14 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await imp0.press('Enter');
     await page.waitForTimeout(300);
     ok(page.url() === urlRevisar && await page.isVisible('dialog[data-cobro]'), 'Enter con plata de menos no emite');
+    // 0.57.0 (D-140): tecleando de verdad (con la máscara de miles) el resumen lee lo mismo que se ve; antes «25000» se leía 2,50
+    for (const [tecleo, visto, pagado] of [['25000', '25.000', '25.000,00'], ['25000,50', '25.000,50', '25.000,50'], ['1234567', '1.234.567', '1.234.567,00'], ['2,5', '2,5', '2,50']]) {
+      await imp0.fill('');
+      await imp0.pressSequentially(tecleo);
+      ok((await imp0.inputValue()) === visto && (await page.textContent('[data-r-pagado]')).includes('$ ' + pagado), `tecleando ${tecleo} se ve ${visto} y paga $ ${pagado}`);
+    }
+    ok(await page.evaluate(() => ['25.000', '25000', '25.000,50', '1.234.567', '2,5', '2.5000'].map(Vuelto.num).join('|')) === '25000|25000|25000.5|1234567|2.5|25000', 'Vuelto.num lee el formato argentino (25.000, 25000, 25.000,50, 1.234.567, 2,5)');
+    await imp0.fill('1.000');
     // medios mezclados: 1.000 en efectivo + otro medio; lo que pasa del total es el vuelto, aunque el medio no dé vuelto (informativo)
     await page.click('[data-cobro] [data-agregar-pago]');
     const imp1 = page.locator('[data-cobro] [data-importe-pago]').nth(1);
