@@ -55,6 +55,19 @@ $pct = static fn ($a) => rtrim(rtrim(number_format((float) $a, 2, ',', ''), '0')
     </section>
 </div>
 
+<?php if ($c['items'] !== []): ?>
+    <h2>Artículos</h2>
+    <div class="table-wrap"><table class="table">
+        <thead><tr><th>Artículo</th><th>Descripción</th><th class="num">Cantidad</th><th class="num">Costo unitario</th><th class="num">Total</th><th>Depósito</th><th>Stock</th></tr></thead>
+        <tbody><?php foreach ($c['items'] as $it): ?>
+            <tr><td><?= e($it['articulo']) ?></td><td><?= e($it['descripcion']) ?></td><td class="num"><?= e(rtrim(rtrim(number_format((float) $it['cantidad'], 3, ',', '.'), '0'), ',')) ?></td>
+                <td class="num"><?= e(number_format((float) $it['costo_unitario'], 2, ',', '.')) ?><?= $it['costo_anterior'] !== null ? '<br><small class="muted">antes ' . e(number_format((float) $it['costo_anterior'], 2, ',', '.')) . '</small>' : '' ?></td>
+                <td class="num"><?= e($m($it['total'])) ?></td><td><?= e((string) ($it['deposito'] ?? '')) ?></td>
+                <td class="small"><?= $it['stock_mov_id'] !== null ? ($c['tipo'] === 'NC' ? 'Salió' : 'Entró') : '<span class="muted">No mueve</span>' ?></td></tr>
+        <?php endforeach; ?></tbody>
+    </table></div>
+<?php endif; ?>
+
 <?php if ($c['pagos'] !== []): ?>
     <h2>Pagos</h2>
     <div class="table-wrap"><table class="table">
@@ -79,16 +92,23 @@ $pct = static fn ($a) => rtrim(rtrim(number_format((float) $a, 2, ',', ''), '0')
     </div>
 <?php endif; ?>
 
-<?php if ($vigente && $puedePagar && $c['forma'] === 'C' && $c['tipo'] !== 'NC' && (float) $c['saldo'] > 0.005): ?>
-    <form method="post" action="<?= e(url('/compras/pagar')) ?>" class="card form-grid grid-campos"><?= csrf_field() ?>
-        <h2>Pagar</h2>
-        <input type="hidden" name="compra" value="<?= (int) $c['id'] ?>">
-        <label class="field"><span>Medio</span><select name="medio"><?php foreach (S::MEDIOS as $k => $t): ?><option value="<?= e($k) ?>"><?= e($t) ?></option><?php endforeach; ?></select></label>
-        <label class="field"><span>Importe</span><input name="importe" value="<?= e($m($c['saldo'])) ?>" inputmode="decimal" data-decimales="2"></label>
-        <label class="field"><span>Fecha</span><input name="fecha" value="<?= e(date('d/m/Y')) ?>" inputmode="numeric"></label>
-        <label class="field"><span>Detalle</span><input name="detalle" maxlength="120" placeholder="Banco, número de operación…"></label>
-        <div class="acciones"><button class="btn" type="submit">Registrar pago</button></div>
-    </form>
+<?php if ($c['ordenes'] !== []): ?>
+    <h2>Órdenes de pago</h2>
+    <div class="table-wrap"><table class="table">
+        <thead><tr><th>Orden</th><th>Fecha</th><th class="num">Importe aplicado</th></tr></thead>
+        <tbody><?php foreach ($c['ordenes'] as $o): ?>
+            <tr<?= $o['estado'] === 'A' ? ' class="muted"' : '' ?>><td><a href="<?= e(url('/compras/pagos/ver/' . (int) $o['id'])) ?>"><?= e(\App\Modules\Compras\OrdenesPagoService::numeroVisible((int) $o['numero'])) ?></a><?= $o['estado'] === 'A' ? ' <span class="pill pill-mal">anulada</span>' : '' ?></td>
+                <td><?= e(fecha($o['fecha'])) ?></td><td class="num"><?= e($m($o['importe'])) ?></td></tr>
+        <?php endforeach; ?></tbody>
+    </table></div>
+<?php endif; ?>
+
+<?php if ($vigente && $puedePagar && $c['forma'] === 'C' && (float) $c['saldo'] > 0.005): ?>
+    <div class="card">
+        <h2><?= $c['tipo'] === 'NC' ? 'Descontar en un pago' : 'Pagar' ?></h2>
+        <p class="small muted"><?= $c['tipo'] === 'NC' ? 'La nota de crédito se descuenta en la próxima orden de pago a este proveedor.' : 'Se paga con una orden de pago: podés sumar otras facturas del proveedor, descontar notas de crédito y pagar con efectivo, transferencia, cheques o retenciones.' ?></p>
+        <a class="btn" href="<?= e(url('/compras/pagos/nueva?compra=' . (int) $c['id'])) ?>">Nueva orden de pago</a>
+    </div>
 <?php endif; ?>
 
 <?php if ($vigente && $puedeCargar): ?>
@@ -102,5 +122,5 @@ $pct = static fn ($a) => rtrim(rtrim(number_format((float) $a, 2, ',', ''), '0')
             <button class="btn btn-ghost" type="submit">Anular compra</button>
         </form>
     </div>
-    <p class="small muted">Anular deja la compra en los listados como anulada; si se pagó con efectivo de la caja, el dinero vuelve con un contra-asiento en tu turno.</p>
+    <p class="small muted">Anular deja la compra en los listados como anulada; si se pagó con efectivo de la caja, el dinero vuelve con un contra-asiento en tu turno, y si sumó stock, el stock vuelve. Si está en una orden de pago, primero hay que anular la orden.</p>
 <?php endif; ?>

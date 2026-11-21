@@ -33,7 +33,7 @@ $paginas = (int) ceil($r['total'] / max(1, $porPagina));
                 <td data-label="Condición" class="small"><?= e(P::CONDICIONES[(int) $x['iva']] ?? '') ?></td>
                 <td data-label="Localidad"><?= e($x['localidad']) ?></td>
                 <td data-label="Centro y concepto" class="small"><?= e(trim(($x['centro'] ?? '') . ' · ' . ($x['concepto'] ?? ''), ' ·')) ?></td>
-                <td data-label="Le debemos" class="num"><?= abs((float) $x['saldo']) > 0.005 ? '<b>' . e($m($x['saldo'])) . '</b>' : '' ?></td></tr>
+                <td data-label="Le debemos" class="num"><?= abs((float) $x['saldo']) > 0.005 ? '<a href="' . e(url('/compras/proveedores/cuenta?proveedor=' . (int) $x['id'])) . '"><b>' . e($m($x['saldo'])) . '</b></a>' : '' ?></td></tr>
         <?php endforeach; ?></tbody>
     </table></div>
     <?= paginador($pagina, $paginas, $r['total'], $porPagina, $link) ?>

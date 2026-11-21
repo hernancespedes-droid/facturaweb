@@ -18,7 +18,7 @@ use PDO;
  */
 final class StockService
 {
-    public const ORIGENES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X', 'CM' => 'Cambio', 'INGRESO' => 'Ingreso', 'EGRESO' => 'Egreso', 'AJUSTE' => 'Ajuste', 'TRANSF' => 'Transferencia'];
+    public const ORIGENES = ['FC' => 'Factura', 'NC' => 'Nota de crédito', 'PR' => 'Presupuesto', 'NX' => 'Nota de crédito X', 'CM' => 'Cambio', 'INGRESO' => 'Ingreso', 'EGRESO' => 'Egreso', 'AJUSTE' => 'Ajuste', 'TRANSF' => 'Transferencia', 'COMPRA' => 'Compra', 'DEVCOMPRA' => 'Devolución a proveedor', 'ANUCOMPRA' => 'Compra anulada'];
 
     private PDO $pdo;
 

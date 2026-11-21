@@ -49,7 +49,7 @@ final class ComprasTest extends ComprobantesTestCase
     private function limpiar(): void
     {
         $pdo = Db::pdo();
-        foreach (['compras', 'compras_iva', 'compras_tributos', 'compras_reparto', 'compras_adjuntos', 'compras_pagos'] as $t) {
+        foreach (['compras', 'compras_iva', 'compras_tributos', 'compras_reparto', 'compras_adjuntos', 'compras_pagos', 'compras_items', 'ordenes_pago', 'ordenes_pago_imputaciones', 'ordenes_pago_medios'] as $t) {
             $pdo->exec("DELETE FROM {$t}");
         }
         $pdo->exec("DELETE FROM proveedores WHERE razon_social LIKE 'T %'");

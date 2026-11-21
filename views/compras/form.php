@@ -4,6 +4,7 @@ use App\Modules\Compras\ComprasService as S;
 /**
  * Nueva compra o gasto. @var array $datos @var array<string,string> $errores @var ?array $prov @var ?array $provElegir @var array $centros @var array $conceptos
  * @var array $plantillas @var int $general @var int $conceptoOmision @var bool $inscripta @var string $operacion @var ?array $turno @var bool $puedeCentros
+ * @var array $depositos @var bool $stockActivo
  */
 $d = $datos;
 $v = static fn (string $k, string $def = '') => e((string) ($d[$k] ?? $def));
@@ -107,6 +108,38 @@ $opcConceptos = static function (int $sel) use ($conceptos): string {
         <?= $err('total_impreso') ?>
     </section>
 
+    <?php $items = array_values(array_filter(is_array($d['items'] ?? null) ? $d['items'] : [], static fn ($x) => is_array($x) && trim((string) ($x['articulo'] ?? '')) !== ''));
+    $conArt = ($d['con_articulos'] ?? '') === '1'; ?>
+    <section class="card">
+        <h2>Artículos</h2>
+        <label class="check"><input type="checkbox" name="con_articulos" value="1" <?= $conArt ? 'checked' : '' ?> data-con-articulos> Con artículos: suman stock<?= $stockActivo ? '' : ' (el control de stock está apagado: solo se registran)' ?> y actualizan el costo</label>
+        <div data-articulos<?= $conArt ? '' : ' hidden' ?>>
+            <div class="table-wrap"><table class="table compra-items" data-grilla="no">
+                <thead><tr><th>Artículo</th><th class="num">Cantidad</th><th class="num" data-costo-titulo>Costo unitario</th><th class="num">Total</th><th></th></tr></thead>
+                <tbody data-filas-items>
+                <?php foreach (($items !== [] ? $items : [[]]) as $i => $it): ?>
+                    <tr><td data-label="Artículo"><div class="campo-con-boton"><input name="items[<?= $i ?>][articulo]" value="<?= e((string) ($it['articulo'] ?? '')) ?>" maxlength="60" autocomplete="off"
+                            placeholder="Código, barras, SKU o descripción" data-buscador-url="<?= e(url('/compras/buscar-articulo')) ?>" data-item-articulo data-con-lista aria-label="Artículo"><?= icono_lista('data-lista-articulos', 'artículos') ?></div></td>
+                        <td data-label="Cantidad" class="num"><input name="items[<?= $i ?>][cantidad]" value="<?= e((string) ($it['cantidad'] ?? '')) ?>" inputmode="decimal" data-item-cant aria-label="Cantidad"></td>
+                        <td data-label="Costo unitario" class="num"><input name="items[<?= $i ?>][costo]" value="<?= e((string) ($it['costo'] ?? '')) ?>" inputmode="decimal" data-item-costo aria-label="Costo unitario"></td>
+                        <td data-label="Total" class="num" data-item-total></td>
+                        <td><button type="button" class="btn btn-ghost btn-sm" data-quitar-item aria-label="Quitar">✕</button></td></tr>
+                <?php endforeach; ?>
+                </tbody>
+                <tfoot><tr><th colspan="3">Suma de los artículos</th><th class="num" data-items-suma></th><th></th></tr></tfoot>
+            </table></div>
+            <?= $err('items') ?>
+            <div class="toolbar">
+                <button type="button" class="btn btn-ghost btn-sm" data-agregar-item>+ Agregar artículo</button>
+                <?php if (count($depositos) > 1): ?>
+                    <label class="field"><span>Depósito</span><select name="deposito"><?php foreach ($depositos as $dep): ?><option value="<?= (int) $dep['id'] ?>" <?= (int) ($d['deposito'] ?? 0) === (int) $dep['id'] || ((int) ($d['deposito'] ?? 0) === 0 && (int) $dep['principal'] === 1) ? 'selected' : '' ?>><?= e($dep['nombre']) ?></option><?php endforeach; ?></select></label>
+                <?php endif; ?>
+                <label class="check"><input type="checkbox" name="actualizar_costo" value="1" <?= ($d['actualizar_costo'] ?? '1') === '1' ? 'checked' : '' ?>> Actualizar el costo de los artículos</label>
+            </div>
+            <p class="small muted">El costo unitario va <span data-costo-aclara>sin IVA</span>. Los artículos no tienen que sumar todo el comprobante (puede haber flete u otros gastos). Una nota de crédito con artículos los descuenta del stock.</p>
+        </div>
+    </section>
+
     <section class="card">
         <h2>¿Para qué parte del negocio?</h2>
         <div class="form-grid grid-campos" data-simple<?= $rep !== [] ? ' hidden' : '' ?>>
@@ -173,4 +206,5 @@ $opcConceptos = static function (int $sel) use ($conceptos): string {
 </form>
 <script src="<?= e(asset('assets/ventana-lista.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/cliente-picker.js')) ?>" defer></script>
+<script src="<?= e(asset('assets/buscador.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/compras.js')) ?>" defer></script>

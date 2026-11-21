@@ -94,11 +94,55 @@ async function sinDesborde(page, texto) {
     ok(await page.locator('text=Compra grabada').count() > 0, 'avisa que se grabó');
     ok(await page.locator('table >> text=60 %').count() > 0, 'muestra el reparto');
 
-    // Pagar desde la compra
-    await page.selectOption('select[name=medio]', 'T');
-    await page.fill('input[name=importe]', '240');
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Registrar pago")')]);
-    ok(await page.locator('text=Pago registrado').count() > 0, 'registra un pago parcial');
+    // Orden de pago desde la compra: queda tildada con su saldo; se paga una parte por transferencia
+    await Promise.all([page.waitForNavigation(), page.click('a:has-text("Nueva orden de pago")')]);
+    ok(page.url().includes('/compras/pagos/nueva'), 'abre la orden de pago');
+    ok(await page.locator('[data-tilde]').first().isChecked(), 'la compra viene tildada');
+    ok((await page.textContent('[data-op-apagar]')).includes('1.240,00'), 'a pagar = saldo de la compra');
+    ok((await page.inputValue('[data-medio-imp]')) === '1.240,00', 'con un solo medio propone lo que hay que pagar');
+    await page.fill('[data-imp="deb"]', '1000');
+    ok((await page.inputValue('[data-medio-imp]')) === '1.000,00', 'si cambia lo que se paga, el medio acompaña');
+    await page.selectOption('[data-medio]', 'T');
+    ok(await page.locator('[data-cheque]').isHidden(), 'la transferencia no pide cheque');
+    await page.click('[data-agregar-medio]');
+    await page.selectOption('[data-medio] >> nth=1', 'R');
+    ok(await page.locator('select[name="medios[1][retencion]"]').isVisible(), 'la retención pide cuál es');
+    await page.selectOption('select[name="medios[1][retencion]"]', 'GAN');
+    await page.fill('input[name="medios[1][numero]"]', 'CERT-1');
+    await page.fill('input[name="medios[1][importe]"]', '100');
+    await page.fill('input[name="medios[0][importe]"]', '900');
+    ok(await page.locator('[data-op-dif] .pill-ok').count() === 1, 'cierra justo');
+    await page.screenshot({ path: path.join(CAPTURAS, 'compras-orden-pago.png'), fullPage: true });
+    const provId = await page.inputValue('form#form-op input[name=proveedor]');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir orden de pago")')]);
+    ok(page.url().includes('/compras/pagos/ver/'), 'emite y muestra la orden');
+    ok(await page.locator('text=emitida').count() > 0, 'avisa que se emitió');
+    const pdf = await page.request.get(new URL(await page.locator('a:has-text("PDF")').first().getAttribute('href'), page.url()).href);
+    ok((pdf.headers()['content-type'] || '').includes('pdf'), 'la orden sale en PDF');
+    await page.goto(BASE + '/compras/pagos');
+    ok(await page.locator('td', { hasText: nombre }).count() > 0, 'el listado de órdenes de pago la muestra');
+    await page.goto(BASE + '/compras/proveedores/cuenta?proveedor=' + provId);
+    ok((await page.textContent('main')).includes('240,00'), 'la cuenta corriente muestra lo que falta pagar');
+
+    // Compra con artículos: el buscador propone y el usuario elige; la suma no puede pasar el neto
+    await page.goto(BASE + '/compras/nueva?proveedor=' + provId);
+    await page.fill('input[name=punto_venta]', '4');
+    await page.fill('input[name=numero]', String((Date.now() + 7) % 90000000));
+    await page.fill('input[name="neto[21]"]', '500');
+    await page.check('[data-con-articulos]');
+    ok(await page.locator('[data-articulos]').isVisible(), 'tildar «Con artículos» muestra los renglones');
+    await page.type('[data-item-articulo]', 'E2E-ABO');
+    await page.waitForSelector('.sugerencias li');
+    await page.click('.sugerencias li >> nth=0');
+    ok((await page.inputValue('[data-item-articulo]')) === 'E2E-ABONO', 'elige el artículo de la lista');
+    ok((await page.inputValue('[data-item-cant]')) === '1', 'propone cantidad 1');
+    await page.fill('[data-item-cant]', '5');
+    await page.fill('[data-item-costo]', '100');
+    ok((await page.textContent('[data-items-suma]')).includes('500,00'), 'suma los artículos');
+    await page.check('input[name=forma][value=C]');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Grabar compra")')]);
+    ok(page.url().includes('/compras/ver/'), 'graba la compra con artículos');
+    ok(await page.locator('td', { hasText: 'E2E-ABONO' }).count() > 0, 'la compra muestra sus artículos');
 
     // Gasto sin comprobante, pagado por otro medio
     await page.goto(BASE + '/compras/nueva');
@@ -131,7 +175,7 @@ async function sinDesborde(page, texto) {
     const pc = await cel.newPage();
     pc.on('pageerror', e => errores.push(e.message));
     await login(pc, 'e2e_admin');
-    for (const r of ['/compras', '/compras/nueva', '/compras/lista', '/compras/a-pagar', '/compras/centros']) {
+    for (const r of ['/compras', '/compras/nueva', '/compras/lista', '/compras/a-pagar', '/compras/centros', '/compras/pagos', '/compras/pagos/nueva', '/compras/proveedores/cuenta']) {
       await pc.goto(BASE + r);
       await sinDesborde(pc, 'celular ' + r);
     }

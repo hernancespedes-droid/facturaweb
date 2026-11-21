@@ -41,7 +41,6 @@ $tramos = ['por_vencer' => 'Por vencer', 'd30' => 'Vencido 1 a 30 días', 'd60' 
     </table></div>
 
     <h2>Comprobantes por vencimiento</h2>
-    <?php if ($puedePagar && $turno === null): ?><p class="small"><span class="pill pill-warn">Sin turno de caja</span> para pagar en efectivo abrí tu turno en <a href="<?= e(url('/caja')) ?>">Mi caja</a>.</p><?php endif; ?>
     <div class="table-wrap"><table class="table table-cards">
         <thead><tr><th>Vence</th><th>Proveedor</th><th>Comprobante</th><th class="num">Saldo</th><th>Estado</th><?php if ($puedePagar): ?><th>Pagar</th><?php endif; ?></tr></thead>
         <tbody><?php foreach ($r['detalle'] as $x): $d = (int) $x['dias']; ?>
@@ -50,14 +49,10 @@ $tramos = ['por_vencer' => 'Por vencer', 'd30' => 'Vencido 1 a 30 días', 'd60' 
                 <td data-label="Comprobante"><a href="<?= e(url('/compras/ver/' . (int) $x['id'])) ?>"><?= e(S::titulo($x)) ?></a></td>
                 <td data-label="Saldo" class="num"><b><?= e($m($x['saldo_signo'])) ?></b></td>
                 <td data-label="Estado"><?= $x['tipo'] === 'NC' ? '<span class="pill">a favor</span>' : ($d > 0 ? '<span class="pill pill-mal">vencida hace ' . $d . ' días</span>' : ($d >= -7 ? '<span class="pill pill-warn">' . ($d === 0 ? 'vence hoy' : 'vence en ' . -$d . ' días') . '</span>' : '<span class="pill pill-ok">al día</span>')) ?></td>
-                <?php if ($puedePagar): ?><td data-label="Pagar"><?php if ($x['tipo'] !== 'NC'): ?>
-                    <form method="post" action="<?= e(url('/compras/pagar')) ?>" class="toolbar" style="margin:0"><?= csrf_field() ?>
-                        <input type="hidden" name="compra" value="<?= (int) $x['id'] ?>"><input type="hidden" name="volver" value="a-pagar">
-                        <select name="medio" aria-label="Medio"><?php foreach (S::MEDIOS as $k => $tt): ?><option value="<?= e($k) ?>" <?= $k === 'T' ? 'selected' : '' ?>><?= e($tt) ?></option><?php endforeach; ?></select>
-                        <button class="btn btn-sm" type="submit">Pagar todo</button></form><?php endif; ?></td><?php endif; ?></tr>
+                <?php if ($puedePagar): ?><td data-label="Pagar"><a class="btn btn-sm" href="<?= e(url('/compras/pagos/nueva?compra=' . (int) $x['id'])) ?>"><?= $x['tipo'] === 'NC' ? 'Descontar' : 'Pagar' ?></a></td><?php endif; ?></tr>
         <?php endforeach; ?></tbody>
     </table></div>
-    <p class="small muted">Las notas de crédito de proveedores se descuentan al pagar con las órdenes de pago (próxima entrega).</p>
+    <p class="small muted">Se paga con una orden de pago: ahí se pueden sumar otras facturas del mismo proveedor y descontar sus notas de crédito y anticipos.</p>
 <?php endif; ?>
 <script src="<?= e(asset('assets/ventana-lista.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/cliente-picker.js')) ?>" defer></script>

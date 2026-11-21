@@ -228,6 +228,64 @@
     proponerVence();
   }
 
+  // ---------------- artículos (suman stock y actualizan el costo)
+  var conArt = $('[data-con-articulos]'), bloqueArt = $('[data-articulos]'), filasItems = $('[data-filas-items]');
+  var moldeItem = filasItems.querySelector('tr').cloneNode(true), nItems = filasItems.children.length;
+  function itemsCalc() {
+    var suma = 0;
+    $$('tr', filasItems).forEach(function (tr) {
+      var t = r2(num($('[data-item-cant]', tr).value) * num($('[data-item-costo]', tr).value));
+      suma += t;
+      $('[data-item-total]', tr).textContent = t ? campo(t) : '';
+    });
+    $('[data-items-suma]').textContent = plata(r2(suma));
+    $('[data-costo-aclara]').textContent = discrimina() ? 'sin IVA' : 'con IVA (el comprobante no lo discrimina)';
+  }
+  function vistaArt() {
+    bloqueArt.hidden = !conArt.checked;
+    $$('input, select', bloqueArt).forEach(function (i) { i.disabled = !conArt.checked; });
+    itemsCalc();
+  }
+  conArt.addEventListener('change', vistaArt);
+  bloqueArt.addEventListener('input', function (ev) { if (ev.target.matches('[data-item-cant], [data-item-costo]')) itemsCalc(); });
+  bloqueArt.addEventListener('buscador:elegido', function (ev) {
+    var tr = ev.target.closest('tr'), c = $('[data-item-costo]', tr), q = $('[data-item-cant]', tr);
+    if (c.value === '' && ev.detail && ev.detail.costo) c.value = String(ev.detail.costo).replace('.', ',');
+    if (q.value === '') q.value = '1';
+    itemsCalc();
+    q.focus();
+  });
+  $('[data-agregar-item]').addEventListener('click', function () {
+    var tr = moldeItem.cloneNode(true);
+    $$('[name]', tr).forEach(function (el) { el.name = el.name.replace(/items\[\d+\]/, 'items[' + nItems + ']'); el.value = ''; });
+    $$('[data-buscador-etiqueta]', tr).forEach(function (el) { el.parentNode.removeChild(el); });
+    nItems++;
+    filasItems.appendChild(tr);
+    itemsCalc();
+    $('[data-item-articulo]', tr).focus();
+  });
+  bloqueArt.addEventListener('click', function (ev) {
+    var q = ev.target.closest('[data-quitar-item]');
+    if (q) {
+      var tr = q.closest('tr');
+      if (filasItems.children.length > 1) filasItems.removeChild(tr);
+      else $$('input', tr).forEach(function (i) { i.value = ''; });
+      itemsCalc();
+      return;
+    }
+    var lupa = ev.target.closest('[data-lista-articulos]');
+    if (lupa && window.VentanaLista) {
+      var inp = $('[data-item-articulo]', lupa.closest('tr'));
+      window.VentanaLista.articulos(inp.getAttribute('data-buscador-url'), function (a) {
+        inp.value = a.codigo;
+        inp.dispatchEvent(new CustomEvent('buscador:elegido', { bubbles: true, detail: a }));
+      });
+    }
+  });
+  tipo.addEventListener('change', itemsCalc);
+  letra.addEventListener('change', itemsCalc);
+  vistaArt();
+
   tipo.addEventListener('change', vista);
   letra.addEventListener('change', vista);
   if (!reparto.hidden) modoReparto(true); else modoReparto(false);

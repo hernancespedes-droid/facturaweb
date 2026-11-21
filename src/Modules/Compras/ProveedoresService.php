@@ -38,7 +38,8 @@ final class ProveedoresService
         $total = (int) $st->fetchColumn();
         $orden = Orden::sql(self::ORDEN, (string) ($f['orden'] ?? ''), 'p.razon_social, p.codigo');
         $st = $this->pdo->prepare("SELECT p.*, cc.nombre AS centro, cg.nombre AS concepto,
-                (SELECT COALESCE(SUM(IF(c.tipo = 'NC', -c.saldo, c.saldo)), 0) FROM compras c WHERE c.proveedor_id = p.id AND c.estado = 'V' AND c.forma = 'C') AS saldo
+                ((SELECT COALESCE(SUM(IF(c.tipo = 'NC', -c.saldo, c.saldo)), 0) FROM compras c WHERE c.proveedor_id = p.id AND c.estado = 'V' AND c.forma = 'C')
+                 - (SELECT COALESCE(SUM(o.anticipo_saldo), 0) FROM ordenes_pago o WHERE o.proveedor_id = p.id AND o.estado = 'V')) AS saldo
             FROM proveedores p LEFT JOIN centros_costo cc ON cc.id = p.centro_id LEFT JOIN conceptos_gasto cg ON cg.id = p.concepto_id
             WHERE {$where} ORDER BY {$orden}" . ExcelListado::limite($f + ['pagina' => $pagina], $porPagina));
         $st->execute($params);
@@ -178,8 +179,9 @@ final class ProveedoresService
     /** Lo que se le debe (compras a cuenta corriente con saldo; las NC restan). */
     public function saldo(int $id): float
     {
-        $st = $this->pdo->prepare("SELECT COALESCE(SUM(IF(tipo = 'NC', -saldo, saldo)), 0) FROM compras WHERE proveedor_id = ? AND estado = 'V' AND forma = 'C'");
-        $st->execute([$id]);
+        $st = $this->pdo->prepare("SELECT (SELECT COALESCE(SUM(IF(tipo = 'NC', -saldo, saldo)), 0) FROM compras WHERE proveedor_id = ? AND estado = 'V' AND forma = 'C')
+            - (SELECT COALESCE(SUM(anticipo_saldo), 0) FROM ordenes_pago WHERE proveedor_id = ? AND estado = 'V')");
+        $st->execute([$id, $id]);
         return round((float) $st->fetchColumn(), 2);
     }
 
