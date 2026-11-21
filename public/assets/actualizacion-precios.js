@@ -1,6 +1,6 @@
 /*
  * Actualización de precios por filtro (0.60.0): muestra la lista solo con «Una lista», la opción de los automáticos solo cuando se tocan listas
- * sin el costo, cambia el título y la ayuda del valor según la forma, y la lupa de «Desde / Hasta código» abre la lista de artículos.
+ * sin el costo, cambia el título y la ayuda del valor según la forma (la lupa de «Desde / Hasta código» la pone buscador.js).
  */
 (function () {
   'use strict';
@@ -26,11 +26,4 @@
   }
   form.addEventListener('change', function (ev) { if (ev.target.matches('[data-que], [data-forma]')) actualizar(); });
   actualizar();
-  form.querySelectorAll('[data-lista-desde-hasta]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var inp = b.parentNode.querySelector('input');
-      if (!window.VentanaLista) return;
-      window.VentanaLista.articulos(inp.getAttribute('data-buscador-url'), function (a) { inp.value = a.codigo; inp.focus(); });
-    });
-  });
 })();
