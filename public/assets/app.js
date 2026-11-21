@@ -1173,3 +1173,30 @@ document.addEventListener('DOMContentLoaded', function () {
     i.value = String(n);
   });
 })();
+
+// Apariencia (Configuración): el botón de muestra toma el color elegido; sin «Usar un color propio», el azul de siempre.
+document.addEventListener('DOMContentLoaded', function () {
+  var color = document.querySelector('[data-ap-color]');
+  var propio = document.querySelector('[data-ap-color-propio]');
+  var muestra = document.querySelector('[data-ap-muestra]');
+  if (!color || !propio || !muestra) return;
+  function lum(hex) {
+    var c = [1, 3, 5].map(function (i) {
+      var s = parseInt(hex.substr(i, 2), 16) / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function pintar() {
+    color.disabled = !propio.checked;
+    if (!propio.checked) { muestra.removeAttribute('style'); return; }
+    var l = lum(color.value);
+    var texto = (1.05 / (l + 0.05)) >= ((l + 0.05) / (lum('#111111') + 0.05)) ? '#fff' : '#111';
+    muestra.style.background = color.value;
+    muestra.style.borderColor = color.value;
+    muestra.style.color = texto;
+  }
+  color.addEventListener('input', pintar);
+  propio.addEventListener('change', pintar);
+  pintar();
+});
