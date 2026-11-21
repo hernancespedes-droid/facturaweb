@@ -29,8 +29,8 @@ $ayudaValor = ['coeficiente' => 'Multiplica: 1,10 = 10 % más; 0,95 = 5 % menos.
             <span></span><span class="dh-tit">Desde</span><span class="dh-tit">Hasta</span>
             <span class="dh-lbl">Código</span>
             <?php foreach (['desde', 'hasta'] as $x): ?>
-                <div class="field<?= $cls('codigo_' . $x) ?>"><div class="campo-con-boton"><input name="codigo_<?= $x ?>" value="<?= e($d['codigo_' . $x]) ?>" autocomplete="off" maxlength="15"
-                    placeholder="<?= $x === 'desde' ? 'El primero' : 'El último' ?>" data-buscador-url="<?= e($buscar) ?>" aria-label="Código <?= $x ?>"><?= icono_lista('data-lista-desde-hasta', 'artículos') ?></div><?= $err('codigo_' . $x) ?></div>
+                <div class="field<?= $cls('codigo_' . $x) ?>"><input name="codigo_<?= $x ?>" value="<?= e($d['codigo_' . $x]) ?>" autocomplete="off" maxlength="15"
+                    placeholder="<?= $x === 'desde' ? 'El primero' : 'El último' ?>" data-buscador-url="<?= e($buscar) ?>" aria-label="Código <?= $x ?>"><?= $err('codigo_' . $x) ?></div>
             <?php endforeach; ?>
             <span class="dh-lbl">Proveedor</span>
             <?php foreach (['desde', 'hasta'] as $x): ?>

@@ -52,9 +52,11 @@ function limpiar() {
     await login(page, 'e2e_admin');
 
     await page.goto(BASE + '/articulos/actualizacion');
+    await page.waitForSelector('.field:has(input[name=codigo_desde]) .btn-icono');
+    ok(await page.locator('.field:has(input[name=codigo_desde]) .btn-icono').count() === 1, 'una sola lupa por campo de código');
     ok(await page.isHidden('[data-solo-costo]'), 'con «Una lista» no se muestra la nota del costo');
     // lupa de «Desde»: abre la lista y al elegir completa el código
-    await page.click('.field:has(input[name=codigo_desde]) [data-lista-desde-hasta]');
+    await page.click('.field:has(input[name=codigo_desde]) .btn-icono');
     await page.waitForSelector('dialog.ventana-lista[open]');
     await page.fill('dialog.ventana-lista .va-buscar', 'E2A-1');
     await page.waitForSelector('dialog.ventana-lista tbody tr:has-text("E2A-1")');
