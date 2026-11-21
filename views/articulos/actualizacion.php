@@ -153,4 +153,6 @@ $ayudaValor = ['coeficiente' => 'Multiplica: 1,10 = 10 % más; 0,95 = 5 % menos.
     </table></div>
     <?php endif; ?>
 </section>
+<script src="<?= e(asset('assets/ventana-lista.js')) ?>" defer></script>
+<script src="<?= e(asset('assets/buscador.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/actualizacion-precios.js')) ?>" defer></script>
