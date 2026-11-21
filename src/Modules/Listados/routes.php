@@ -13,4 +13,9 @@ return function (Router $r): void {
     $r->get('/listados/iva-ventas/pdf', Guard::permiso('listados.ver', [C::class, 'ivaVentasPdf']));
     $r->get('/listados/libro-iva-digital', Guard::permiso('listados.ver', [C::class, 'libroIva']));
     $r->get('/listados/libro-iva-digital/descargar', Guard::permiso('listados.ver', [C::class, 'libroIvaDescarga']));
+    $r->get('/listados/estadistica', Guard::permiso('listados.ver', [C::class, 'estadistica']));
+    $r->get('/listados/rentabilidad', Guard::permiso('listados.costos', [C::class, 'rentabilidad']));
+    $r->get('/listados/costos', Guard::permiso('listados.costos', [C::class, 'costos']));
+    $r->get('/listados/buscar-articulo', Guard::permiso('listados.ver', [C::class, 'buscarArticulo']));
+    $r->get('/listados/buscar-cliente', Guard::permiso('listados.ver', [C::class, 'buscarCliente']));
 };

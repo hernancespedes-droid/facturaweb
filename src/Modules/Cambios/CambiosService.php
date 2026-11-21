@@ -365,6 +365,7 @@ final class CambiosService
             $id = (int) $this->pdo->lastInsertId();
 
             $orden = 0;
+            $costos = \App\Modules\Listados\Costos::unitarios($this->pdo, array_merge(array_column($c['devueltos'], 'articulo'), array_column($c['nuevos'], 'articulo')), $c['fecha']); // D-62
             foreach ($c['devueltos'] as $d) {
                 $uni = $d['unitario'];
                 $this->insertar('estadistica', [
@@ -372,7 +373,7 @@ final class CambiosService
                     'orden' => ++$orden, 'articulo' => $d['articulo'], 'unidades' => -$d['cantidad'], 'unidades_ori' => -$d['cantidad'], 'lista' => 'E', 'precio' => $uni,
                     'precio_siniva' => $d['alicuota'] > 0 ? round($uni / (1 + $d['alicuota'] / 100), 4) : $uni, 'observaciones' => mb_substr('DEVUELVE: ' . $d['descripcion'], 0, 255),
                     'total_item' => -$d['importe'], 'total_siniva' => -($d['alicuota'] > 0 ? Calculadora::r2($d['importe'] / (1 + $d['alicuota'] / 100)) : $d['importe']),
-                    'cliente' => $h['cliente'], 'grabado' => $d['alicuota'] > 0 ? 1 : 0, 'por_iva' => $d['alicuota'], 'actualizacion' => $ahora, 'linea_origen' => $d['linea'],
+                    'cliente' => $h['cliente'], 'grabado' => $d['alicuota'] > 0 ? 1 : 0, 'por_iva' => $d['alicuota'], 'actualizacion' => $ahora, 'linea_origen' => $d['linea'], 'costo' => $costos[(string) $d['articulo']] ?? 0,
                 ]);
             }
             foreach ($c['nuevos'] as $nv) {
@@ -382,7 +383,7 @@ final class CambiosService
                     'precio' => $nv['precio'], 'precio_siniva' => $nv['alicuota'] > 0 ? round($nv['precio'] / (1 + $nv['alicuota'] / 100), 4) : $nv['precio'],
                     'observaciones' => mb_substr('LLEVA: ' . $nv['descripcion'], 0, 255), 'total_item' => $nv['importe'],
                     'total_siniva' => $nv['alicuota'] > 0 ? Calculadora::r2($nv['importe'] / (1 + $nv['alicuota'] / 100)) : $nv['importe'],
-                    'cliente' => $h['cliente'], 'grabado' => $nv['alicuota'] > 0 ? 1 : 0, 'por_iva' => $nv['alicuota'], 'actualizacion' => $ahora,
+                    'cliente' => $h['cliente'], 'grabado' => $nv['alicuota'] > 0 ? 1 : 0, 'por_iva' => $nv['alicuota'], 'actualizacion' => $ahora, 'costo' => $costos[(string) $nv['articulo']] ?? 0,
                 ]);
             }
             (new StockService($this->pdo))->porCambio($id, $c['devueltos'], $c['nuevos'], $usuarioId > 0 ? $usuarioId : null);
