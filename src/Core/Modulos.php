@@ -26,6 +26,8 @@ final class Modulos
         'kiosco' => ['nombre' => 'Modo Kiosco', 'menu' => ['kiosco'], 'rutas' => ['/kiosco'], 'por_omision' => true],
         'cambios' => ['nombre' => 'Cambio de mercadería', 'menu' => ['cambios'], 'rutas' => ['/cambios'], 'por_omision' => true],
         'mercadopago' => ['nombre' => 'Cobros con Mercado Pago', 'menu' => ['mp'], 'rutas' => ['/mercadopago', '/api/v1/mercadopago'], 'por_omision' => true],
+        'compras' => ['nombre' => 'Compras y centros de costos', 'menu' => ['compras', 'compras_nueva', 'compras_lista', 'compras_apagar', 'compras_analisis',
+            'compras_presupuesto', 'compras_iva', 'proveedores', 'compras_centros'], 'rutas' => ['/compras'], 'por_omision' => false],
         'agente' => ['nombre' => 'Agente de sincronización con el VFP', 'menu' => ['agente'], 'rutas' => ['/agente', '/api/v1/vfp', '/api/v1/ping'], 'por_omision' => false],
         'portal' => ['nombre' => 'Portal de clientes (bajan sus facturas)', 'menu' => [], 'rutas' => ['/portal'], 'por_omision' => true],
     ];

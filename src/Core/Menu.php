@@ -43,6 +43,15 @@ final class Menu
         $o['estadistica'] = ['texto' => 'Estadística de ventas', 'ruta' => '/listados/estadistica', 'permiso' => 'listados.ver', 'grupo' => 'Listados'];
         $o['rentabilidad'] = ['texto' => 'Rentabilidad de ventas', 'ruta' => '/listados/rentabilidad', 'permiso' => 'listados.costos', 'grupo' => 'Listados'];
         $o['lista_costos'] = ['texto' => 'Costos y márgenes', 'ruta' => '/listados/costos', 'permiso' => 'listados.costos', 'grupo' => 'Listados'];
+        $o['compras'] = ['texto' => 'Tablero de compras', 'ruta' => '/compras', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['compras_nueva'] = ['texto' => 'Nueva compra o gasto', 'ruta' => '/compras/nueva', 'permiso' => 'compras.cargar', 'grupo' => 'Compras'];
+        $o['compras_lista'] = ['texto' => 'Compras cargadas', 'ruta' => '/compras/lista', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['compras_apagar'] = ['texto' => 'A pagar y vencimientos', 'ruta' => '/compras/a-pagar', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['compras_analisis'] = ['texto' => 'Análisis de gastos', 'ruta' => '/compras/analisis', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['compras_presupuesto'] = ['texto' => 'Presupuesto contra real', 'ruta' => '/compras/presupuesto', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['compras_iva'] = ['texto' => 'Subdiario IVA compras', 'ruta' => '/compras/iva', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['proveedores'] = ['texto' => 'Proveedores', 'ruta' => '/compras/proveedores', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['compras_centros'] = ['texto' => 'Centros de costos y conceptos', 'ruta' => '/compras/centros', 'permiso' => 'compras.centros', 'grupo' => 'Compras'];
         foreach (Definiciones::todas() as $t => $d) {
             $o[$t] = ['texto' => $d['titulo'], 'ruta' => '/tablas/' . $t, 'permiso' => 'tablas.' . $t, 'grupo' => 'Tablas'];
         }
