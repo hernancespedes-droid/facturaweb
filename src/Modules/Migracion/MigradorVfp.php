@@ -38,6 +38,8 @@ final class MigradorVfp
     /** Tablas con valores iniciales de la instalación: se reemplazan sin pedir confirmación. */
     private const SEMILLAS = ['tasas_iva', 'provincias', 'unidad_venta'];
     private const MAX_AVISOS = 200;
+    /** Columnas del VFP con otro nombre según la instalación: tabla => [nombre en el DBF => columna MySQL]. */
+    private const SINONIMOS = ['articulos_precios' => ['articulos' => 'articulo']];
     /** Catálogos donde un código que usan los clientes/artículos y no existe se agrega solo (para no perderlo). */
     private const CREAR_FALTANTES = ['provincias', 'vendedores', 'condicionpago', 'transportes', 'rubros'];
 
@@ -509,6 +511,15 @@ final class MigradorVfp
      * @return string[]
      */
     private function nombresLargos(string $tabla, Dbf $dbf, array &$r, array $destino): array
+    {
+        // Columnas que algunas instalaciones del VFP llaman distinto (Gogolinas: articulos_precios.articulos).
+        $sinonimos = self::SINONIMOS[$tabla] ?? [];
+        return array_map(static fn (string $c): string => !in_array($c, $destino, true) && isset($sinonimos[$c]) && in_array($sinonimos[$c], $destino, true)
+            ? $sinonimos[$c] : $c, $this->nombresSinSinonimos($tabla, $dbf, $r, $destino));
+    }
+
+    /** @param string[] $destino @return string[] */
+    private function nombresSinSinonimos(string $tabla, Dbf $dbf, array &$r, array $destino): array
     {
         $cortos = array_map('mb_strtolower', $dbf->nombres());
         $largos = $this->dbc?->campos($tabla);
