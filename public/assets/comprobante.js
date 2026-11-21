@@ -134,7 +134,13 @@
           li.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') elegirCliente(c); });
           lista.appendChild(li);
         });
-        lista.hidden = arr.length === 0;
+        if (window.AltaCliente && window.AltaCliente.disponible()) {
+          if (!arr.length) { var nada = document.createElement('li'); nada.className = 'muted'; nada.textContent = 'No hay clientes con «' + q + '».'; lista.appendChild(nada); }
+          lista.appendChild(window.AltaCliente.itemLista(q, function (c) { elegirCliente(c); }));
+          lista.hidden = false;
+        } else {
+          lista.hidden = arr.length === 0;
+        }
       });
   }
   function elegirCliente(c) {
@@ -155,6 +161,11 @@
     else if (tipo !== 'PR') cargarAsociables(c.codigo);
     recalcular();
   }
+  // Botón «+»: nuevo cliente sin salir de la venta (con el CUIT trae los datos de ARCA); queda elegido
+  var btnNuevoCli = form.querySelector('[data-nuevo-cliente]');
+  if (btnNuevoCli) btnNuevoCli.addEventListener('click', function () {
+    if (window.AltaCliente) window.AltaCliente.abrir({ texto: hidCliente.value ? '' : qInput.value }, function (c) { elegirCliente(c); });
+  });
   // Ícono de lupa junto al buscador: ventana con la lista de clientes para elegir uno
   var btnListaCli = form.querySelector('[data-lista-clientes]');
   if (btnListaCli) btnListaCli.addEventListener('click', function () {

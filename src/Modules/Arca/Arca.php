@@ -318,6 +318,12 @@ final class Arca
             }
             return count($ids) . ' condiciones; las equivalencias cargadas son válidas.';
         });
+        if (Padron::disponible()) {
+            $paso('Padrón (alta de clientes por CUIT)', static function () use ($afip) {
+                $p = Padron::consultar((string) $afip->cfg['cuit'], true);
+                return 'Responde: ' . $p['razon_social'] . ' · ' . $p['condicion'];
+            });
+        }
         return $out;
     }
 }
