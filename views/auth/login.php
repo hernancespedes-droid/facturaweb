@@ -15,7 +15,7 @@
         <?php if ($error !== null): ?>
             <div class="alerta alerta-error" role="alert"><?= e($error) ?></div>
         <?php endif; ?>
-        <form method="post" action="<?= e(url('/login')) ?>" class="form">
+        <form method="post" action="<?= e(url('/login')) ?>" class="form" data-enter="enviar">
             <?= csrf_field() ?>
             <label class="field">
                 <span>Usuario</span>

@@ -71,6 +71,12 @@ Humano: 230–340 h. Cuello de botella: homologación con ARCA y control de sald
   un solo medio de pago por comprobante (el mixto y los cheques de terceros van con la etapa 4); sin anulación (se corrige con NC).
 - Etapa 3 (hecha en 0.4.0): modos `interno|simulado|homologacion|produccion` en `config/local.php` (`afip`); `Modules/Arca` (Arca, ArcaSimulador, ArcaController); `afip_operaciones` registra cada pedido antes de hablar con ARCA y permite recuperar lo aprobado y no grabado; `es_prueba` marca lo no fiscal; Sistema → ARCA. Decisiones de Claude marcadas `D-xx` en el código y listadas en `docs/decisiones-pendientes.md`. Pendiente: pantalla de equivalencias de condición de IVA. Diseño original: el comprobante nace con el número de ARCA; arma el `Comprobante` de `lib/afip_fe` desde lo calculado; punto de venta y certificado propios de la web.
 
+## Regla de interfaz: Enter no envía (pedido de Hernán, 21/11/2026, 0.50.0)
+
+En los formularios que graban, **Enter pasa al campo siguiente** (como en el VFP) y desde el último al botón; recién otro Enter o el clic envía.
+Al volver a la misma pantalla después de grabar, la página queda a la misma altura con el aviso flotando. Todo en `public/assets/carga.js` (D-134);
+una pantalla que deba enviar con Enter lleva `data-enter="enviar"`.
+
 ## Regla de interfaz: buscar y cargar artículos y clientes (decisión de Hernán, 12/11/2026)
 
 **Siempre que una pantalla pida un artículo o un cliente, el campo es un buscador**, no un texto libre ni un desplegable con todo:

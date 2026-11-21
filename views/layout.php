@@ -40,6 +40,7 @@ if ($alDia && Menu::visible('mp_ingresos')) {
     <?php if ($iconoUrl !== null): ?><link rel="icon" type="image/png" href="<?= e($iconoUrl) ?>"><?php endif; ?>
     <script src="<?= e(asset('assets/app.js')) ?>" defer></script>
     <script src="<?= e(asset('assets/grilla.js')) ?>" defer></script>
+    <script src="<?= e(asset('assets/carga.js')) ?>" defer></script>
 </head>
 <body class="menu-horizontal">
     <header class="topbar">
