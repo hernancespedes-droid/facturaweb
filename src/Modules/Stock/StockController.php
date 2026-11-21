@@ -91,11 +91,12 @@ final class StockController
             'pagina' => $pagina, 'porPagina' => $por, 'orden' => $orden, 'porDeposito' => $svc->porDeposito((string) $art['codigo']), 'saldo' => $svc->saldo((string) $art['codigo'])]));
     }
 
-    private static function formulario(string $vista, string $titulo, array $datos, ?string $error, int $status = 200): Response
+    private static function formulario(string $vista, string $titulo, array $datos, ?string $error, int $status = 200, ?array $pregunta = null): Response
     {
         $svc = new StockService();
         return Response::html(View::render($vista, ['title' => $titulo, 'nav' => $vista === 'stock/ajuste' ? 'stock_ajuste' : 'stock_transferir', 'datos' => $datos, 'error' => $error,
-            'depositos' => $svc->depositos(), 'principal' => $svc->depositoPrincipal(), 'activo' => StockService::activo()]), $status);
+            'depositos' => $svc->depositos(), 'principal' => $svc->depositoPrincipal(), 'activo' => StockService::activo(),
+            'puedeCosto' => Auth::puede('articulos.precios'), 'pregunta' => $pregunta]), $status);
     }
 
     public static function ajusteForm(Request $req, array $params): Response
@@ -111,11 +112,38 @@ final class StockController
         if (!in_array($datos['modo'], ['INGRESO', 'EGRESO', 'AJUSTE'], true)) {
             return self::formulario('stock/ajuste', 'Ingreso, egreso o ajuste de stock', $datos, 'Elegí qué querés hacer.', 422);
         }
-        $r = (new StockService())->cargar($datos['modo'], $datos['articulo'], (int) $datos['deposito'], $datos['cantidad'], $datos['unidad'], $datos['motivo'], Auth::id());
+        // Costo del ingreso (solo con articulos.precios): si cambia el costo del artículo, antes de grabar se pregunta si también se actualizan los precios
+        $costo = null;
+        $precios = false;
+        $datos['costo'] = trim((string) ($p['costo'] ?? ''));
+        if ($datos['modo'] === 'INGRESO' && $datos['costo'] !== '' && Auth::puede('articulos.precios')) {
+            $costo = \App\Core\Valida::decimal($datos['costo']);
+            if ($costo === null || $costo < 0 || $costo > 99999999999) {
+                return self::formulario('stock/ajuste', 'Ingreso, egreso o ajuste de stock', $datos, 'El costo no es válido.', 422);
+            }
+            $art = (new StockService())->resolverArticulo($datos['articulo']);
+            $ficha = $art === null ? null : (new \App\Modules\Articulos\ArticulosService())->obtener((string) $art['codigo']);
+            if ($ficha === null || abs((float) $ficha['costo'] - $costo) < 0.00005) {
+                $costo = null; // sin artículo (lo informa cargar) o el mismo costo: no hay nada que preguntar
+            } else {
+                $decision = (string) ($p['precios'] ?? '');
+                if (!in_array($decision, ['precios', 'costo', 'nada'], true)) {
+                    $calc = (new \App\Modules\Articulos\Precios())->calcular($ficha, $costo);
+                    return self::formulario('stock/ajuste', 'Ingreso, egreso o ajuste de stock', $datos, null, 200,
+                        ['ficha' => $ficha, 'calc' => $calc]);
+                }
+                $precios = $decision === 'precios';
+                if ($decision === 'nada') {
+                    $costo = null;
+                }
+            }
+        }
+        $r = (new StockService())->cargar($datos['modo'], $datos['articulo'], (int) $datos['deposito'], $datos['cantidad'], $datos['unidad'], $datos['motivo'], Auth::id(),
+            $costo, $precios);
         if (!$r['ok']) {
             return self::formulario('stock/ajuste', 'Ingreso, egreso o ajuste de stock', $datos, $r['error'], 422);
         }
-        Session::flash('ok', 'Movimiento de stock registrado.');
+        Session::flash('ok', 'Movimiento de stock registrado.' . ($costo === null ? '' : ($precios ? ' Se actualizaron el costo y los precios.' : ' Se actualizó el costo; los precios quedaron igual.')));
         $svc = new StockService();
         $art = $svc->resolverArticulo($datos['articulo']);
         return Response::redirect(url('/stock/articulo/' . rawurlencode((string) $art['codigo'])));

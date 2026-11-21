@@ -18,6 +18,7 @@ final class Menu
         $o = [
             'clientes' => ['texto' => 'Clientes', 'ruta' => '/clientes', 'permiso' => 'clientes.ver', 'grupo' => 'Maestros'],
             'articulos' => ['texto' => 'Artículos', 'ruta' => '/articulos', 'permiso' => 'articulos.ver', 'grupo' => 'Maestros'],
+            'articulos_precios' => ['texto' => 'Actualizar precios', 'ruta' => '/articulos/precios', 'permiso' => 'articulos.precios', 'grupo' => 'Maestros'],
         ];
         $o['comprobantes_fc'] = ['texto' => 'Nueva factura', 'ruta' => '/comprobantes/nuevo?tipo=FC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes_pr'] = ['texto' => 'Nuevo presupuesto', 'ruta' => '/comprobantes/nuevo?tipo=PR', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];

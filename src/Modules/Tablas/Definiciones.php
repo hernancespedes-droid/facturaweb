@@ -20,6 +20,8 @@ final class Definiciones
         $cod = static fn (int $largo, string $tipo = 'texto') => ['label' => 'Código', 'tipo' => $tipo, 'largo' => $largo, 'requerido' => true, 'clave' => true];
         $desc = static fn (int $largo = 30) => ['label' => 'Descripción', 'tipo' => 'texto', 'largo' => $largo, 'requerido' => true];
         $pct = static fn (string $label) => ['label' => $label, 'tipo' => 'decimal', 'dec' => 2, 'min' => 0, 'max' => 999.99];
+        $margen = static fn (string $lista, ?string $grupo = null) => ['label' => 'Margen ' . $lista . ' (% sobre el costo)', 'tipo' => 'decimal', 'dec' => 2, 'min' => 0,
+            'max' => 99999, 'nulo' => true] + ($grupo !== null ? ['grupo' => $grupo] : []);
         return [
             'sucursales' => [
                 'titulo' => 'Sucursales', 'singular' => 'sucursal', 'vfp' => 'TA',
@@ -54,9 +56,10 @@ final class Definiciones
                 'titulo' => 'Rubros', 'singular' => 'rubro', 'vfp' => 'TB',
                 'campos' => [
                     'codigo' => $cod(3), 'descripcion' => $desc(),
-                    'porcentaje_rubro_l1' => $pct('% lista 1'), 'porcentaje_rubro_l2' => $pct('% lista 2'), 'porcentaje_rubro_l3' => $pct('% lista 3'),
+                    // D-130: margen de ganancia sobre el costo de cada lista; vacío = toma el general de Parámetros (los % del VFP quedan en la base, sin uso)
+                    'margen_l1' => $margen('lista 1'), 'margen_l2' => $margen('lista 2'), 'margen_l3' => $margen('lista 3'), 'margen_oferta' => $margen('oferta'),
                 ],
-                'lista' => ['codigo', 'descripcion', 'porcentaje_rubro_l1', 'porcentaje_rubro_l2', 'porcentaje_rubro_l3'],
+                'lista' => ['codigo', 'descripcion', 'margen_l1', 'margen_l2', 'margen_l3', 'margen_oferta'],
                 'orden' => 'codigo',
                 'usos' => [['articulos', ['rubro' => 'codigo'], 'artículos'], ['subrubros', ['rubro' => 'codigo'], 'subrubros']],
             ],
@@ -98,6 +101,12 @@ final class Definiciones
                     'impresion' => ['label' => 'Impresión de comprobantes (hoja A4 o ticket de impresora térmica; el PDF y los envíos siguen igual)', 'tipo' => 'opciones', 'opciones' => self::PAPELES, 'grupo' => 'Mostrador'],
                     'kiosco' => ['label' => 'Habilitar modo Kiosco (carrito de mostrador con los productos en tarjetas; al finalizar genera un presupuesto)', 'tipo' => 'si_no', 'grupo' => 'Mostrador'],
                     'ticket_cambio' => ['label' => 'Habilita modo ticket de cambio (ticket sin importes para regalos y cambio de mercadería)', 'tipo' => 'si_no', 'grupo' => 'Mostrador'],
+                    'margen_l1' => $margen('lista 1', 'Precios') + ['ayuda' => 'General: vale para los rubros y artículos que no tienen el suyo. Vacío = esa lista no se calcula sola.'],
+                    'margen_l2' => $margen('lista 2', 'Precios'),
+                    'margen_l3' => $margen('lista 3', 'Precios'),
+                    'margen_oferta' => $margen('oferta', 'Precios'),
+                    'precio_redondeo' => ['label' => 'Redondeo del precio calculado (hacia arriba)', 'tipo' => 'opciones', 'opciones' => self::REDONDEOS, 'grupo' => 'Precios'],
+                    'precios_con_iva' => ['label' => 'Los precios de venta incluyen IVA (precio final). Solo cambia algo si la empresa es responsable inscripta.', 'tipo' => 'si_no', 'grupo' => 'Precios'],
                 ],
                 'lista' => ['empresa', 'cuit'],
                 'orden' => 'id',
@@ -188,6 +197,9 @@ final class Definiciones
 
     /** Condición de IVA del emisor (mismos códigos que el cliente). */
     public const PAPELES = ['a4' => 'Hoja A4', 't80' => 'Ticket 80 mm (impresora térmica)', 't50' => 'Ticket 50 mm (impresora térmica)'];
+    /** Redondeo hacia arriba del precio calculado desde el costo (parametros.precio_redondeo). */
+    public const REDONDEOS = ['0' => 'Sin redondeo (centavos)', '1' => 'A $ 1', '10' => 'A $ 10', '50' => 'A $ 50', '100' => 'A $ 100'];
+
     public const CONDICIONES_EMPRESA = [1 => 'Responsable Inscripto', 7 => 'Monotributo', 4 => 'Exento'];
 
     /** @return array<string,mixed>|null */
