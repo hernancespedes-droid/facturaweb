@@ -64,7 +64,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await Promise.all([page.waitForNavigation(), page.click('button[type=submit]')]);
     ok((await page.textContent('.alerta-error')).includes('incorrectos'), 'contraseña mala: avisa');
     await login(page, 'e2e_admin');
-    ok((await page.textContent('h1')).includes('Facturación'), 'entra al inicio');
+    ok((await page.textContent('h1')).length > 0 && page.url().replace(/\/$/, '') === BASE, 'entra al inicio');
     await page.screenshot({ path: path.join(CAPTURAS, 'inicio.png'), fullPage: true });
 
     // Tablas: alta de un vendedor, edición y borrado.
@@ -474,6 +474,34 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.textContent('body')).includes('Pago acreditado: la venta se emitió'), 'mercado pago: al acreditarse se emite sola');
     await Promise.all([page.waitForNavigation(), page.click('a:has-text("Seguir")')]);
     ok((await page.textContent('body')).includes('MERCADO PAGO'), 'mercado pago: el comprobante quedó con Mercado Pago como forma de pago');
+    // ---- ingresos de dinero a la cuenta de Mercado Pago: grilla, campanita y cartel al entrar plata (de una venta o no)
+    await page.goto(BASE + '/mercadopago/ingresos');
+    let cuerpoIng = await page.textContent('body');
+    ok(cuerpoIng.includes('Ingresos de Mercado Pago') && cuerpoIng.includes('Ver comprobante'), 'ingresos mp: la venta cobrada aparece como ingreso con su comprobante');
+    ok(await page.isVisible('[data-mp-campana]'), 'ingresos mp: la campanita está en la barra');
+    if (await page.locator('[data-mp-vistos]').count()) {
+      await Promise.all([page.waitForNavigation(), page.click('[data-mp-vistos]')]);
+    }
+    ok(!(await page.isVisible('[data-mp-n]')), 'ingresos mp: marcados como vistos, la campanita queda sin número');
+    await page.goto(BASE + '/');
+    {
+      const otra = await ctx.newPage(); // entra plata mientras la pantalla de inicio está abierta
+      await otra.goto(BASE + '/mercadopago/ingresos');
+      await otra.fill('input[name=monto]', '12.500');
+      await otra.fill('input[name=pagador]', 'Juan Transferencia');
+      await Promise.all([otra.waitForNavigation(), otra.click('button:has-text("Simular ingreso")')]);
+      await otra.close();
+    }
+    await page.evaluate(() => window.MpIngresos.ahora());
+    await page.waitForSelector('.mp-aviso', { timeout: 5000 });
+    ok((await page.textContent('.mp-aviso')).includes('Ingresó $ 12.500,00 de Juan Transferencia'), 'ingresos mp: sale el cartel con el ingreso nuevo');
+    ok((await page.textContent('[data-mp-n]')).trim() === '1', 'ingresos mp: la campanita cuenta el ingreso sin ver');
+    await page.screenshot({ path: path.join(CAPTURAS, 'mp-ingresos-campanita.png') });
+    await page.goto(BASE + '/mercadopago/ingresos');
+    cuerpoIng = await page.textContent('body');
+    ok(cuerpoIng.includes('12.500,00') && cuerpoIng.includes('Juan Transferencia') && cuerpoIng.includes('Sin venta asociada'), 'ingresos mp: el ingreso sin venta queda en la grilla');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'ingresos mp: la grilla no se desborda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'mp-ingresos.png'), fullPage: true });
 
     // ---- caja: turno con arqueo, ingreso y egreso manual, anulación, auditoría con hora y usuario
     await page.goto(BASE + '/caja');
@@ -574,12 +602,14 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
       const cel = await browser.newContext({ ...devices['Pixel 7'] });
       const pe = await cel.newPage();
       await login(pe, 'e2e_admin');
-      for (const ruta of ['/listados/estadistica', '/stock/movimientos', '/stock/existencias', '/listados/costos']) {
+      for (const ruta of ['/listados/estadistica', '/stock/movimientos', '/stock/existencias', '/listados/costos', '/mercadopago/ingresos']) {
         await pe.goto(BASE + ruta);
         ok(await pe.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: ' + ruta + ' sin scroll horizontal');
       }
       await pe.goto(BASE + '/listados/estadistica');
       await pe.screenshot({ path: path.join(CAPTURAS, 'celular-estadistica.png'), fullPage: true });
+      await pe.goto(BASE + '/mercadopago/ingresos');
+      await pe.screenshot({ path: path.join(CAPTURAS, 'celular-mp-ingresos.png'), fullPage: true });
       await cel.close();
     }
 
@@ -607,6 +637,27 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await pc.goto(BASE + '/portal/acceso/' + token);
     ok((await pc.textContent('body')).includes('ya se usó'), 'portal: el link no sirve dos veces');
     await cli.close();
+
+    // ---- Tablero de inicio (0.40.0): números, gráficos con valores al pasar el mouse, claro/oscuro y celular.
+    await page.goto(BASE + '/?periodo=mes');
+    ok((await page.textContent('h1')).includes('Cómo viene el negocio'), 'tablero: el administrador ve cómo viene el negocio');
+    ok(await page.locator('.tb-hero-n').count() === 1, 'tablero: número principal de ventas');
+    ok(await page.locator('[data-tb-grafico] svg.g-svg').count() === 2, 'tablero: los dos gráficos');
+    await page.locator('[data-tb-grafico="columnas"] .g-zona').last().hover();
+    ok(await page.locator('[data-tb-grafico="columnas"] .tb-tip').isVisible(), 'tablero: al pasar el mouse por una columna muestra el valor');
+    await page.locator('[data-tb-grafico="lineas"] .g-zona').nth(2).hover();
+    ok((await page.textContent('[data-tb-grafico="lineas"] .tb-tip')).includes('Día 3'), 'tablero: la línea muestra el día y los dos meses');
+    ok(await page.locator('[data-tb-grafico="lineas"] .g-guia:not([hidden])').count() === 1, 'tablero: aparece la línea guía');
+    await page.screenshot({ path: path.join(CAPTURAS, 'tablero.png'), fullPage: true });
+    await page.click('.tb-periodos a:has-text("12 meses")');
+    ok((await page.textContent('.tb-hero .tb-label')).includes('12 meses'), 'tablero: cambia el período');
+    await page.evaluate(() => document.documentElement.setAttribute('data-tema', 'claro'));
+    await page.screenshot({ path: path.join(CAPTURAS, 'tablero-claro.png'), fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(BASE + '/');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'tablero: en el celular no se desborda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'tablero-celular.png'), fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 860 });
     ok(errores.length === 0, 'sin errores de JavaScript' + (errores.length ? ': ' + errores.join(' | ') : ''));
     await ctx.close();
 
@@ -617,6 +668,8 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     const menu = await p2.content();
     ok(!menu.includes('/usuarios"') && !menu.includes('/tablas/sucursales"'), 'operador: el menú no muestra Usuarios ni Sucursales');
     ok(menu.includes('/comprobantes/nuevo?tipo=FC'), 'operador: el menú muestra Nueva factura');
+    ok(!menu.includes('Cómo viene el negocio') && !menu.includes('Ticket promedio'), 'operador: el inicio no muestra importes de ventas');
+    ok(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: el inicio del operador no se desborda');
     await p2.goto(BASE + '/comprobantes/nuevo?tipo=FC');
     ok(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: el formulario de factura no se desborda');
     await p2.screenshot({ path: path.join(CAPTURAS, 'celular-factura.png'), fullPage: true });

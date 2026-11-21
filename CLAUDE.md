@@ -85,6 +85,12 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `Modules/MercadoPago/MercadoPago` es el único que habla con la API (modos `mp.modo` apagado|simulado|produccion en `config/local.php`; `MercadoPago::$transporte` permite probar sin red). `MercadoPagoService`: «Cobrar con Mercado Pago» deja la venta en un cobro `pendiente` (tabla `mp_cobros`, sin claves) y **solo se emite al acreditarse el pago** (`confirmar` → `emitir`, idempotente con el token como clave de operación; `CajaService::$actor` pone al cajero cuando no hay sesión). La notificación va por `/api/v1/mercadopago/webhook` (sin sesión ni CSRF) con firma HMAC verificada y el pago se vuelve a consultar en Mercado Pago. `ComprobantesService::armar` acepta `$autorizoPrevio` (solo desde el código) para la autorización de stock ya resuelta.
 
+## Ingresos de Mercado Pago (0.41.0)
+
+`MercadoPago/IngresosService`: todo pago aprobado que entra a la cuenta (sea o no una venta de la web) va a `mp_ingresos` una sola vez (`mp_pago_id` único). Llega por la notificación (`notificacion` llama a `registrar`
+antes de `confirmar`) y por `consultarSiToca()` (una por minuto, turno tomado con UPDATE condicionado sobre `interno.mp_ingresos_consulta`; la disparan `/mercadopago/ingresos/novedades` y `bin/mp-ingresos.php`).
+Campanita y carteles: `views/layout.php` + `public/assets/mp-ingresos.js` (con `mercadopago.ingresos`); vistos por usuario en `mp_ingresos_vistos`. Mail opcional a `configuracion.mercadopago.ingresos_mails`.
+
 ## Alta de clientes desde el CUIT (0.37.0)
 
 `Arca/Padron` consulta la constancia de inscripción (`ws_sr_constancia_inscripcion`, `getPersona_v2`, mismo certificado y `Arca::afip()->wsaa`) y la normaliza (condición de IVA → `clientes.iva`, D-70); guarda cada respuesta en `padron_consultas` (caché `afip.padron_dias`, 30). `ArcaSimulador::padron` contesta sin internet (ver los CUIT de ejemplo en su docblock; `Padron::$transporte` para pruebas).
@@ -95,6 +101,12 @@ Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_c
 
 `Listados/Estadistica` (agrupar por artículo, rubro, cliente, vendedor, mes…, ranking y detalle; `/listados/estadistica` y `/listados/rentabilidad`), `Listados/ListaCostos` (`/listados/costos`), `Stock/MovimientosStock` (trazabilidad con saldo corrido y resumen; `/stock/movimientos`) y `Stock/Existencias` (por depósito a una fecha; `/stock/existencias`).
 **Todo INSERT nuevo en `estadistica` lleva `costo`** (unitario en pesos al emitir, `Listados\Costos::unitarios`, D-62). Costos, márgenes y valorizados solo con el permiso `listados.costos`. La estadística no cuenta la factura de un presupuesto (`solo_subdiario = 1`) y resta NC/NX (D-63).
+
+## Tablero de inicio (0.40.0)
+
+`Modules/Tablero`: `Tablero::datos()` arma todo lo del inicio según permisos y módulos (D-90; «venta» = lo vendido de la caja diaria, D-91; avisos, D-92) y `Graficos` dibuja los SVG en el servidor
+(colores por variables CSS: `--g-marca` = color del cliente legible, `--g-comp` gris de comparación, `--g-1..5` paleta fija validada para «Cómo te pagaron»). `public/assets/tablero.js` pone la guía y el cartel
+(`data-tip` con renglones separados por «|»). Otro módulo suma su tarjeta con `Tablero::EXTRAS` (modulo, permiso, vista), sin tocar `home.php`.
 
 ## Libro IVA Digital (ventas)
 
@@ -132,6 +144,12 @@ la clave para no duplicar es tipo + letra + punto de venta + número + fecha. Re
 avisos por mail a `configuracion.soporte.mail_aviso` y al `usuario_mail` del ticket; `$enviador` para pruebas), `SoporteApi` (`/api/v1/soporte/…`, cabeceras `X-FW-Instancia` + `X-FW-Clave`, solo en la principal)
 y `SoporteCliente` (lo que usa la pantalla: directo en la principal, por HTTP en un cliente con `soporte.url`/`soporte.clave` de su config; `$transporte` para pruebas). `InstanciasService::asegurarSoporte()`
 escribe la URL del master y la clave de cada cliente (al entrar al panel o a la bandeja). Cliente: Ayuda → Soporte (`soporte.usar`, módulo `soporte`); master: Sistema → Tickets de soporte (Master en la principal).
+
+## Base que se actualiza sola (0.40.1)
+
+`Core\AutoMigracion::asegurar()` corre al principio de `App::handle` (salvo `/salud` e `/instalar`): si la firma (versión + migraciones) no coincide con
+`sistema_estado`, aplica lo pendiente con el candado `fw_migrar:<base>` (el mismo de «Aplicar cambios»); los demás pedidos ven «Actualizando» (503). Si falla, no bloquea: queda en
+`App::storage('automigracion_error.json')`, el Master lo ve en Sistema y `/salud` da `migracion_error`. Por eso las migraciones **tienen que ser aditivas e idempotentes**: se aplican sin que nadie mire.
 
 ## Estructura y convenciones
 

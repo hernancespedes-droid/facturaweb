@@ -111,6 +111,10 @@ final class App
         // "Enviar a Excel" de cualquier grilla: la página se arma igual (mismos permisos y filtros) pero sin paginar, y la tabla sale en .xlsx.
         \App\Core\GrillaExcel::$pedido = $req->method === 'GET' && ($req->query['excel'] ?? '') === 'grilla';
         try {
+            // Después de actualizar el código, el primer pedido aplica los cambios de base pendientes (AutoMigracion). /salud y /instalar no esperan.
+            if (!in_array($req->path, ['/salud', '/instalar'], true) && ($espera = \App\Core\AutoMigracion::asegurar()) !== null) {
+                return $this->withSecurityHeaders($espera); // otro pedido está aplicando los cambios de base (unos segundos)
+            }
             $esApi = str_starts_with($req->path, '/api/'); // API del agente: sin formulario, sin sesión y sin CSRF (usa clave en el encabezado)
             if (!$esApi && $req->method === 'POST' && $req->post === [] && (int) ($req->server['CONTENT_LENGTH'] ?? 0) > 0) {
                 // PHP descarta todo el formulario cuando supera post_max_size (típico al subir un Excel grande).

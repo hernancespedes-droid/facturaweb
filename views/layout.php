@@ -19,6 +19,15 @@ $colorMarca = Apariencia::color();
 // Tema que eligió este usuario en este navegador (botón Dark/Light): cookie "tema", claro si no eligió.
 $tema = ($_COOKIE['tema'] ?? '') === 'oscuro' ? 'oscuro' : 'claro';
 $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] === 0;
+// Campanita de ingresos de Mercado Pago (permiso mercadopago.ingresos, con Mercado Pago encendido)
+$mpAvisos = null;
+if ($alDia && Menu::visible('mp_ingresos')) {
+    try {
+        $mpAvisos = (new \App\Modules\MercadoPago\IngresosService())->novedades((int) Auth::id());
+    } catch (\PDOException) {
+        $mpAvisos = null; // antes de migrar
+    }
+}
 ?><!doctype html>
 <html lang="es-AR" data-tema="<?= $tema ?>">
 <head>
@@ -66,6 +75,12 @@ $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] =
                     </form>
                 </nav>
             <?php endif; ?>
+            <?php if ($mpAvisos !== null): ?>
+                <a class="mp-campana" href="<?= e(url('/mercadopago/ingresos')) ?>" title="Ingresos de Mercado Pago sin ver" aria-label="Ingresos de Mercado Pago: <?= (int) $mpAvisos['sin_ver'] ?> sin ver"
+                    data-mp-campana data-url="<?= e(url('/mercadopago/ingresos/novedades')) ?>" data-ultimo="<?= (int) $mpAvisos['ultimo_id'] ?>">
+                    <span aria-hidden="true">🔔</span><b class="mp-campana-n" data-mp-n<?= $mpAvisos['sin_ver'] > 0 ? '' : ' hidden' ?>><?= $mpAvisos['sin_ver'] > 99 ? '99+' : (int) $mpAvisos['sin_ver'] ?></b>
+                </a>
+            <?php endif; ?>
             <button type="button" class="btn btn-ghost tema-btn" data-tema-cambiar aria-label="<?= $tema === 'claro' ? 'Pasar a fondo oscuro' : 'Pasar a fondo blanco' ?>"
                 title="Fondo oscuro o blanco"><span aria-hidden="true" data-tema-icono><?= $tema === 'claro' ? '☾' : '☀' ?></span><span class="tema-txt" data-tema-texto><?= $tema === 'claro' ? 'Dark' : 'Light' ?></span></button>
         </div>
@@ -80,6 +95,10 @@ $alDia = $usuarioActual !== null && (int) $usuarioActual['debe_cambiar_clave'] =
         <?php endforeach; ?>
         <?= $content ?>
     </main>
+    <?php if ($mpAvisos !== null): ?>
+        <div class="mp-avisos" data-mp-avisos aria-live="polite"></div>
+        <script src="<?= e(asset('assets/mp-ingresos.js')) ?>" defer></script>
+    <?php endif; ?>
     <footer class="pie wrap">Factura<b>Web</b> · Organización &amp; Sistemas</footer>
 </body>
 </html>

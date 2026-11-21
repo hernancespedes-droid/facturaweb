@@ -21,9 +21,9 @@ El código es el mismo para todos. Este manual es el camino que se repite; lo qu
 3. Si ya había clientes creados en la carpeta del master, el panel muestra «Pasar a la carpeta de clientes»: tocarlo y apuntar sus subdominios a `facturador_clientes/public`.
 
 **Cada cambio pedido a Code:**
-1. Code hace el PR a `main`; se fusiona. Ferozo → GIT → `facturador_web` → actualizar. Sistema → Aplicar cambios. **Se prueba en el master.**
+1. Code hace el PR a `main`; se fusiona. Ferozo → GIT → `facturador_web` → actualizar. Los cambios de base se aplican solos con el primer ingreso (0.40.1). **Se prueba en el master.**
 2. Si está bien: Instalaciones de clientes → **Pasar a clientes** (mueve `estable` al commit exacto que corre el master; sin token, pedírselo a Code).
-3. Ferozo → GIT → `facturador_clientes` → actualizar. Instalaciones de clientes → **Aplicar cambios en todas**.
+3. Ferozo → GIT → `facturador_clientes` → actualizar. Cada cliente aplica solo sus cambios de base con su primer ingreso; **Aplicar cambios en todas** lo adelanta para todos de una vez (opcional).
 4. Si la función nueva no la tienen que tener todos: viene como **módulo** apagado (`Core\Modulos`) y se prende por cliente en «Administrar → Módulos».
 
 **Suscripción** (Administrar → Suscripción): Activa → Aviso de pago pendiente (cartel) → Sin emitir (consultan e imprimen) → Bloqueada (solo entra el Master de O&S),
@@ -36,7 +36,7 @@ Cada cliente nuevo queda además como **cliente del master** (para facturarle; s
    el Master, un Administrador con clave provisoria y la configuración del cliente.
 3. Panel del hosting: crear el **subdominio** apuntando a la **misma carpeta `…/public`** que la principal y activar su SSL.
 4. Entrar a `https://<subdominio>` y seguir con Parámetros/Sucursales, migración del VFP (Sistema), licencia y ARCA (modo y mail se cambian desde el panel, «Mail, ARCA y licencia»).
-5. Actualizar: GIT una sola vez + **Aplicar cambios en todas** en el panel.
+5. Actualizar: GIT una sola vez; los cambios de base se aplican solos en cada cliente (o **Aplicar cambios en todas** en el panel, para no esperar).
 
 El camino de abajo (una carpeta y un clon de GIT por cliente) sigue sirviendo para un cliente en otro hosting.
 
