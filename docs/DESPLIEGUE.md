@@ -40,7 +40,7 @@ Ferozo clona el repositorio dentro de `public_html/`.
 
 1. **Backup** de la base (phpMyAdmin → Exportar, o `mysqldump`).
 2. Ferozo → GIT → actualizar (pull) el repositorio de la instalación (con SSH: `git pull` o descomprimir el zip nuevo).
-3. Ingresar como Master → **Sistema → Aplicar cambios** (o `php bin/migrate.php`).
+3. Desde la 0.30.0 los cambios de base se aplican solos con el primer pedido. Si fallan, el Master lo ve en **Sistema** y lo resuelve con **Aplicar cambios** (o `php bin/migrate.php`).
 4. `/salud` muestra la versión nueva y `cambios_de_base_pendientes: 0`.
 
 Nunca se pisan `config/local.php` ni `storage/`.

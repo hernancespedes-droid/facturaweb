@@ -109,12 +109,13 @@ final class SistemaController
             return new Response(403);
         }
         $pdo = Db::pdo();
-        if ((int) $pdo->query("SELECT GET_LOCK('fw_migrar', 0)")->fetchColumn() !== 1) {
+        if (!\App\Core\AutoMigracion::tomar($pdo)) { // el mismo candado que la actualización automática
             Session::flash('error', 'Ya se están aplicando cambios de base. Esperá unos segundos.');
             return Response::redirect(url('/sistema'));
         }
         try {
             $aplicadas = self::migrator()->run();
+            \App\Core\AutoMigracion::marcarAlDia($pdo); // y se borra el aviso de una actualización automática fallida
             Session::flash('ok', $aplicadas === []
                 ? 'La base ya estaba al día.'
                 : 'Cambios aplicados: ' . implode(', ', $aplicadas) . '.');
@@ -122,7 +123,7 @@ final class SistemaController
             // El detalle técnico le sirve al Master para pasárselo a O&S.
             Session::flash('error', 'No se pudo completar: ' . $e->getMessage() . ' Lo que se aplicó antes del error quedó registrado.');
         } finally {
-            $pdo->query("SELECT RELEASE_LOCK('fw_migrar')");
+            \App\Core\AutoMigracion::soltar($pdo);
         }
         return Response::redirect(url('/sistema'));
     }

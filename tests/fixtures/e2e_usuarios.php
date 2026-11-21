@@ -69,7 +69,7 @@ if ((int) $pdo->query('SELECT COUNT(*) FROM sucursales')->fetchColumn() === 0) {
     $pdo->exec("INSERT INTO sucursales (codigo, descripcion, prefijo) VALUES (1, 'CASA CENTRAL', 4)");
 }
 if ((int) $pdo->query('SELECT COUNT(*) FROM forma_de_pagos WHERE tipo = 1')->fetchColumn() === 0) {
-    $pdo->exec("INSERT IGNORE INTO forma_de_pagos (codigo, descripcion, tipo) VALUES ('01', 'EFECTIVO', 1)");
+    $pdo->exec("INSERT IGNORE INTO forma_de_pagos (codigo, descripcion, tipo, acepta_vuelto) VALUES ('01', 'EFECTIVO', 1, 1)");
 }
 $pdo->exec("INSERT INTO forma_de_pagos (codigo, descripcion, tipo) VALUES ('E5', 'CHEQUE E2E', 5)");
 $pdo->exec("INSERT INTO bancos (codigo, descripcion) VALUES (998, 'BANCO E2E')");
