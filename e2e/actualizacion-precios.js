@@ -53,8 +53,17 @@ function limpiar() {
 
     await page.goto(BASE + '/articulos/actualizacion');
     ok(await page.isHidden('[data-solo-costo]'), 'con «Una lista» no se muestra la nota del costo');
-    await page.fill('input[name=codigo_desde]', 'E2A-1');
-    await page.keyboard.press('Escape');
+    // lupa de «Desde»: abre la lista y al elegir completa el código
+    await page.click('.field:has(input[name=codigo_desde]) [data-lista-desde-hasta]');
+    await page.waitForSelector('dialog.ventana-lista[open]');
+    await page.fill('dialog.ventana-lista .va-buscar', 'E2A-1');
+    await page.waitForSelector('dialog.ventana-lista tbody tr:has-text("E2A-1")');
+    await page.click('dialog.ventana-lista tbody tr:has-text("E2A-1")');
+    ok(await page.inputValue('input[name=codigo_desde]') === 'E2A-1', 'lupa: eligió el artículo en «Desde»');
+    // buscador: al escribir parte de la descripción sugiere debajo
+    await page.fill('input[name=codigo_hasta]', 'AUTOMATICO E2E');
+    await page.waitForSelector('ul.sugerencias:not([hidden]) li:has-text("E2A-2")');
+    ok(true, 'buscador: sugiere al escribir la descripción');
     await page.fill('input[name=codigo_hasta]', 'E2A-9');
     await page.keyboard.press('Escape');
     await page.check('input[name=forma][value=porcentaje]');
