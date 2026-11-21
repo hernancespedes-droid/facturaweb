@@ -23,6 +23,39 @@ final class StockController
             'total' => $r['total'], 'unidades' => $r['unidades'], 'pagina' => $pagina, 'porPagina' => $por]));
     }
 
+    /** Movimientos de stock (trazabilidad), en detalle o resumidos por artículo y depósito. */
+    public static function movimientos(Request $req, array $params): Response
+    {
+        $f = array_map(static fn ($x) => is_string($x) ? trim($x) : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'articulo', 'deposito', 'origen', 'usuario',
+            'cliente', 'cliente_nombre', 'rubro', 'subrubro', 'resumido', 'orden'])));
+        $per = MovimientosStock::periodo($f);
+        $f['desde'] = date('d/m/Y', (int) strtotime($per['desde']));
+        $f['hasta'] = date('d/m/Y', (int) strtotime($per['hasta']));
+        $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
+        $por = Configuracion::porPagina();
+        $resumido = ($f['resumido'] ?? '') === '1';
+        $r = $resumido ? MovimientosStock::resumen($f, $pagina, $por) : MovimientosStock::listar($f, $pagina, $por);
+        return Response::html(View::render('stock/movimientos', ['title' => 'Movimientos de stock', 'nav' => 'stock_movimientos', 'f' => $f, 'r' => $r, 'resumido' => $resumido,
+            'depositos' => (new StockService())->depositos(), 'usuarios' => MovimientosStock::usuarios(), 'opciones' => \App\Modules\Listados\ListadosController::opciones(),
+            'costos' => Auth::puede('listados.costos'), 'pagina' => $pagina, 'porPagina' => $por]));
+    }
+
+    /** Existencias por depósito a una fecha (valorizado con listados.costos). */
+    public static function existencias(Request $req, array $params): Response
+    {
+        $f = array_map(static fn ($x) => is_string($x) ? trim($x) : '', array_intersect_key($req->query, array_flip(['fecha', 'q', 'rubro', 'subrubro', 'proveedor', 'deposito',
+            'mostrar', 'valorizar', 'orden'])));
+        if (!Auth::puede('listados.costos')) {
+            unset($f['valorizar']);
+        }
+        $deps = (new StockService())->depositos();
+        $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
+        $por = Configuracion::porPagina();
+        $r = Existencias::listar($f, $deps, $pagina, $por);
+        return Response::html(View::render('stock/existencias', ['title' => 'Existencias por depósito', 'nav' => 'stock_existencias', 'f' => $f, 'r' => $r, 'depositos' => $deps,
+            'opciones' => \App\Modules\Listados\ListadosController::opciones(), 'costos' => Auth::puede('listados.costos'), 'pagina' => $pagina, 'porPagina' => $por]));
+    }
+
     public static function index(Request $req, array $params): Response
     {
         $svc = new StockService();

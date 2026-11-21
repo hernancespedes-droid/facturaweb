@@ -91,6 +91,11 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 `Clientes/AltaCliente`: `propuesta()` (CUIT → existentes + datos del formulario con la provincia de la tabla + letra) y `crear()` (alta rápida, solo `CAMPOS_RAPIDOS`). Rutas `GET /clientes/padron` y `POST /clientes/rapido` con `clientes.alta` o `clientes.editar`.
 Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_cliente()` junto a la lupa, `require views/clientes/_alta_rapida.php` y `AltaCliente.itemLista(q, elegir)` al final de la lista (ver `comprobante.js` y `kiosco.js`).
 
+## Estadística, stock y costos (0.32.0)
+
+`Listados/Estadistica` (agrupar por artículo, rubro, cliente, vendedor, mes…, ranking y detalle; `/listados/estadistica` y `/listados/rentabilidad`), `Listados/ListaCostos` (`/listados/costos`), `Stock/MovimientosStock` (trazabilidad con saldo corrido y resumen; `/stock/movimientos`) y `Stock/Existencias` (por depósito a una fecha; `/stock/existencias`).
+**Todo INSERT nuevo en `estadistica` lleva `costo`** (unitario en pesos al emitir, `Listados\Costos::unitarios`, D-62). Costos, márgenes y valorizados solo con el permiso `listados.costos`. La estadística no cuenta la factura de un presupuesto (`solo_subdiario = 1`) y resta NC/NX (D-63).
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.

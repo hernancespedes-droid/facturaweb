@@ -17,11 +17,11 @@ final class Modulos
     public const LISTA = [
         'cuenta_corriente' => ['nombre' => 'Cuenta corriente, recibos y cheques', 'menu' => ['ctacte', 'recibos_nuevo', 'recibos', 'imputar', 'ctacte_ajuste', 'cheques'],
             'rutas' => ['/cuenta-corriente', '/recibos', '/cheques'], 'por_omision' => true],
-        'stock' => ['nombre' => 'Stock', 'menu' => ['stock', 'stock_ventas_sin_stock', 'stock_ajuste', 'stock_transferir', 'stock_depositos'],
+        'stock' => ['nombre' => 'Stock', 'menu' => ['stock', 'stock_movimientos', 'stock_existencias', 'stock_ventas_sin_stock', 'stock_ajuste', 'stock_transferir', 'stock_depositos'],
             'rutas' => ['/stock'], 'por_omision' => true],
         'caja' => ['nombre' => 'Caja (turnos, arqueos, caja diaria)', 'menu' => ['caja', 'caja_turnos', 'caja_auditoria', 'caja_diaria'],
             'rutas' => ['/caja', '/listados/caja-diaria'], 'por_omision' => true],
-        'listados' => ['nombre' => 'Listados (ventas, IVA ventas, Libro IVA Digital)', 'menu' => ['ventas_diarias', 'iva_ventas', 'libro_iva'],
+        'listados' => ['nombre' => 'Listados (ventas, IVA ventas, Libro IVA Digital, estadística, rentabilidad y costos)', 'menu' => ['ventas_diarias', 'iva_ventas', 'libro_iva', 'estadistica', 'rentabilidad', 'lista_costos'],
             'rutas' => ['/listados'], 'por_omision' => true],
         'kiosco' => ['nombre' => 'Modo Kiosco', 'menu' => ['kiosco'], 'rutas' => ['/kiosco'], 'por_omision' => true],
         'cambios' => ['nombre' => 'Cambio de mercadería', 'menu' => ['cambios'], 'rutas' => ['/cambios'], 'por_omision' => true],

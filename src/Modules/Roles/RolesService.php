@@ -30,6 +30,7 @@ final class RolesService
         'caja' => ['caja.turno', ['caja.mover']],
         'caja_auditoria' => ['caja.auditar', []],
         'iva_ventas' => ['listados.ver', []],
+        'lista_costos' => ['listados.costos', []],
         'stock' => ['stock.ver', ['stock.mover', 'stock.administrar', 'stock.autorizar']],
         'sucursales' => ['tablas.sucursales', []],
         'rubros' => ['tablas.rubros', []],

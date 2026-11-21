@@ -1221,6 +1221,16 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 .mp-link input { width: min(32rem, 100%); }
 .mp-estado { font-size: 1.1rem; }
 
+/* Listados (0.32.0): vista de impresión sin menú ni filtros, grillas enteras */
+.solo-imprimir { display: none; }
+@media print {
+  .topbar, .no-imprimir, .grilla-barra, .paginador, .page-head .acciones, .sugerencias { display: none !important; }
+  .solo-imprimir { display: block; }
+  .table-wrap { max-height: none !important; overflow: visible !important; box-shadow: none; }
+  @page { size: A4 landscape; margin: 10mm; }
+}
+/* En el celular los totales ya están en el recuadro de arriba: el pie de la grilla no entra como tarjeta */
+@media (max-width: 760px) { .table-cards.pie-solo-escritorio tfoot { display: none; } }
 /* ---------- Apariencia (Configuración) ---------- */
 .ap-color { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 0 4px; }
 .ap-color input[type="color"] { width: 64px; height: 42px; padding: 2px; border-radius: 8px; cursor: pointer; }

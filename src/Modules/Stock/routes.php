@@ -9,6 +9,9 @@ use App\Modules\Stock\StockController as C;
 // stock.ver: saldos y kardex. stock.mover: ingresos, egresos, ajustes y transferencias. stock.administrar: depósitos y recálculo.
 return function (Router $r): void {
     $r->get('/stock', Guard::permiso('stock.ver', [C::class, 'index']));
+    $r->get('/stock/movimientos', Guard::permiso('stock.ver', [C::class, 'movimientos']));
+    $r->get('/stock/existencias', Guard::permiso('stock.ver', [C::class, 'existencias']));
+    $r->get('/stock/buscar-cliente', Guard::permiso('stock.ver', [\App\Modules\Comprobantes\ComprobantesController::class, 'buscarCliente']));
     $r->get('/stock/ventas-sin-stock', Guard::permiso('stock.ver', [C::class, 'ventasSinStock']));
     $r->get('/stock/articulo/{codigo}', Guard::permiso('stock.ver', [C::class, 'kardex']));
     $r->get('/stock/buscar-articulo', Guard::permiso('stock.ver', [C::class, 'buscarArticulo']));
