@@ -172,6 +172,13 @@ escribe la URL del master y la clave de cada cliente (al entrar al panel o a la 
 `sistema_estado`, aplica lo pendiente con el candado `fw_migrar:<base>` (el mismo de «Aplicar cambios»); los demás pedidos ven «Actualizando» (503). Si falla, no bloquea: queda en
 `App::storage('automigracion_error.json')`, el Master lo ve en Sistema y `/salud` da `migracion_error`. Por eso las migraciones **tienen que ser aditivas e idempotentes**: se aplican sin que nadie mire.
 
+## Cargar sin saltos (0.48.0)
+
+`public/assets/carga.js` (en `layout.php`, todas las pantallas): en un `form[method=post]` Enter pasa al campo siguiente y desde el último al botón principal (D-129); no envía.
+Quedan con Enter normal: textarea, formularios de un campo, GET (filtros) y `data-enter="enviar"` (en el form o el campo, p. ej. el ingreso). Un manejador propio de Enter
+(buscadores) tiene que llamar `preventDefault()`: `carga.js` escucha en `window` y respeta `defaultPrevented`. Al volver a la misma ruta después de enviar, restaura altura y foco
+(o va al primer `.has-error` / `.field-error`) y muestra los `main > .alerta` flotando (`.avisos-flotantes`).
+
 ## Estructura y convenciones
 
 - Módulos en `src/Modules/<Nombre>/` con `routes.php`; vistas en `views/<modulo>/`. Handlers `function (Request $req, array $params): Response`.

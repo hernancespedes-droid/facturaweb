@@ -1483,3 +1483,13 @@ tr.mp-no-visto td { background: color-mix(in srgb, var(--ok) 10%, transparent); 
 .qr-marco { position: absolute; inset: 15%; border: 3px solid var(--brand); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0, 0, 0, .35); }
 .resultado-pos { color: var(--ok, #1e8e3e); }
 .resultado-neg { color: var(--error, #c0392b); }
+
+/* 0.48.0: avisos que quedan a la vista cuando la página vuelve a la altura donde se estaba cargando (carga.js). */
+.avisos-flotantes { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 60; width: min(560px, calc(100vw - 32px)); display: grid; gap: 8px; }
+.avisos-flotantes .alerta { margin: 0; padding-right: 40px; position: relative; background: var(--panel); box-shadow: 0 8px 24px rgba(0, 0, 0, .25); }
+.avisos-flotantes .alerta-ok { background: color-mix(in srgb, var(--ok) 12%, var(--panel)); }
+.avisos-flotantes .alerta-error { background: color-mix(in srgb, var(--danger) 12%, var(--panel)); }
+.avisos-flotantes .alerta-info { background: color-mix(in srgb, var(--brand) 12%, var(--panel)); }
+.avisos-flotantes .alerta-warn { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); }
+.aviso-cerrar { position: absolute; top: 6px; right: 6px; border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; padding: 6px 8px; cursor: pointer; border-radius: 6px; }
+.aviso-cerrar:hover, .aviso-cerrar:focus-visible { color: var(--text); background: var(--panel-2); }

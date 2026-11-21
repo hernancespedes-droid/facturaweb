@@ -13,6 +13,7 @@ const RECORRIDOS = [
   'alta-cliente.js',
   'compras.js',
   'soporte.js',
+  'carga.js',
 ];
 
 for (const archivo of RECORRIDOS) {
