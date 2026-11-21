@@ -38,6 +38,7 @@ final class AparienciaTest extends DbTestCase
         Db::pdo()->exec("UPDATE configuracion SET valor = '' WHERE clave IN ('apariencia.color', 'apariencia.nombre')");
         Db::pdo()->exec("UPDATE configuracion SET valor = '1' WHERE clave = 'apariencia.logo_en_pantalla'");
         Db::pdo()->exec("UPDATE configuracion SET valor = '0' WHERE clave = 'apariencia.logo_placa'");
+        Db::pdo()->exec("DELETE FROM configuracion WHERE clave = 'apariencia.menu'");
         Configuracion::reset();
         Apariencia::reset();
         Logo::reset();
@@ -255,5 +256,39 @@ final class AparienciaTest extends DbTestCase
         // y el formulario general no las cambia
         $r = Configuracion::guardar(['apariencia.color' => '#000000'], null);
         $this->assertSame(0, $r['cambiados']);
+    }
+
+    public function testMenuHorizontalOLateralParaTodaLaInstalacion(): void
+    {
+        $this->loginComo($this->crearUsuario('t_adm_menu', 'admin'));
+        $this->assertSame('horizontal', Apariencia::menu(), 'sin elegir: horizontal, como siempre');
+        $this->assertStringContainsString('<body class="menu-horizontal">', $this->get('/')->body);
+
+        $r = $this->post('/configuracion/apariencia', ['nombre' => '', 'logo_en_pantalla' => '1', 'menu' => 'lateral']);
+        $this->assertSame(302, $r->status);
+        $this->assertSame('lateral', Apariencia::menu());
+        $this->assertStringContainsString('<body class="menu-lateral">', $this->get('/')->body);
+        $this->assertStringContainsString('name="menu" value="lateral" checked', $this->get('/configuracion')->body);
+
+        // vale para todos los usuarios de la instalación
+        $this->loginComo($this->crearUsuario('t_op_menu', 'operador'));
+        $this->assertStringContainsString('<body class="menu-lateral">', $this->get('/')->body);
+        // y quien no administra la configuración no lo cambia
+        $this->assertSame(403, $this->post('/configuracion/apariencia', ['menu' => 'horizontal'])->status);
+        $this->assertSame('lateral', Apariencia::menu());
+
+        // un valor inventado no se graba; guardar sin el campo (formulario viejo) conserva lo elegido
+        $this->loginComo($this->crearUsuario('t_adm_menu2', 'admin'));
+        $this->assertTrue($this->post('/configuracion/apariencia', ['menu' => 'flotante'])->status !== 302);
+        $this->assertSame('lateral', Apariencia::menu());
+        $this->post('/configuracion/apariencia', ['nombre' => '', 'logo_en_pantalla' => '1']);
+        $this->assertSame('lateral', Apariencia::menu());
+    }
+
+    public function testSinSesionElIngresoNoLlevaMenuLateral(): void
+    {
+        Db::pdo()->exec("INSERT INTO configuracion (clave, valor, tipo, descripcion) VALUES ('apariencia.menu', 'lateral', 'texto', 'menú') ON DUPLICATE KEY UPDATE valor = 'lateral'");
+        Configuracion::reset();
+        $this->assertStringNotContainsString('menu-lateral', $this->get('/login')->body);
     }
 }

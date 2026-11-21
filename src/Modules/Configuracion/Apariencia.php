@@ -21,6 +21,9 @@ final class Apariencia
     public const NOMBRE = 'apariencia.nombre';
     public const LOGO_EN_PANTALLA = 'apariencia.logo_en_pantalla';
     public const LOGO_PLACA = 'apariencia.logo_placa';
+    /** Menú horizontal (arriba, con desplegables) o lateral (columna a la izquierda), 0.52.0 / D-136. */
+    public const MENU = 'apariencia.menu';
+    public const MENUS = ['horizontal' => 'Horizontal, arriba (con desplegables)', 'lateral' => 'Lateral, a la izquierda (columna fija)'];
 
     public const IMG_WEB = 'logo_web';
     public const IMG_PANTALLA = 'logo_pantalla';
@@ -72,6 +75,13 @@ final class Apariencia
     public static function logoPlaca(): bool
     {
         return Configuracion::valor(self::LOGO_PLACA) === '1';
+    }
+
+    /** Menú de esta instalación: 'horizontal' (por omisión) o 'lateral'. En el celular siempre es el botón ☰. */
+    public static function menu(): string
+    {
+        $m = (string) Configuracion::valor(self::MENU);
+        return isset(self::MENUS[$m]) ? $m : 'horizontal';
     }
 
     /** Si el cliente cambió algo (entonces se firma «FacturaWeb · O&S» en el ingreso). */
@@ -160,6 +170,10 @@ final class Apariencia
                 $color = $n;
             }
         }
+        $menu = (string) ($post['menu'] ?? self::menu());
+        if (!isset(self::MENUS[$menu])) {
+            $err['menu'] = 'Elegí menú horizontal o lateral.';
+        }
         if ($err !== []) {
             return $err;
         }
@@ -168,6 +182,7 @@ final class Apariencia
             self::COLOR => [$color, 'texto', 'Apariencia: color principal en #rrggbb (vacío = el azul de FacturaWeb)'],
             self::LOGO_EN_PANTALLA => [empty($post['logo_en_pantalla']) ? '0' : '1', 'si_no', 'Apariencia: mostrar el logo en la barra y en el ingreso'],
             self::LOGO_PLACA => [empty($post['logo_placa']) ? '0' : '1', 'si_no', 'Apariencia: poner el logo sobre una placa blanca'],
+            self::MENU => [$menu, 'texto', 'Apariencia: menú horizontal (arriba) o lateral (a la izquierda)'],
         ];
         $st = Db::pdo()->prepare(
             'INSERT INTO configuracion (clave, valor, tipo, descripcion, actualizado_por) VALUES (?, ?, ?, ?, ?)
