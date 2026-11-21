@@ -474,6 +474,34 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.textContent('body')).includes('Pago acreditado: la venta se emitió'), 'mercado pago: al acreditarse se emite sola');
     await Promise.all([page.waitForNavigation(), page.click('a:has-text("Seguir")')]);
     ok((await page.textContent('body')).includes('MERCADO PAGO'), 'mercado pago: el comprobante quedó con Mercado Pago como forma de pago');
+    // ---- ingresos de dinero a la cuenta de Mercado Pago: grilla, campanita y cartel al entrar plata (de una venta o no)
+    await page.goto(BASE + '/mercadopago/ingresos');
+    let cuerpoIng = await page.textContent('body');
+    ok(cuerpoIng.includes('Ingresos de Mercado Pago') && cuerpoIng.includes('Ver comprobante'), 'ingresos mp: la venta cobrada aparece como ingreso con su comprobante');
+    ok(await page.isVisible('[data-mp-campana]'), 'ingresos mp: la campanita está en la barra');
+    if (await page.locator('[data-mp-vistos]').count()) {
+      await Promise.all([page.waitForNavigation(), page.click('[data-mp-vistos]')]);
+    }
+    ok(!(await page.isVisible('[data-mp-n]')), 'ingresos mp: marcados como vistos, la campanita queda sin número');
+    await page.goto(BASE + '/');
+    {
+      const otra = await ctx.newPage(); // entra plata mientras la pantalla de inicio está abierta
+      await otra.goto(BASE + '/mercadopago/ingresos');
+      await otra.fill('input[name=monto]', '12.500');
+      await otra.fill('input[name=pagador]', 'Juan Transferencia');
+      await Promise.all([otra.waitForNavigation(), otra.click('button:has-text("Simular ingreso")')]);
+      await otra.close();
+    }
+    await page.evaluate(() => window.MpIngresos.ahora());
+    await page.waitForSelector('.mp-aviso', { timeout: 5000 });
+    ok((await page.textContent('.mp-aviso')).includes('Ingresó $ 12.500,00 de Juan Transferencia'), 'ingresos mp: sale el cartel con el ingreso nuevo');
+    ok((await page.textContent('[data-mp-n]')).trim() === '1', 'ingresos mp: la campanita cuenta el ingreso sin ver');
+    await page.screenshot({ path: path.join(CAPTURAS, 'mp-ingresos-campanita.png') });
+    await page.goto(BASE + '/mercadopago/ingresos');
+    cuerpoIng = await page.textContent('body');
+    ok(cuerpoIng.includes('12.500,00') && cuerpoIng.includes('Juan Transferencia') && cuerpoIng.includes('Sin venta asociada'), 'ingresos mp: el ingreso sin venta queda en la grilla');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'ingresos mp: la grilla no se desborda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'mp-ingresos.png'), fullPage: true });
 
     // ---- caja: turno con arqueo, ingreso y egreso manual, anulación, auditoría con hora y usuario
     await page.goto(BASE + '/caja');
@@ -574,12 +602,14 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
       const cel = await browser.newContext({ ...devices['Pixel 7'] });
       const pe = await cel.newPage();
       await login(pe, 'e2e_admin');
-      for (const ruta of ['/listados/estadistica', '/stock/movimientos', '/stock/existencias', '/listados/costos']) {
+      for (const ruta of ['/listados/estadistica', '/stock/movimientos', '/stock/existencias', '/listados/costos', '/mercadopago/ingresos']) {
         await pe.goto(BASE + ruta);
         ok(await pe.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: ' + ruta + ' sin scroll horizontal');
       }
       await pe.goto(BASE + '/listados/estadistica');
       await pe.screenshot({ path: path.join(CAPTURAS, 'celular-estadistica.png'), fullPage: true });
+      await pe.goto(BASE + '/mercadopago/ingresos');
+      await pe.screenshot({ path: path.join(CAPTURAS, 'celular-mp-ingresos.png'), fullPage: true });
       await cel.close();
     }
 

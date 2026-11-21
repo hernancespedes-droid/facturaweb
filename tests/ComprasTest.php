@@ -10,7 +10,7 @@ use App\Modules\Compras\ComprasListados;
 use App\Modules\Compras\ComprasService;
 use App\Modules\Compras\ProveedoresService;
 
-/** Compras y centros de costos (0.41.0): importes e IVA, costo, reparto, repetidos, caja, cuenta corriente, listados, tablero y permisos. */
+/** Compras y centros de costos (0.43.0): importes e IVA, costo, reparto, repetidos, caja, cuenta corriente, listados, tablero y permisos. */
 final class ComprasTest extends ComprobantesTestCase
 {
     private ComprasService $c;

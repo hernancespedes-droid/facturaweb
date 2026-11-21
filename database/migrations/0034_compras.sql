@@ -1,4 +1,4 @@
--- Compras y centros de costos, entrega A (0.41.0): proveedores, conceptos de gasto, centros de costos con presupuesto mensual, compras con IVA por alícuota,
+-- Compras y centros de costos, entrega A (0.43.0): proveedores, conceptos de gasto, centros de costos con presupuesto mensual, compras con IVA por alícuota,
 -- percepciones, reparto entre centros, adjuntos y pagos (efectivo de la caja, otro medio o a cuenta corriente para pagar después).
 --   Todo lo nuevo de la web (no hay tablas de compras en el VFP de O&S). El módulo se enciende por cliente (Core\Modulos 'compras').
 --   Permisos: compras.ver (tablero y listados), compras.cargar, compras.pagar, compras.centros (centros, conceptos, presupuestos y plantillas).

@@ -32,6 +32,7 @@ final class Menu
         $o['imputar'] = ['texto' => 'Imputación manual', 'ruta' => '/cuenta-corriente/imputar', 'permiso' => 'ctacte.imputar', 'grupo' => 'Cuenta corriente'];
         $o['ctacte_ajuste'] = ['texto' => 'Ajuste de cuenta corriente', 'ruta' => '/cuenta-corriente/ajuste', 'permiso' => 'ctacte.ajustar', 'grupo' => 'Cuenta corriente'];
         $o['cheques'] = ['texto' => 'Cheques en cartera', 'ruta' => '/cheques', 'permiso' => 'ctacte.ver', 'grupo' => 'Cuenta corriente'];
+        $o['mp_ingresos'] = ['texto' => 'Ingresos de Mercado Pago', 'ruta' => '/mercadopago/ingresos', 'permiso' => 'mercadopago.ingresos', 'grupo' => 'Facturación'];
         $o['mp'] = ['texto' => 'Cobros con Mercado Pago', 'ruta' => '/mercadopago', 'permiso' => 'mercadopago.cobrar', 'grupo' => 'Facturación'];
         $o['caja'] = ['texto' => 'Mi caja (turno y movimientos)', 'ruta' => '/caja', 'permiso' => 'caja.turno', 'grupo' => 'Caja'];
         $o['caja_turnos'] = ['texto' => 'Turnos y arqueos', 'ruta' => '/caja/turnos', 'permiso' => 'caja.turno', 'grupo' => 'Caja'];
@@ -87,7 +88,7 @@ final class Menu
         if ($clave === 'kiosco' && !\App\Modules\Kiosco\KioscoService::habilitado()) {
             return false; // el modo Kiosco se enciende en Parámetros
         }
-        if ($clave === 'mp' && !\App\Modules\MercadoPago\MercadoPago::activo()) {
+        if (($clave === 'mp' || $clave === 'mp_ingresos') && !\App\Modules\MercadoPago\MercadoPago::activo()) {
             return false; // Mercado Pago se enciende en config/local.php
         }
         if ($clave === 'cambios' && !\App\Modules\Cambios\CambiosService::habilitado()) {

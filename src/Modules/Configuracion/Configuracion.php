@@ -95,6 +95,13 @@ final class Configuracion
             if ($p['tipo'] === 'entero') {
                 $v = (string) (int) $v;
             }
+            if ($p['clave'] === 'mercadopago.ingresos_mails' && $v !== '') {
+                $malos = array_filter(preg_split('/[,;\s]+/', $v) ?: [], static fn ($m) => $m !== '' && filter_var($m, FILTER_VALIDATE_EMAIL) === false);
+                if ($malos !== []) {
+                    $errores[$p['clave']] = 'No es un mail válido: ' . implode(', ', $malos) . '.';
+                    continue;
+                }
+            }
             if (mb_strlen($v) > 255) {
                 $errores[$p['clave']] = 'Es demasiado largo.';
                 continue;

@@ -1,4 +1,4 @@
-// Recorrido de navegador de compras y centros de costos (0.41.0): tablero, proveedor, compra con reparto, pago, listados, celular y permisos.
+// Recorrido de navegador de compras y centros de costos (0.43.0): tablero, proveedor, compra con reparto, pago, listados, celular y permisos.
 //   node e2e/compras.js   levanta su propio servidor en el puerto 8083
 const { chromium, devices } = require('playwright');
 const { spawn, execFileSync } = require('child_process');
