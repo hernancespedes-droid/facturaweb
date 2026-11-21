@@ -60,7 +60,7 @@
     fila.querySelectorAll('[data-solo-cheque]').forEach(function (e) { e.hidden = tipo !== '5'; });
     vuelto(fila);
   }
-  // efectivo (la forma que acepta vuelto): lo que entrega el cliente y la calculadora de vuelto (vuelto.js, D-129)
+  // efectivo (la forma que acepta vuelto): lo que entrega el cliente y la calculadora de vuelto (vuelto.js, D-134)
   function vuelto(fila) {
     var op = fila.querySelector('[data-fpago] option:checked');
     var acepta = !!op && op.getAttribute('data-vuelto') === '1';

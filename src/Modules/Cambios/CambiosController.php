@@ -83,7 +83,7 @@ final class CambiosController
             : 'Cambio X ' . numero_cbte($r['cambio']['prefijo'], $e['numero']) . ' hecho.' . ($dif > 0.004 ? ' Diferencia cobrada: ' . plata_dec($dif) . '.' : ' Sin diferencia a cobrar.')
                 . (($e['vuelto'] ?? 0) > 0 ? ' DAR VUELTO AL CLIENTE: ' . plata_dec($e['vuelto']) . '.' : ''));
         if (!$e['repetido'] && ($e['vuelto'] ?? 0) > 0) {
-            Session::flash('vuelto', (string) $e['vuelto']); // D-129
+            Session::flash('vuelto', (string) $e['vuelto']); // D-134
         }
         return Response::redirect(url('/comprobantes/' . $e['id']));
     }

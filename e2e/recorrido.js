@@ -230,7 +230,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.fill('[data-recibido]', '1.500');
     const aviso = await page.textContent('[data-vuelto-aviso]');
     ok(aviso.includes('DAR VUELTO AL CLIENTE') && aviso.includes('290,00'), 'avisa el vuelto (1.500 − 1.210 = 290)');
-    // calculadora de vuelto (D-129): cifras grandes, montos redondos y billetes para sumar
+    // calculadora de vuelto (D-134): cifras grandes, montos redondos y billetes para sumar
     ok((await page.textContent('[data-v-resultado]')).includes('290,00') && (await page.textContent('[data-v-etiqueta]')).includes('vuelto'), 'calculadora: muestra el vuelto en grande');
     ok((await page.textContent('[data-v-desglose]')).includes('1 de $ 200'), 'calculadora: sugiere con qué billetes darlo');
     await page.click('[data-v-borrar]');

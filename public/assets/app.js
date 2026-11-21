@@ -1201,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', function () {
   pintar();
 });
 
-// Cartel grande del vuelto después de cobrar (D-129): se cierra con el botón, Enter o Escape y devuelve el cursor al campo de la pantalla (el buscador del kiosco)
+// Cartel grande del vuelto después de cobrar (D-134): se cierra con el botón, Enter o Escape y devuelve el cursor al campo de la pantalla (el buscador del kiosco)
 document.addEventListener('DOMContentLoaded', function () {
   var cartel = document.querySelector('[data-vuelto-final]');
   if (!cartel) return;

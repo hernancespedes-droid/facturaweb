@@ -162,7 +162,7 @@ final class CuentaCorrienteController
         Session::flash('ok', $e['repetido'] ? 'Ese recibo ya estaba cargado.' : 'Recibo N.º ' . numero_cbte($r['recibo']['prefijo'], $e['numero']) . ' grabado.'
             . (!$e['repetido'] && $vuelto > 0 ? ' DAR VUELTO AL CLIENTE: ' . plata_dec($vuelto) . '.' : ''));
         if (!$e['repetido'] && $vuelto > 0) {
-            Session::flash('vuelto', (string) $vuelto); // D-129
+            Session::flash('vuelto', (string) $vuelto); // D-134
         }
         return Response::redirect(url('/recibos/' . $e['id']));
     }

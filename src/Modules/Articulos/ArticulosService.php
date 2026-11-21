@@ -38,7 +38,11 @@ final class ArticulosService
             'grabado' => ['label' => 'Gravado con IVA', 'tipo' => 'si_no', 'grupo' => 'Precios'],
             'moneda' => ['label' => 'Moneda', 'tipo' => 'opciones', 'opciones' => self::MONEDAS, 'requerido' => true, 'grupo' => 'Precios'],
             'costo' => ['label' => 'Costo', 'tipo' => 'decimal', 'dec' => 4, 'min' => 0, 'max' => 99999999999, 'grupo' => 'Precios'],
-            'margen' => ['label' => 'Margen (%)', 'tipo' => 'decimal', 'dec' => 2, 'min' => 0, 'max' => 9999, 'grupo' => 'Precios'],
+            'precio_automatico' => ['label' => 'Precio automático: los precios se calculan solos con el costo y el margen de cada lista', 'tipo' => 'si_no', 'grupo' => 'Precios'],
+            'margen_l1' => self::margen('lista 1', 'Vacío = el del rubro o el general de Parámetros.'),
+            'margen_l2' => self::margen('lista 2'),
+            'margen_l3' => self::margen('lista 3'),
+            'margen_oferta' => self::margen('oferta'),
             'precio_unitario' => ['label' => 'Precio unitario', 'tipo' => 'decimal', 'dec' => 4, 'min' => 0, 'max' => 99999999999, 'grupo' => 'Precios'],
             'precio_de_venta_1' => ['label' => 'Precio lista 1', 'tipo' => 'decimal', 'dec' => 4, 'min' => 0, 'max' => 99999999999, 'grupo' => 'Precios'],
             'precio_de_venta_2' => ['label' => 'Precio lista 2', 'tipo' => 'decimal', 'dec' => 4, 'min' => 0, 'max' => 99999999999, 'grupo' => 'Precios'],
@@ -52,6 +56,15 @@ final class ArticulosService
             'stock_minimo_unidades' => ['label' => 'Stock mínimo (unidades)', 'tipo' => 'entero', 'min' => 0, 'max' => 999999999, 'grupo' => 'Otros datos'],
             'cta_contable' => ['label' => 'Cuenta contable', 'tipo' => 'entero', 'min' => 0, 'max' => 9999, 'grupo' => 'Otros datos'],
         ];
+    }
+
+    /** Campos que solo cambia quien tiene articulos.precios (D-130). */
+    public const CAMPOS_PRECIOS = ['costo', 'precio_automatico', 'margen_l1', 'margen_l2', 'margen_l3', 'margen_oferta'];
+
+    private static function margen(string $lista, ?string $ayuda = null): array
+    {
+        return ['label' => 'Margen ' . $lista . ' (% sobre el costo)', 'tipo' => 'decimal', 'dec' => 2, 'min' => 0, 'max' => 99999, 'nulo' => true, 'grupo' => 'Precios']
+            + ($ayuda !== null ? ['ayuda' => $ayuda] : []);
     }
 
     private const ORDEN = [
@@ -121,13 +134,13 @@ final class ArticulosService
      *
      * @return array{ok:bool,errores:array<string,string>,codigo:?string}
      */
-    public function guardar(?string $codigo, array $data): array
+    public function guardar(?string $codigo, array $data, bool $puedePrecios = true, ?int $usuarioId = null): array
     {
         $actual = $codigo === null ? null : $this->obtener($codigo);
         if ($codigo !== null && $actual === null) {
             return ['ok' => false, 'errores' => ['general' => 'El artículo ya no existe.'], 'codigo' => null];
         }
-        [$v, $errores] = Validador::validar(self::campos(), $data);
+        [$v, $errores] = Validador::validar(self::campos(), $data, $puedePrecios ? [] : self::CAMPOS_PRECIOS);
         if ($actual === null) {
             $nuevo = mb_strtoupper(trim((string) ($data['codigo'] ?? '')));
             if ($nuevo === '' || mb_strlen($nuevo) > 15 || preg_match('/^[^\s\/\\\\?#%]+( [^\s\/\\\\?#%]+)*$/u', $nuevo) !== 1) {
@@ -148,6 +161,16 @@ final class ArticulosService
         if ($errores !== []) {
             return ['ok' => false, 'errores' => $errores, 'codigo' => null];
         }
+        // Precio automático (D-133): las listas con margen se calculan desde el costo, pise lo que pise el formulario.
+        $precios = new Precios($this->pdo);
+        $todo = $v + ($actual ?? []);
+        if ((int) ($todo['precio_automatico'] ?? 0) === 1) {
+            foreach ($precios->calcular($todo)['listas'] as $l => $x) {
+                if ($x['nuevo'] !== null) {
+                    $v[Precios::LISTAS[$l][0]] = $x['nuevo'];
+                }
+            }
+        }
         $v['actualizacion'] = date('Y-m-d H:i:s');
         try {
             if ($actual === null) {
@@ -166,6 +189,9 @@ final class ArticulosService
                 return ['ok' => false, 'errores' => ['codigo' => 'Ya existe un artículo con ese código.'], 'codigo' => null];
             }
             throw $e;
+        }
+        if ($actual !== null) {
+            $precios->registrar((string) $codigo, Precios::valores($actual), Precios::valores($v + $actual), 'FICHA', $usuarioId);
         }
         return ['ok' => true, 'errores' => [], 'codigo' => $codigo];
     }

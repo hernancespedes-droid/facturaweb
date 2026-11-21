@@ -325,7 +325,7 @@ final class CuentaCorrienteService
                 $err['pagos'] = 'El número de un medio de pago es demasiado largo (hasta 20).';
                 continue;
             }
-            // lo que entrega el cliente y el vuelto (D-44, D-129): vacío es el importe justo; de menos no vale; de más solo si la forma acepta vuelto
+            // lo que entrega el cliente y el vuelto (D-44, D-134): vacío es el importe justo; de menos no vale; de más solo si la forma acepta vuelto
             $linea['recibido'] = null;
             $linea['vuelto'] = 0.0;
             $recTxt = trim((string) ($p['recibido'] ?? ''));

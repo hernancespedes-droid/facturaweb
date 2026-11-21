@@ -204,6 +204,10 @@ final class ImportacionController
         $r['simulado'] = $simular;
         $r['destino'] = $x['destino'];
         $r['nombre'] = $x['nombre'];
+        $n = count($r['costos'] ?? []);
+        $r['preguntar_precios'] = $r['grabado'] ? \App\Modules\Articulos\ArticulosController::preguntarPrecios($r['costos'] ?? [],
+            'La importación cambió el costo de ' . ($n === 1 ? '1 artículo.' : $n . ' artículos.'), url('/importar/resultado?t=' . $token)) : null;
+        unset($r['costos']);
         Session::set(self::SESION . '_resultado_' . $token, $r);
         if ($r['grabado']) {
             self::olvidar($token, false);

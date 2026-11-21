@@ -1,5 +1,5 @@
 /*
- * Calculadora de vuelto para el operador (D-129): junto al campo «Recibido» de una forma de pago que acepta vuelto muestra, en grande, cuánto hay que
+ * Calculadora de vuelto para el operador (D-134): junto al campo «Recibido» de una forma de pago que acepta vuelto muestra, en grande, cuánto hay que
  * cobrar, cuánto entregó el cliente y el vuelto (o lo que falta), con botones para cargar lo recibido sin teclear: «Justo», los montos redondos más
  * cercanos (lo que suele entregar la gente) y billetes para sumar a medida que se cuentan. Sugiere con qué billetes dar el vuelto.
  * Solo ayuda en pantalla: lo recibido se escribe en el mismo campo y el servidor vuelve a calcular todo.

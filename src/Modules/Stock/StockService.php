@@ -254,11 +254,13 @@ final class StockService
     }
 
     /**
-     * Ingreso, egreso o ajuste (llevar el saldo a una cantidad contada).
+     * Ingreso, egreso o ajuste (llevar el saldo a una cantidad contada). En un ingreso, $costo (por unidad) reemplaza el costo del artículo y
+     * $precios recalcula sus listas con los márgenes (Articulos\Precios).
      *
      * @return array{ok:bool,error:?string}
      */
-    public function cargar(string $modo, string $articuloTxt, int $deposito, string $cantidadTxt, string $unidad, string $motivo, ?int $usuarioId): array
+    public function cargar(string $modo, string $articuloTxt, int $deposito, string $cantidadTxt, string $unidad, string $motivo, ?int $usuarioId,
+        ?float $costo = null, bool $precios = false): array
     {
         $art = $this->resolverArticulo($articuloTxt);
         if ($art === null) {
@@ -285,6 +287,10 @@ final class StockService
             };
             if (abs($mov) > 0.0004) {
                 $this->mover((string) $art['codigo'], $deposito, $mov, $modo, null, $usuarioId, $motivo !== '' ? $motivo : ($modo === 'AJUSTE' ? 'Ajuste por conteo' : null));
+            }
+            // Ingreso con costo (0.49): el costo del artículo (y los precios, si se confirmó) cambia en la misma transacción, con su historial
+            if ($costo !== null && $modo === 'INGRESO') {
+                (new \App\Modules\Articulos\Precios($this->pdo))->aplicar((string) $art['codigo'], $costo, $precios, 'STOCK', $usuarioId, $motivo);
             }
             $this->pdo->commit();
         } catch (\Throwable $e) {

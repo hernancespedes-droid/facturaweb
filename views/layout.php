@@ -93,7 +93,7 @@ if ($alDia && Menu::visible('mp_ingresos')) {
         <?php foreach ($flashes as $f): if ($f['tipo'] === 'vuelto') { continue; } ?>
             <div class="alerta alerta-<?= e($f['tipo']) ?>" role="status"><?= e($f['texto']) ?></div>
         <?php endforeach; ?>
-        <?php foreach ($flashes as $f): if ($f['tipo'] !== 'vuelto' || (float) $f['texto'] <= 0) { continue; } // vuelto a entregar después de cobrar (D-129) ?>
+        <?php foreach ($flashes as $f): if ($f['tipo'] !== 'vuelto' || (float) $f['texto'] <= 0) { continue; } // vuelto a entregar después de cobrar (D-134) ?>
             <div class="vuelto-final" data-vuelto-final role="alertdialog" aria-modal="true" aria-labelledby="vuelto-final-t">
                 <div class="vuelto-final-caja">
                     <p id="vuelto-final-t">Entregá el vuelto al cliente</p>

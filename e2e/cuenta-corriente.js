@@ -109,7 +109,7 @@ async function factura(page, precio) {
     const fp = page.locator('[data-fpago]').nth(0);
     await fp.selectOption({ label: 'EFECTIVO' });
     await page.locator('[data-pago-importe]').nth(0).fill('1.000');
-    ok(await page.isVisible('[data-recibido]'), 'recibo en efectivo: pide lo que entrega el cliente (D-129)');
+    ok(await page.isVisible('[data-recibido]'), 'recibo en efectivo: pide lo que entrega el cliente (D-134)');
     await page.click('[data-v-sumar="2000"]');
     ok((await page.textContent('[data-v-resultado]')).includes('1.000,00'), 'recibo: la calculadora muestra el vuelto (2.000 − 1.000)');
     await page.click('[data-agregar-pago]');

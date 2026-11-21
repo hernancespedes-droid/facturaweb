@@ -1156,7 +1156,7 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 .pago-linea .pago-cheque { flex: 1 1 100%; }
 .pago-linea .pago-quitar { flex: 0 0 auto; }
 
-/* Calculadora de vuelto (vuelto.js, D-129) */
+/* Calculadora de vuelto (vuelto.js, D-134) */
 .vuelto-caja { flex: 1 1 100%; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--panel-2); padding: 12px; margin: 4px 0 0; min-width: 0; }
 .pago-fila .vuelto-caja { grid-column: 1 / -1; }
 .vuelto-cifras { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 10px; margin-bottom: 10px; }

@@ -75,10 +75,10 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `parametros.impresion` (`a4`|`t80`|`t50`): `ImpresionController::imprimir` elige `views/comprobantes/imprimir.php` (A4) o `imprimir_ticket.php`; `?papel=` lo cambia. El PDF (`pdf()`, mail) sigue en A4; `ComprobanteTicketPdf` (con `?papel=t80|t50`) hace el PDF angosto. El vuelto se lee de `caja` (`ComprobanteImpreso::datos()['pagos']`).
 
-## Vuelto interactivo (0.48.0)
+## Vuelto interactivo (0.50.0)
 
 `public/assets/vuelto.js` (`Vuelto.crear(campoRecibido, lugar)`) dibuja la calculadora de vuelto junto a «Recibido» de toda forma que acepta vuelto; la usan `pago.js` (`_pago.php`: factura, kiosco, cambio) y `recibo.js` (los recibos graban `p_recibido`/`p_vuelto`). Con plata de menos no se envía el formulario.
-Después de cobrar, `Session::flash('vuelto', importe)` muestra el cartel grande del layout (`[data-vuelto-final]`, lo cierra `app.js`). D-129.
+Después de cobrar, `Session::flash('vuelto', importe)` muestra el cartel grande del layout (`[data-vuelto-final]`, lo cierra `app.js`). D-134.
 
 ## Caja (0.25.0)
 
@@ -108,6 +108,14 @@ Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_c
 
 `Listados/Estadistica` (agrupar por artículo, rubro, cliente, vendedor, mes…, ranking y detalle; `/listados/estadistica` y `/listados/rentabilidad`), `Listados/ListaCostos` (`/listados/costos`), `Stock/MovimientosStock` (trazabilidad con saldo corrido y resumen; `/stock/movimientos`) y `Stock/Existencias` (por depósito a una fecha; `/stock/existencias`).
 **Todo INSERT nuevo en `estadistica` lleva `costo`** (unitario en pesos al emitir, `Listados\Costos::unitarios`, D-62). Costos, márgenes y valorizados solo con el permiso `listados.costos`. La estadística no cuenta la factura de un presupuesto (`solo_subdiario = 1`) y resta NC/NX (D-63).
+
+## Precios con margen sobre el costo (0.49.0)
+
+`Articulos/Precios`: margen % sobre el costo por lista (`margen_l1|l2|l3|oferta` en `articulos` → `rubros` → `parametros`, NULL = hereda; D-130), IVA si la empresa es RI y
+`parametros.precios_con_iva` (D-131), redondeo hacia arriba `parametros.precio_redondeo` (D-132). `articulos.precio_automatico`: `ArticulosService::guardar` recalcula (D-133).
+`Precios::aplicar` cambia costo/precios con la fila bloqueada y anota en `articulos_precios_historial` (usa la transacción de quien llama). **Todo cambio nuevo de `articulos.costo`
+pasa por `Precios::aplicar` o `registrar`.** Para preguntar por los precios después de cambiar costos: `ArticulosController::preguntarPrecios($codigos, $motivo, $volver)` → `/articulos/precios?pendientes=1`.
+Permiso `articulos.precios` (costo, márgenes, automático, `/articulos/precios`; el ingreso de stock con costo).
 
 ## Tablero de inicio (0.40.0)
 

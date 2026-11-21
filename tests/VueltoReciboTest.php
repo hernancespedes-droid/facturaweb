@@ -6,7 +6,7 @@ namespace Tests;
 use App\Core\Db;
 use App\Modules\CuentaCorriente\CuentaCorrienteService;
 
-/** Vuelto en los recibos (D-129): en efectivo se anota lo que entrega el cliente; de menos no vale y en una forma sin vuelto no se cobra de más. */
+/** Vuelto en los recibos (D-134): en efectivo se anota lo que entrega el cliente; de menos no vale y en una forma sin vuelto no se cobra de más. */
 final class VueltoReciboTest extends ComprobantesTestCase
 {
     private CuentaCorrienteService $cc;
