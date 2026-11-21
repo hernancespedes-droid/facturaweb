@@ -6,6 +6,15 @@ const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// Emitir: al contado se abre «Cobrar venta» (D-136) y se confirma con el total justo.
+async function emitir(page) {
+  await page.click('button:has-text("Emitir")');
+  let abierta = false;
+  try { abierta = await page.isVisible('dialog[data-cobro][open]'); } catch (e) { abierta = false; }
+  if (abierta) await page.click('[data-confirmar-cobro]');
+}
+
+
 const BASE = process.env.E2E_URL || 'http://127.0.0.1:8080';
 const ROOT = path.resolve(__dirname, '..');
 const CAPTURAS = path.join(__dirname, 'capturas');
@@ -187,7 +196,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.textContent('h1')).includes('Factura A'), 'revisión de la factura A');
     ok((await page.textContent('.totales-rev')).includes('2.972,50'), 'la revisión recalcula en el servidor');
     await page.screenshot({ path: path.join(CAPTURAS, 'factura-revisar.png'), fullPage: true });
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), emitir(page)]);
     ok((await page.textContent('.alerta')).includes('emitida'), 'factura emitida');
     const urlFactura = page.url();
     ok(/Factura A 0004-\d{8}/.test(await page.textContent('h1')), 'numerada con el punto de venta 0004');
@@ -204,7 +213,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.textContent('h1')).includes('Nota de crédito'), 'abre la nota de crédito');
     ok((await page.inputValue('[data-renglon] [data-descripcion]')).includes('ABONO'), 'trae los renglones de la factura');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), emitir(page)]);
     ok(/Nota de crédito A 0004-\d{8}/.test(await page.textContent('h1')), 'nota de crédito emitida');
     await page.goto(urlFactura);
     ok(!(await page.content()).includes('Hacer nota de crédito'), 'la factura ya está acreditada por completo');
@@ -225,40 +234,40 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     // la forma de pago se pide al terminar, con el total a la vista
     ok((await page.textContent('.total-cobrar')).includes('1.210,00'), 'revisión: muestra el total a cobrar');
     await page.check('input[name=forma_pago][value="1"]');
-    ok(await page.isVisible('[data-fpago]'), 'contado: elige con qué paga');
-    ok(await page.isVisible('[data-recibido]'), 'efectivo: pide lo recibido');
-    await page.fill('[data-recibido]', '1.500');
-    const aviso = await page.textContent('[data-vuelto-aviso]');
-    ok(aviso.includes('DAR VUELTO AL CLIENTE') && aviso.includes('290,00'), 'avisa el vuelto (1.500 − 1.210 = 290)');
-    // calculadora de vuelto (D-134): cifras grandes, montos redondos y billetes para sumar
-    ok((await page.textContent('[data-v-resultado]')).includes('290,00') && (await page.textContent('[data-v-etiqueta]')).includes('vuelto'), 'calculadora: muestra el vuelto en grande');
-    ok((await page.textContent('[data-v-desglose]')).includes('1 de $ 200'), 'calculadora: sugiere con qué billetes darlo');
-    await page.click('[data-v-borrar]');
-    await page.click('[data-v-sumar="1000"]');
-    await page.click('[data-v-sumar="1000"]');
-    ok((await page.inputValue('[data-recibido]')) === '2.000,00' && (await page.textContent('[data-v-resultado]')).includes('790,00'), 'calculadora: tocar billetes suma lo recibido (2 × 1.000 → vuelto 790)');
-    await page.click('[data-v-monto="1500"]');
-    ok((await page.inputValue('[data-recibido]')) === '1.500,00', 'calculadora: los montos redondos cargan lo recibido');
-    await page.click('[data-v-justo]');
-    ok((await page.textContent('[data-v-resultado]')).includes('Sin vuelto'), 'calculadora: «Justo» es sin vuelto');
-    await page.fill('[data-recibido]', '1.500');
-    await page.screenshot({ path: path.join(CAPTURAS, 'pago-vuelto.png'), fullPage: true });
-    await page.selectOption('[data-fpago]', { label: 'BILLETERA VIRTUAL' });
-    ok(!(await page.isVisible('[data-recibido]')), 'billetera virtual: no hay vuelto');
-    await page.selectOption('[data-fpago]', { label: 'EFECTIVO' });
-    await page.fill('[data-recibido]', '1.000');
-    ok((await page.textContent('[data-v-etiqueta]')) === 'Faltan' && (await page.textContent('[data-v-resultado]')).includes('210,00'), 'calculadora: si entrega menos, dice cuánto falta');
+    ok(await page.isVisible('[data-abrir-cobro]'), 'contado: ofrece «Cobrar venta»');
     const urlRevisar = page.url();
     await page.click('button:has-text("Emitir")');
+    ok(await page.isVisible('dialog[data-cobro]') && page.url() === urlRevisar, 'Emitir al contado abre la ventana «Cobrar venta» (D-136)');
+    const imp0 = page.locator('[data-cobro] [data-importe-pago]').first();
+    await imp0.fill('1.500');
+    ok((await page.textContent('[data-r-vuelto]')).includes('290,00') && (await page.textContent('[data-r-pagado]')).includes('1.500,00'), 'resumen: pagado 1.500 y vuelto 290');
+    ok((await page.textContent('[data-v-desglose]')).includes('1 de $ 200'), 'sugiere con qué billetes dar el vuelto');
+    await page.click('[data-cobro] [data-v-borrar]');
+    await page.click('[data-cobro] [data-v-sumar="1000"]');
+    await page.click('[data-cobro] [data-v-sumar="1000"]');
+    ok((await imp0.inputValue()) === '2.000,00' && (await page.textContent('[data-r-vuelto]')).includes('790,00'), 'tocar billetes suma lo que entrega (2 × 1.000 → vuelto 790)');
+    await page.click('[data-cobro] [data-v-monto="1500"]');
+    ok((await imp0.inputValue()) === '1.500,00', 'los montos redondos cargan lo que entrega');
+    await page.click('[data-cobro] [data-v-monto="1210"]');
+    ok((await page.textContent('[data-r-vuelto]')).includes('Sin vuelto'), '«Justo» es sin vuelto');
+    await imp0.fill('1.000');
+    ok((await page.textContent('[data-r-etiqueta]')) === 'Falta' && (await page.textContent('[data-r-vuelto]')).includes('210,00') && await page.isDisabled('[data-confirmar-cobro]'), 'si paga de menos dice cuánto falta y no deja confirmar');
+    await imp0.press('Enter');
     await page.waitForTimeout(300);
-    ok(page.url() === urlRevisar && (await page.isVisible('[data-recibido]')), 'si entrega menos del total, no emite');
-    await page.press('[data-recibido]', 'Enter');
-    await page.waitForTimeout(300);
-    ok(page.url() === urlRevisar, 'Enter con plata de menos tampoco emite');
-    await page.fill('[data-recibido]', '1.500');
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
-    ok(/Factura B 0004-\d{8}/.test(await page.textContent('h1')), 'factura B emitida');
-    ok((await page.textContent('body')).includes('DAR VUELTO AL CLIENTE: $ 290,00'), 'al emitir recuerda dar el vuelto');
+    ok(page.url() === urlRevisar && await page.isVisible('dialog[data-cobro]'), 'Enter con plata de menos no emite');
+    // medios mezclados: 1.000 en efectivo + otro medio; lo que pasa del total es el vuelto, aunque el medio no dé vuelto (informativo)
+    await page.click('[data-cobro] [data-agregar-pago]');
+    const imp1 = page.locator('[data-cobro] [data-importe-pago]').nth(1);
+    ok((await imp1.inputValue()) === '210,00', 'otro medio propone lo que falta');
+    await page.locator('[data-cobro] [data-linea]').nth(1).locator('[data-fpago]').selectOption({ label: 'BILLETERA VIRTUAL' });
+    await imp1.fill('500');
+    ok((await page.textContent('[data-r-vuelto]')).includes('290,00') && !(await page.isDisabled('[data-confirmar-cobro]')), 'mezclando medios calcula el vuelto (1.000 + 500 − 1.210 = 290) y deja confirmar');
+    await page.locator('dialog[data-cobro]').screenshot({ path: path.join(CAPTURAS, 'cobrar-venta.png') });
+    await page.click('[data-cobro] [data-linea]:nth-child(2) [data-quitar-pago]');
+    await imp0.fill('1.500');
+    await Promise.all([page.waitForNavigation(), imp0.press('Enter')]);
+    ok(/Factura B 0004-\d{8}/.test(await page.textContent('h1')), 'Enter con lo que alcanza confirma el cobro: factura B emitida');
+    ok((await page.textContent('body')).includes('DAR VUELTO AL CLIENTE: $ 290,00'), 'al emitir recuerda el vuelto');
     ok(await page.isVisible('[data-vuelto-final]') && (await page.textContent('.vuelto-final-monto')).includes('290,00'), 'al emitir, cartel grande con el vuelto');
     await page.screenshot({ path: path.join(CAPTURAS, 'vuelto-final.png') });
     await page.keyboard.press('Enter');
@@ -318,7 +327,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok((await page.textContent('[data-t-total]')).includes('242,00') && (await page.locator('[data-t-iva-filas] div').count()) === 0, 'presupuestos sin IVA: el total es 2 x 121, sin IVA');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
     await page.check('input[name=forma_pago][value="2"]');
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), emitir(page)]);
     const verSin = await page.textContent('body');
     ok(verSin.includes('sin IVA (no calcula IVA') && verSin.includes('$ 242,00'), 'presupuestos sin IVA: el presupuesto sale sin calcular IVA');
     await page.goto(BASE + '/configuracion');
@@ -355,15 +364,14 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
     // varias formas de pago: 120 en efectivo + 80 con billetera virtual
     await page.check('input[name=forma_pago][value="1"]');
-    await page.fill('[data-importe-pago]', '120');
-    await page.click('[data-agregar-pago]');
-    ok((await page.locator('[data-linea]').count()) === 2, 'varias formas de pago: se agrega otra');
-    await page.locator('[data-linea]').nth(1).locator('[data-fpago]').selectOption({ label: 'BILLETERA VIRTUAL' });
-    ok((await page.textContent('[data-resumen-pago]')).includes('faltan'), 'varias formas de pago: avisa lo que falta');
-    await page.click('[data-completar-pago]');
-    ok((await page.textContent('[data-resumen-pago]')).includes('cuadra'), 'varias formas de pago: «Completar» reparte lo que falta y cuadra');
+    await page.click('[data-abrir-cobro]');
+    await page.fill('[data-cobro] [data-importe-pago]', '120');
+    await page.click('[data-cobro] [data-agregar-pago]');
+    ok((await page.locator('[data-cobro] [data-linea]').count()) === 2, 'varias formas de pago: se agrega otra');
+    await page.locator('[data-cobro] [data-linea]').nth(1).locator('[data-fpago]').selectOption({ label: 'BILLETERA VIRTUAL' });
+    ok((await page.textContent('[data-r-vuelto]')).includes('Sin vuelto'), 'varias formas de pago: el otro medio completa lo que falta');
     await page.screenshot({ path: path.join(CAPTURAS, 'pago-varias-formas.png'), fullPage: true });
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), page.click('[data-confirmar-cobro]')]);
     const mixto = await page.textContent('body');
     ok(mixto.includes('Mixto: EFECTIVO $ 120,00') && mixto.includes('BILLETERA VIRTUAL $ 80,00'), 'varias formas de pago: el comprobante queda como mixto');
     const nroPr = (await page.textContent('h1')).match(/(\d{4}-\d{8})/)[1];
@@ -383,11 +391,13 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok(dif.includes('900,00'), 'cambio: la diferencia es lo que lleva (1.000) menos lo que devuelve (100)');
     ok(await page.isVisible('[data-pago]'), 'cambio: con diferencia pide cómo se paga');
     await page.check('input[name=forma_pago][value="1"]');
-    await page.fill('[data-recibido]', '1.000');
-    ok((await page.textContent('[data-vuelto-aviso]')).includes('100,00'), 'cambio: avisa el vuelto');
+    await page.click('[data-hacer]');
+    ok(await page.isVisible('dialog[data-cobro]'), 'cambio: al contado abre «Cobrar venta»');
+    await page.fill('[data-cobro] [data-importe-pago]', '1.000');
+    ok((await page.textContent('[data-r-vuelto]')).includes('100,00'), 'cambio: muestra el vuelto');
     await page.screenshot({ path: path.join(CAPTURAS, 'cambio.png'), fullPage: true });
     page.once('dialog', (d) => d.accept()); // confirma el cambio
-    await Promise.all([page.waitForNavigation(), page.click('[data-hacer]')]);
+    await Promise.all([page.waitForNavigation(), page.click('[data-confirmar-cobro]')]);
     const cp = await page.textContent('body');
     ok(/Cambio X 0004-\d{8}/.test(cp) && cp.includes('DAR VUELTO AL CLIENTE: $ 100,00') && cp.includes('DEVUELVE'), 'cambio: se hace, cobra solo la diferencia y recuerda el vuelto');
     if (await page.isVisible('[data-vuelto-listo]')) await page.click('[data-vuelto-listo]');
@@ -441,16 +451,16 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     const revK = await page.textContent('body');
     ok(revK.includes('Cómo se paga') && revK.includes('Volver al kiosco') && revK.includes('Presupuesto X'), 'kiosco: al cobrar arma un presupuesto y pide cómo se paga');
     const yaContado = await page.isChecked('input[name=forma_pago][value="1"]');
-    if (yaContado) ok(await page.evaluate(() => document.activeElement && document.activeElement.matches('[data-recibido]')), 'kiosco: el cursor arranca en «Recibido»');
-    await page.check('input[name=forma_pago][value="1"]');
-    await page.fill('[data-recibido]', '5.000');
-    ok((await page.textContent('[data-v-resultado]')).includes('1.296,50'), 'kiosco: la calculadora muestra el vuelto (5.000 − 3.703,50)');
+    if (yaContado) ok(await page.isVisible('dialog[data-cobro]') && await page.evaluate(() => document.activeElement && document.activeElement.matches('[data-importe-pago]')), 'kiosco: «Cobrar venta» se abre sola con el cursor en el importe');
+    else { await page.check('input[name=forma_pago][value="1"]'); await page.click('[data-abrir-cobro]'); }
+    await page.fill('[data-cobro] [data-importe-pago]', '5.000');
+    ok((await page.textContent('[data-r-vuelto]')).includes('1.296,50'), 'kiosco: el resumen muestra el vuelto (5.000 − 3.703,50)');
+    await page.locator('dialog[data-cobro]').screenshot({ path: path.join(CAPTURAS, 'cobrar-kiosco.png') });
     await page.setViewportSize({ width: 390, height: 844 });
-    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'calculadora de vuelto: en el celular no se desborda');
-    await page.locator('[data-vuelto-caja]').screenshot({ path: path.join(CAPTURAS, 'vuelto-celular.png') });
+    ok(await page.evaluate(() => { const d = document.querySelector('dialog[data-cobro]'); return d.scrollWidth <= d.clientWidth + 1; }), 'cobrar venta: en el celular no se desborda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'cobrar-celular.png') });
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.locator('[data-pago]').screenshot({ path: path.join(CAPTURAS, 'vuelto-kiosco.png') });
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), page.click('[data-confirmar-cobro]')]);
     ok(page.url().includes('/kiosco?hecho='), 'kiosco: al emitir vuelve al kiosco');
     ok((await page.textContent('.vuelto-final-monto')).includes('1.296,50'), 'kiosco: cartel grande con el vuelto');
     await page.keyboard.press('Enter');

@@ -97,9 +97,10 @@ if ($alDia && Menu::visible('mp_ingresos')) {
         <?php foreach ($flashes as $f): if ($f['tipo'] !== 'vuelto' || (float) $f['texto'] <= 0) { continue; } // vuelto a entregar después de cobrar (D-134) ?>
             <div class="vuelto-final" data-vuelto-final role="alertdialog" aria-modal="true" aria-labelledby="vuelto-final-t">
                 <div class="vuelto-final-caja">
-                    <p id="vuelto-final-t">Entregá el vuelto al cliente</p>
+                    <p id="vuelto-final-t">Vuelto</p>
                     <b class="vuelto-final-monto"><?= e(plata_dec((float) $f['texto'])) ?></b>
-                    <button type="button" class="btn" data-vuelto-listo autofocus>Listo, ya lo di</button>
+                    <p class="small muted">Es informativo: si la diferencia es un recargo, no se entrega.</p>
+                    <button type="button" class="btn" data-vuelto-listo autofocus>Listo</button>
                 </div>
             </div>
         <?php endforeach; ?>

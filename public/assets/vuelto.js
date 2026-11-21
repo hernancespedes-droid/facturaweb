@@ -124,5 +124,5 @@
     return { caja: caja, actualizar: actualizar };
   }
 
-  window.Vuelto = { crear: crear, sugeridos: sugeridos, desglose: desglose, num: num };
+  window.Vuelto = { crear: crear, sugeridos: sugeridos, desglose: desglose, num: num, corto: corto, BILLETES: BILLETES };
 })();

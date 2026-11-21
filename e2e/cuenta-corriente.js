@@ -5,6 +5,15 @@ const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// Emitir: al contado se abre «Cobrar venta» (D-136) y se confirma con el total justo.
+async function emitir(page) {
+  await page.click('button:has-text("Emitir")');
+  let abierta = false;
+  try { abierta = await page.isVisible('dialog[data-cobro][open]'); } catch (e) { abierta = false; }
+  if (abierta) await page.click('[data-confirmar-cobro]');
+}
+
+
 const PORT = process.env.E2E_CC_PORT || '8082';
 const BASE = 'http://127.0.0.1:' + PORT;
 const ROOT = path.resolve(__dirname, '..');
@@ -44,7 +53,7 @@ async function factura(page, precio) {
   await r.locator('[data-precio]').fill(precio);
   await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
   await page.check('input[name=forma_pago][value="2"]'); // la forma de pago se elige al terminar
-  await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+  await Promise.all([page.waitForNavigation(), emitir(page)]);
 }
 
 (async () => {
@@ -186,7 +195,7 @@ async function factura(page, precio) {
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
     ok((await page.textContent('body')).includes('no va a ARCA ni al subdiario'), 'presupuesto: la revisión aclara que no es fiscal');
     await page.check('input[name=forma_pago][value="2"]');
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), emitir(page)]);
     const prUrl = page.url();
     ok(/\/comprobantes\/\d+$/.test(prUrl), 'presupuesto: se emite');
     let cp = await page.textContent('body');
@@ -202,7 +211,7 @@ async function factura(page, precio) {
     await Promise.all([page.waitForNavigation(), page.click('a:has-text("Generar factura")')]);
     ok((await page.textContent('body')).includes('solo al subdiario'), 'presupuesto: la factura va solo al subdiario');
     await page.screenshot({ path: path.join(CAPTURAS, 'presupuesto-facturar.png'), fullPage: true });
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), emitir(page)]);
     cp = await page.textContent('body');
     ok(cp.includes('Sale del presupuesto') && cp.includes('solo al subdiario'), 'presupuesto: la factura queda ligada al presupuesto');
     await page.goto(prUrl);

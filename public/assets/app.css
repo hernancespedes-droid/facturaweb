@@ -1184,6 +1184,41 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
   .vuelto-btn { flex: 1 1 calc(33% - 6px); padding-left: 4px; padding-right: 4px; font-size: .85rem; }
 }
 @media (prefers-reduced-motion: reduce) { .vuelto-caja.sacudir { animation: none; } }
+/* Ventana «Cobrar venta» (pago.js, D-136) */
+.cobro { width: min(920px, calc(100vw - 24px)); padding: 0; overflow: auto; }
+.cobro-cab { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.cobro-cab h2 { flex: 1; }
+.cobro > .alerta { margin: 12px 20px 0; }
+.cobro-cuerpo { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 16px; padding: 16px 20px 20px; }
+.cobro-medios, .cobro-resumen { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--panel-2); min-width: 0; }
+.cobro h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.cobro-medio { background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; margin: 10px 0 0; align-items: center; }
+.cobro-medio > .field { flex: 1 1 150px; }
+.cobro-medio .cobro-importe input { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cobro-icono { flex: 0 0 38px; height: 38px; border-radius: 9px; display: grid; place-items: center; font-weight: 800; color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 14%, transparent); align-self: center; }
+.cobro-agregar { width: 100%; margin: 10px 0 12px; border-style: dashed; }
+.cobro-resumen dl { margin: 8px 0; }
+.cobro-resumen dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.cobro-resumen dt { color: var(--muted); }
+.cobro-resumen dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cobro-resumen .cobro-vuelto { border-bottom: 0; padding-top: 12px; align-items: baseline; }
+.cobro-vuelto dt { color: var(--text); font-weight: 700; font-size: 1.1rem; }
+.cobro-vuelto dd { font-size: 1.8rem; }
+.cobro-vuelto.es-vuelto dd, .cobro-vuelto.es-justo dd { color: var(--ok); }
+.cobro-vuelto.es-falta dd, .cobro-vuelto.es-falta dt { color: var(--danger); }
+.cobro-confirmar { width: 100%; min-height: 50px; font-size: 1.05rem; margin: 8px 0 6px; }
+.cobro-confirmar.sacudir { animation: vuelto-sacudir .35s; }
+.cobro-quien { margin: 0; text-align: center; }
+.cobro-resumen-corto { margin: 0 0 8px; color: var(--muted); }
+@media (max-width: 720px) {
+  .cobro-cuerpo { grid-template-columns: 1fr; padding: 12px; }
+  .cobro-resumen { position: sticky; bottom: 0; box-shadow: 0 -8px 20px rgba(0, 0, 0, .18); }
+  .cobro-resumen h3, .cobro-resumen .cobro-quien, .cobro-resumen [data-r-nota] { display: none; }
+  .cobro-vuelto dd { font-size: 1.5rem; }
+  .cobro-resumen dl > div { padding: 4px 0; }
+  .cobro-cab { padding: 12px; }
+}
 .vuelto-final { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(0, 0, 0, .55); padding: 16px; }
 .vuelto-final-caja { background: var(--panel); border: 2px solid var(--ok); border-radius: 16px; padding: 24px 28px; text-align: center; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0, 0, 0, .45); }
 .vuelto-final-caja p { margin: 0 0 6px; font-size: 1.1rem; color: var(--muted); }

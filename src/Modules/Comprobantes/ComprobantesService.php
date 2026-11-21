@@ -649,29 +649,68 @@ final class ComprobantesService
                 $linea['banco'] = (int) $p['banco'];
                 $linea['vencimiento'] = $vto;
             }
-            if ($tipo !== 6 && $imp !== null && $e === []) {
-                $linea = $this->aplicarVuelto($linea, $linea['importe'], ['recibido' => $p['recibido']], $e);
+            // lo recibido (pantalla anterior a D-136): si vino y es más que el importe, eso es lo que entregó el cliente con esta forma
+            if ($tipo !== 6 && $p['recibido'] !== '') {
+                $rec = Valida::decimal($p['recibido']);
+                if ($rec === null || $rec <= 0 || $rec > Calculadora::MAX_IMPORTE) {
+                    $e['recibido'] = 'El importe recibido no es válido.';
+                } elseif ($imp !== null && $p['importe'] === '' && !$varias) {
+                    $linea['importe'] = Calculadora::r2($rec); // de una sola forma sin importe, lo recibido es lo que paga (si es menos, falta; si es más, vuelto)
+                } elseif ($imp !== null && $rec > $linea['importe']) {
+                    $linea['recibido'] = Calculadora::r2($rec); // importe y lo recibido aparte: la diferencia es el vuelto de esta forma
+                    $linea['vuelto'] = Calculadora::r2($rec - $linea['importe']);
+                }
             }
             if ($e !== []) {
                 $this->volcarErrorPago($e, $pre, $simple, $err, $msgs);
             }
             $suma += $linea['importe'];
-            $tipo === 6 ? $cuenta += $linea['importe'] : $contado += $linea['importe'];
-            $vuelto += $linea['vuelto'];
             $lineas[] = $linea;
         }
         if ($msgs !== []) {
             $err['pagos'] = implode("\n", array_unique($msgs));
         }
         $suma = Calculadora::r2($suma);
-        if ($err === [] || (!isset($err['pagos']) && !isset($err['fpago']) && !isset($err['recibido']) && !isset($err['pago_nro']) && !isset($err['pago_banco']) && !isset($err['pago_vto']))) {
-            if (abs($suma - $total) > 0.004) {
-                $err['pagos'] = ($suma < $total ? 'Faltan ' . plata_dec($total - $suma) . ' para llegar al total' : 'Se pasan ' . plata_dec($suma - $total) . ' del total') . ' (las formas de pago suman ' . plata_dec($suma) . ' y la venta es de ' . plata_dec($total) . ').';
-            }
+        $conError = static function () use (&$err): bool {
+            return isset($err['pagos']) || isset($err['fpago']) || isset($err['recibido']) || isset($err['pago_nro']) || isset($err['pago_banco']) || isset($err['pago_vto']);
+        };
+        if (!$conError() && $suma < $total - 0.004) {
+            $falta = 'Faltan ' . plata_dec($total - $suma) . ' para llegar al total (' . ($varias ? 'las formas de pago suman ' : 'el cliente entregó ') . plata_dec($suma) . ' y la venta es de ' . plata_dec($total) . '). Sumá otra forma de pago o la cuenta corriente.';
+            $simple && !$todoCuenta ? $err['recibido'] = $falta : $err['pagos'] = $falta;
         }
-        if (isset($err['pagos']) || isset($err['fpago']) || isset($err['recibido']) || isset($err['pago_nro']) || isset($err['pago_banco']) || isset($err['pago_vto'])) {
+        if ($conError()) {
             return null;
         }
+        // DECISIÓN D-136: lo que se paga de más es vuelto y es solo informativo (no frena la venta: puede ser el recargo de una tarjeta).
+        // En caja queda el total de la venta: lo de más se descuenta primero de la cuenta corriente (no es plata), después de las formas que
+        // aceptan vuelto y por último de las demás (de la última a la primera); en cada fila queda lo que entregó (p_recibido) y la diferencia (p_vuelto).
+        $sobra = Calculadora::r2($suma - $total);
+        foreach ($lineas as $i => $l) {
+            $lineas[$i]['recibido'] = $l['tipo'] === 6 ? null : ($l['recibido'] ?? $l['importe']);
+        }
+        if ($sobra > 0.004) {
+            $orden = array_keys($lineas);
+            $prioridad = static fn (array $l): int => $l['tipo'] === 6 ? 0 : ($l['acepta_vuelto'] ? 1 : 2);
+            usort($orden, static fn (int $a, int $b): int => [$prioridad($lineas[$a]), -$a] <=> [$prioridad($lineas[$b]), -$b]);
+            foreach ($orden as $i) {
+                if ($sobra <= 0.004) {
+                    break;
+                }
+                $saca = min($sobra, $lineas[$i]['importe']);
+                $lineas[$i]['importe'] = Calculadora::r2($lineas[$i]['importe'] - $saca);
+                if ($lineas[$i]['tipo'] !== 6) {
+                    $lineas[$i]['vuelto'] = Calculadora::r2($lineas[$i]['vuelto'] + $saca);
+                }
+                $sobra = Calculadora::r2($sobra - $saca);
+            }
+        }
+        $contado = $cuenta = $vuelto = 0.0;
+        foreach ($lineas as $l) {
+            $l['tipo'] === 6 ? $cuenta += $l['importe'] : $contado += $l['importe'];
+            $vuelto += $l['vuelto'];
+        }
+        // una forma que quedó en cero (todo lo que dio fue vuelto) no va a la caja; la cuenta corriente en cero tampoco
+        $lineas = array_values(array_filter($lineas, static fn (array $l): bool => $l['importe'] > 0.004));
         return ['lineas' => $lineas, 'contado' => Calculadora::r2($contado), 'cuenta' => Calculadora::r2($cuenta), 'vuelto' => Calculadora::r2($vuelto)];
     }
 
