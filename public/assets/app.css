@@ -1476,3 +1476,10 @@ tr.mp-no-visto td { background: color-mix(in srgb, var(--ok) 10%, transparent); 
   .mp-campana { order: 2; margin-left: auto; }
   .mp-campana + .tema-btn { margin-left: 0; }
 }
+
+/* Compras: lector del QR de la factura (0.47.0) */
+.qr-video { position: relative; max-width: 420px; border-radius: 12px; overflow: hidden; background: #000; margin: 8px 0; }
+.qr-video video { display: block; width: 100%; height: auto; }
+.qr-marco { position: absolute; inset: 15%; border: 3px solid var(--brand); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0, 0, 0, .35); }
+.resultado-pos { color: var(--ok, #1e8e3e); }
+.resultado-neg { color: var(--error, #c0392b); }

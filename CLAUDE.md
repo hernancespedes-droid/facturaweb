@@ -122,7 +122,12 @@ subdiario de IVA compras, `tablero()` para `/compras` con gráficos SVG en `comp
 medios E efectivo del turno, T, Q cheque de la cartera → `caja.cheque_estado = 'E'`, P cheque propio, R retención a mano, O; lo de más queda en `ordenes_pago.anticipo_saldo`, D-115..D-117;
 `anular` devuelve saldos, cheques y efectivo; `cuentaCorriente` con saldo corrido), `OrdenPagoPdf` (PDF y mail), pantallas `/compras/pagos…` y `/compras/proveedores/cuenta`
 (`ordenes-pago.js`). El saldo del proveedor resta `anticipo_saldo`. Compras con artículos (`compras_items`, D-118): mueven stock con origen `COMPRA`/`DEVCOMPRA`/`ANUCOMPRA` y actualizan
-`articulos.costo`. Una compra en una orden vigente no se anula. Entrega C (QR, Mis Comprobantes, Libro IVA compras, resultado del mes) queda para después.
+`articulos.costo`. Una compra en una orden vigente no se anula. 
+**Entrega C (0.47.0):** `ComprobanteArca` (códigos de comprobante de ARCA ↔ tipo/letra, `desdeQr` lee el QR de la factura, `proveedorOAlta` con el padrón, `datosCompra` arma el
+formulario «para revisar»; `ComprasController::form` es público para eso), `/compras/qr` (`compras-qr.js`, BarcodeDetector o pegar el enlace, D-123/D-124), `MisComprobantes`
+(importa el Excel/CSV de «Mis Comprobantes Recibidos» a `compras_arca` y lo controla contra compras, D-125/D-126; `/compras/mis-comprobantes`, `/compras/desde-arca`),
+`LibroIvaCompras` (RG 4597 compras: CBTE 325 y ALICUOTAS 84, reutiliza los formatos de `Listados\LibroIvaDigital`, D-127; se baja desde el subdiario de IVA compras) y
+`ComprasListados::resultado` (`/compras/resultado`, D-128).
 
 ## Libro IVA Digital (ventas)
 
