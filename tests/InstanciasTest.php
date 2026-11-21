@@ -45,6 +45,9 @@ final class InstanciasTest extends DbTestCase
             $this->borrar($this->tmp);
         }
         \App\Core\Db::pdo()->exec("DELETE FROM clientes WHERE cuit = 30712345671");
+        \App\Core\Db::pdo()->exec("DELETE FROM instancias_resets WHERE instancia LIKE '%.prueba.test'");
+        \App\Core\Db::pdo()->exec("DELETE m FROM soporte_mensajes m JOIN soporte_tickets t ON t.id = m.ticket_id WHERE t.instancia LIKE '%.prueba.test'");
+        \App\Core\Db::pdo()->exec("DELETE FROM soporte_tickets WHERE instancia LIKE '%.prueba.test'");
         \App\Modules\Instancias\Promocion::$transporte = null;
         foreach (['instancia', 'suscripcion', 'modulos', 'panel'] as $k) {
             Config::set($k, []);
@@ -144,6 +147,88 @@ final class InstanciasTest extends DbTestCase
         $r = InstanciasService::actualizarTodas();
         $this->assertSame('al día', $r[self::HOST]);
         $this->assertSame('al día', $r['Principal']);
+    }
+
+    public function testElMasterReseteaLaContraseñaDeUnUsuarioDelClienteYQuedaRegistrado(): void
+    {
+        $pdo = $this->baseCliente();
+        if ($pdo === null) {
+            echo "      (se saltea: falta la base " . self::BASE . ")\n";
+            return;
+        }
+        $mas = $this->crearUsuario('t_mas', 'master');
+        $this->loginComo($mas);
+        $this->assertSame(200, $this->post('/instancias/nueva', $this->datos())->status);
+        $admin = (int) $pdo->query("SELECT id FROM usuarios WHERE usuario = 'admin'")->fetchColumn();
+        // Un usuario del cliente que se quedó afuera: bloqueado por intentos, con «recordarme», y otro inactivo.
+        $pdo->exec("UPDATE usuarios SET debe_cambiar_clave = 0, intentos_fallidos = 5, bloqueado_hasta = NOW() + INTERVAL 1 HOUR WHERE id = {$admin}");
+        $pdo->exec("INSERT INTO recordarme (selector, validador, usuario_id, vence_en) VALUES ('t_sel', 'x', {$admin}, NOW() + INTERVAL 1 DAY)");
+        $pdo->exec("INSERT INTO usuarios (usuario, nombre, password_hash, rol_id, activo) SELECT 'cajera', 'Ana Caja', 'x', id, 0 FROM roles WHERE codigo = 'operador'");
+        $cajera = (int) $pdo->lastInsertId();
+
+        // Solo el Master del master.
+        $adm = $this->crearUsuario('t_adm', 'admin');
+        $this->loginComo($adm);
+        $this->assertSame(403, $this->get('/instancias/usuarios', ['host' => self::HOST])->status);
+        $this->assertSame(403, $this->post('/instancias/usuarios/resetear', ['host' => self::HOST, 'usuario_id' => (string) $admin])->status);
+        $this->loginComo($mas);
+        $this->assertSame(404, $this->get('/instancias/usuarios', ['host' => '../../config'])->status);
+
+        $lista = $this->get('/instancias/usuarios', ['host' => self::HOST]);
+        $this->assertSame(200, $lista->status);
+        foreach (['admin', 'tmaster', 'Ana Caja', 'Bloqueado', 'Inactivo'] as $t) {
+            $this->assertStringContainsString($t, $lista->body);
+        }
+        $this->assertStringContainsString('/instancias/usuarios?host=' . self::HOST, $this->get('/instancias/editar', ['host' => self::HOST])->body);
+
+        // Un ticket del cliente y otro de otra instalación.
+        $db = \App\Core\Db::pdo();
+        $alta = $db->prepare("INSERT INTO soporte_tickets (instancia, asunto, tipo, estado, creado_en, actualizado_en) VALUES (?, 'No puedo entrar', 'consulta', 'nuevo', NOW(), NOW())");
+        $alta->execute([self::HOST]);
+        $ticket = (int) $db->lastInsertId();
+        $alta->execute(['otra.prueba.test']);
+        $ajeno = (int) $db->lastInsertId();
+        $hashAntes = (string) $pdo->query("SELECT password_hash FROM usuarios WHERE id = {$admin}")->fetchColumn();
+        $this->post('/instancias/usuarios/resetear', ['host' => self::HOST, 'usuario_id' => (string) $admin, 'ticket' => (string) $ajeno]);
+        $this->assertSame($hashAntes, (string) $pdo->query("SELECT password_hash FROM usuarios WHERE id = {$admin}")->fetchColumn(), 'ticket de otra instalación: no cambia nada');
+
+        $res = $this->post('/instancias/usuarios/resetear', ['host' => self::HOST, 'usuario_id' => (string) $admin, 'ticket' => (string) $ticket, 'motivo' => 'Perdió la clave']);
+        $this->assertRedirect('/instancias/usuarios?host=' . self::HOST . '&ticket=' . $ticket, $res);
+        $pantalla = $this->get('/instancias/usuarios', ['host' => self::HOST])->body;
+        $this->assertTrue(preg_match('/<code data-clave>([^<]+)<\/code>/', $pantalla, $m) === 1, 'la contraseña se muestra');
+        $this->assertStringNotContainsString($m[1], $this->get('/instancias/usuarios', ['host' => self::HOST])->body, 'una sola vez');
+
+        $u = $pdo->query("SELECT password_hash, debe_cambiar_clave, intentos_fallidos, bloqueado_hasta FROM usuarios WHERE id = {$admin}")->fetch();
+        $this->assertTrue(password_verify($m[1], $u['password_hash']));
+        $this->assertSame([1, 0, null], [(int) $u['debe_cambiar_clave'], (int) $u['intentos_fallidos'], $u['bloqueado_hasta']]);
+        $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM recordarme WHERE usuario_id = {$admin}")->fetchColumn());
+
+        $reg = $db->query("SELECT * FROM instancias_resets WHERE instancia = '" . self::HOST . "'")->fetchAll();
+        $this->assertCount(1, $reg);
+        $this->assertSame(['admin', 't_mas', $mas, $ticket, 'Perdió la clave', 0], [$reg[0]['usuario'], $reg[0]['por'], (int) $reg[0]['por_id'], (int) $reg[0]['ticket_id'], $reg[0]['motivo'], (int) $reg[0]['reactivado']]);
+        $nota = $db->query("SELECT texto, interno FROM soporte_mensajes WHERE ticket_id = {$ticket}")->fetch();
+        $this->assertSame(1, (int) $nota['interno'], 'nota interna: el cliente no la ve');
+        $this->assertStringContainsString('«admin»', $nota['texto']);
+        $this->assertStringNotContainsString($m[1], $nota['texto'], 'la contraseña nunca va al ticket');
+        $this->assertSame(0, (int) $db->query('SELECT COUNT(*) FROM instancias_resets WHERE motivo LIKE \'%' . $m[1] . '%\'')->fetchColumn());
+
+        // Inactivo: sin tildar «Reactivarlo» queda inactivo; tildándolo, se activa.
+        $this->post('/instancias/usuarios/resetear', ['host' => self::HOST, 'usuario_id' => (string) $cajera]);
+        $this->assertSame(0, (int) $pdo->query("SELECT activo FROM usuarios WHERE id = {$cajera}")->fetchColumn());
+        $this->post('/instancias/usuarios/resetear', ['host' => self::HOST, 'usuario_id' => (string) $cajera, 'reactivar' => [(string) $cajera => '1']]);
+        $this->assertSame([1, 1], array_map('intval', array_values($pdo->query("SELECT activo, debe_cambiar_clave FROM usuarios WHERE id = {$cajera}")->fetch())));
+        $hist = $this->get('/instancias/usuarios', ['host' => self::HOST])->body;
+        $this->assertStringContainsString('reactivado', $hist);
+        $this->assertSame(3, (int) $db->query("SELECT COUNT(*) FROM instancias_resets WHERE instancia = '" . self::HOST . "'")->fetchColumn());
+        $this->assertStringContainsString('Ese usuario no existe', $this->seguir($this->post('/instancias/usuarios/resetear', ['host' => self::HOST, 'usuario_id' => '99999'])));
+        $this->assertStringContainsString('Usuarios y contraseñas de esta instalación', $this->get('/soporte/bandeja/' . $ticket)->body);
+    }
+
+    private function seguir(\App\Http\Response $r): string
+    {
+        $q = [];
+        parse_str((string) parse_url((string) ($r->headers['Location'] ?? ''), PHP_URL_QUERY), $q);
+        return $this->get('/instancias/usuarios', $q)->body;
     }
 
     /** @param array<string,string> $cambios @return array<string,string> */

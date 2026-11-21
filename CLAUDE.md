@@ -162,6 +162,13 @@ la principal solo responde en las direcciones de `storage/instancias/_principal.
 bloqueada, en `Licencia::exigirParaEmitir`, `Guard::auth` y `App::handle`). **Función nueva que no tienen que tener todos: declararla en `Core\Modulos::LISTA` con `por_omision => false`**
 (menú + prefijos de rutas); el master siempre tiene todo. Nunca romper el formato del config de los clientes: la carpeta de clientes puede estar una versión atrás.
 
+## Usuarios de los clientes desde el master (0.59.0)
+
+`Instancias/UsuariosCliente`: Administrar → «Usuarios y contraseñas» (`/instancias/usuarios?host=`, Master en la principal; también desde el ticket en la bandeja) lista los usuarios de la base del cliente y
+`resetear()` pone una temporal (`UsuariosService::claveTemporal`, `debe_cambiar_clave = 1`, desbloquea, borra `recordarme`, «Reactivarlo» opcional). Se muestra una vez y no se guarda;
+registro en `instancias_resets` (base del master) y nota interna en el ticket elegido, sin la contraseña (D-142, D-143). Solo usa columnas de la 0001 en la base del cliente. e2e: `e2e/usuarios-clientes.js`
+(fixture `tests/fixtures/e2e_instancia.php`, necesita `facturaweb_test_inst`).
+
 ## Apariencia por cliente (0.31.0)
 
 `Configuracion/Apariencia`: nombre, color (`--brand`, `--brand-2`, `--on-brand` calculados con contraste) y logo de cada instalación en barra, ingreso, pestaña y portal
