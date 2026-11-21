@@ -144,7 +144,7 @@ async function login(page, usuario) {
     await browser.close();
     execFileSync('php', [path.join(ROOT, 'tests/fixtures/e2e_usuarios.php'), '--limpiar'], { stdio: 'inherit' });
     sql('UPDATE parametros SET kiosco = ' + (kioscoAntes === '1' ? 1 : 0) + ' WHERE id = 1');
-    process.kill(-server.pid);
+    try { process.kill(-server.pid); } catch (e) {}
   }
   console.log(fallas === 0 ? '\nRecorrido de alta de clientes completo sin fallas.' : `\n${fallas} falla(s).`);
   process.exit(fallas === 0 ? 0 : 1);
