@@ -66,7 +66,7 @@ $ayudaValor = ['coeficiente' => 'Multiplica: 1,10 = 10 % más; 0,95 = 5 % menos.
         </fieldset>
     </div>
     <div class="actualizacion-opciones">
-        <label class="check"><input type="checkbox" name="redondear" value="1" <?= $d['redondear'] ? 'checked' : '' ?>> Redondear los precios hacia arriba como en Parámetros (<?= e($red !== '' ? mb_strtolower($red) : 'a centavos') ?>)</label>
+        <label class="check"><input type="checkbox" name="redondear" value="1" <?= $d['redondear'] ? 'checked' : '' ?>> Redondear los precios hacia arriba como en Parámetros (<?= e((int) $cfg['redondeo'] > 0 ? mb_strtolower($red) : 'hoy no tiene redondeo: a centavos') ?>)</label>
         <label class="field field-inline" data-solo-listas><span>Artículos con «Precio automático»</span><select name="automaticos">
             <?php foreach (AM::AUTOMATICOS as $k => $t): ?><option value="<?= e($k) ?>" <?= $d['automaticos'] === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select></label>
         <p class="small muted" data-solo-costo>En los artículos con «Precio automático», al cambiar el costo las listas se recalculan con sus márgenes.</p>

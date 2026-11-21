@@ -17,6 +17,7 @@ const RECORRIDOS = [
   'carga.js',
   'menu.js',
   'usuarios-clientes.js',
+  'actualizacion-precios.js',
 ];
 
 for (const archivo of RECORRIDOS) {
