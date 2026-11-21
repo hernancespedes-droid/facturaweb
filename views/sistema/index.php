@@ -14,11 +14,18 @@
     <span class="chip">Versión <?= e($version) ?></span>
 </div>
 
+<?php $errMig = \App\Core\AutoMigracion::ultimoError(); ?>
+<?php if ($errMig !== null && $puedeMigrar): ?>
+    <div class="alerta alerta-error" role="alert"><b>La actualización automática de la base falló</b> (<?= e(date('d/m/Y H:i', $errMig['ts'])) ?>): <?= e($errMig['mensaje']) ?>
+        El sistema sigue funcionando. Revisá el detalle, arreglá el problema y apretá «Aplicar cambios» (si sale bien, este aviso desaparece).</div>
+<?php endif; ?>
+
 <section class="card regenerar <?= $pendientes !== [] ? 'hay' : '' ?>">
     <div>
         <h2>Actualizar base de datos</h2>
         <?php if ($pendientes === []): ?>
             <p>La base está al día: no hay cambios pendientes.</p>
+            <p class="small muted">Después de actualizar el código, los cambios de base se aplican solos con el primer ingreso (en cada cliente, con su propia versión).</p>
         <?php else: ?>
             <p>Hay <b><?= count($pendientes) ?></b> cambio(s) de base pendiente(s) de esta versión:</p>
             <ul class="small"><?php foreach ($pendientes as $p): ?><li><code><?= e($p) ?></code></li><?php endforeach; ?></ul>

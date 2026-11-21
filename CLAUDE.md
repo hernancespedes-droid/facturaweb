@@ -96,6 +96,12 @@ Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_c
 `Listados/Estadistica` (agrupar por artículo, rubro, cliente, vendedor, mes…, ranking y detalle; `/listados/estadistica` y `/listados/rentabilidad`), `Listados/ListaCostos` (`/listados/costos`), `Stock/MovimientosStock` (trazabilidad con saldo corrido y resumen; `/stock/movimientos`) y `Stock/Existencias` (por depósito a una fecha; `/stock/existencias`).
 **Todo INSERT nuevo en `estadistica` lleva `costo`** (unitario en pesos al emitir, `Listados\Costos::unitarios`, D-62). Costos, márgenes y valorizados solo con el permiso `listados.costos`. La estadística no cuenta la factura de un presupuesto (`solo_subdiario = 1`) y resta NC/NX (D-63).
 
+## Tablero de inicio (0.40.0)
+
+`Modules/Tablero`: `Tablero::datos()` arma todo lo del inicio según permisos y módulos (D-90; «venta» = lo vendido de la caja diaria, D-91; avisos, D-92) y `Graficos` dibuja los SVG en el servidor
+(colores por variables CSS: `--g-marca` = color del cliente legible, `--g-comp` gris de comparación, `--g-1..5` paleta fija validada para «Cómo te pagaron»). `public/assets/tablero.js` pone la guía y el cartel
+(`data-tip` con renglones separados por «|»). Otro módulo suma su tarjeta con `Tablero::EXTRAS` (modulo, permiso, vista), sin tocar `home.php`.
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.
@@ -117,6 +123,20 @@ bloqueada, en `Licencia::exigirParaEmitir`, `Guard::auth` y `App::handle`). **Fu
 `Configuracion/Apariencia`: nombre, color (`--brand`, `--brand-2`, `--on-brand` calculados con contraste) y logo de cada instalación en barra, ingreso, pestaña y portal
 (claves `apariencia.*` en `configuracion`, fuera de la lista general; imágenes `logo_web`/`logo_pantalla`/`logo_icono` en `imagenes`, servidas por `/marca/logo` y `/marca/icono` sin sesión).
 Colores nuevos en `app.css`: siempre con `var(--brand)` / `color-mix(...)` y `var(--on-brand)` para el texto sobre el color, nunca el azul fijo. La marca del cliente va arriba y O&S firma al pie.
+
+## Importar desde Excel, CSV y TXT (0.38.0)
+
+`Modules/Importacion` (Sistema → Importar datos, permiso `importar.datos` + el de cada destino en `Destinos::PERMISO`): `Lector` (xlsx con ZipArchive/XMLReader, CSV/TXT con separador y
+codificación detectados; números del Excel con coma decimal), `Destinos` (campos por destino: clientes y artículos reutilizan `campos()` de sus servicios; sinónimos de títulos),
+`Importador` (todo en una transacción con SAVEPOINT por fila; probar = rollback; todo o nada salvo «parcial»), `Modelos` (`importacion_modelos`: campo → título de columna).
+Clientes/artículos: al actualizar solo cambian las columnas elegidas y con dato. Comprobantes históricos: `subdiario` canal `I` + `importacion_id`, `iva`, `ctact` solo con saldo, sin caja ni stock;
+la clave para no duplicar es tipo + letra + punto de venta + número + fecha. Registro en `importaciones`. Campo nuevo en clientes/artículos: si debe importarse, sumarle sinónimos en `Destinos`.
+
+## Base que se actualiza sola (0.40.1)
+
+`Core\AutoMigracion::asegurar()` corre al principio de `App::handle` (salvo `/salud` e `/instalar`): si la firma (versión + migraciones) no coincide con
+`sistema_estado`, aplica lo pendiente con el candado `fw_migrar:<base>` (el mismo de «Aplicar cambios»); los demás pedidos ven «Actualizando» (503). Si falla, no bloquea: queda en
+`App::storage('automigracion_error.json')`, el Master lo ve en Sistema y `/salud` da `migracion_error`. Por eso las migraciones **tienen que ser aditivas e idempotentes**: se aplican sin que nadie mire.
 
 ## Estructura y convenciones
 
