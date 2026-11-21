@@ -6,7 +6,7 @@ const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// Emitir: al contado se abre «Cobrar venta» (D-136) y se confirma con el total justo.
+// Emitir: al contado se abre «Cobrar venta» (D-137) y se confirma con el total justo.
 async function emitir(page) {
   await page.click('button:has-text("Emitir")');
   let abierta = false;
@@ -237,7 +237,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     ok(await page.isVisible('[data-abrir-cobro]'), 'contado: ofrece «Cobrar venta»');
     const urlRevisar = page.url();
     await page.click('button:has-text("Emitir")');
-    ok(await page.isVisible('dialog[data-cobro]') && page.url() === urlRevisar, 'Emitir al contado abre la ventana «Cobrar venta» (D-136)');
+    ok(await page.isVisible('dialog[data-cobro]') && page.url() === urlRevisar, 'Emitir al contado abre la ventana «Cobrar venta» (D-137)');
     const imp0 = page.locator('[data-cobro] [data-importe-pago]').first();
     await imp0.fill('1.500');
     ok((await page.textContent('[data-r-vuelto]')).includes('290,00') && (await page.textContent('[data-r-pagado]')).includes('1.500,00'), 'resumen: pagado 1.500 y vuelto 290');

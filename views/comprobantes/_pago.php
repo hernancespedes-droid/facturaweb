@@ -11,7 +11,7 @@ if ($cargadas === []) {
 }
 $erroresPago = array_intersect_key($errores, array_flip(['forma_pago', 'credito', 'pagos', 'fpago', 'recibido', 'pago_nro', 'pago_banco', 'pago_vto']));
 $yaEf = false;
-// Un medio de pago de la ventana «Cobrar venta» (D-136): con qué y cuánto paga. Lo que se paga de más es el vuelto (informativo).
+// Un medio de pago de la ventana «Cobrar venta» (D-137): con qué y cuánto paga. Lo que se paga de más es el vuelto (informativo).
 $lineaHtml = static function (string $n, array $p, bool $primera) use ($formas, $bancos, $formId, &$yaEf): string {
     $imp = (string) ($p['importe'] ?? '');
     if ($imp === '' && (string) ($p['recibido'] ?? '') !== '') {

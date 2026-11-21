@@ -78,7 +78,7 @@ final class PagoAlFinalTest extends ComprobantesTestCase
         $this->assertStringContainsString('Faltan $ 42,00', $menos['errores']['recibido']);
         $basura = $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'EF', 'recibido' => 'abc']));
         $this->assertTrue(isset($basura['errores']['recibido']));
-        // D-136: de más con una forma que no acepta vuelto (p. ej. el recargo de la tarjeta) no frena: la diferencia queda como vuelto informativo
+        // D-137: de más con una forma que no acepta vuelto (p. ej. el recargo de la tarjeta) no frena: la diferencia queda como vuelto informativo
         $tj = $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'TJ', 'recibido' => '300']));
         $this->assertSame([], $tj['errores']);
         $this->assertSame([242.0, 300.0, 58.0], [$tj['cbte']['pagos'][0]['importe'], $tj['cbte']['pagos'][0]['recibido'], $tj['cbte']['pagos'][0]['vuelto']]);
@@ -162,7 +162,7 @@ final class PagoAlFinalTest extends ComprobantesTestCase
     {
         $e = fn (array $pagos, array $extra = []) => $this->svc->armar($this->conPago(['pagos' => $pagos] + $extra))['errores'];
         $this->assertStringContainsString('Faltan $ 42,00', $e([['fpago' => 'EF', 'importe' => '100'], ['fpago' => 'TJ', 'importe' => '100']])['pagos']);
-        $this->assertSame([], $e([['fpago' => 'EF', 'importe' => '200'], ['fpago' => 'TJ', 'importe' => '100']]), 'de más no es error (D-136)');
+        $this->assertSame([], $e([['fpago' => 'EF', 'importe' => '200'], ['fpago' => 'TJ', 'importe' => '100']]), 'de más no es error (D-137)');
         $this->assertStringContainsString('Cargá el importe de cada forma de pago', $e([['fpago' => 'EF', 'importe' => ''], ['fpago' => 'TJ', 'importe' => '100']])['pagos']);
         $this->assertStringContainsString('número del cheque', $e([['fpago' => 'CH', 'importe' => '142'], ['fpago' => 'EF', 'importe' => '100']])['pagos']);
         $this->assertStringContainsString('Elegí cómo se paga', $e([['fpago' => 'ZZ', 'importe' => '242'], ['fpago' => 'EF', 'importe' => '0']])['pagos']);

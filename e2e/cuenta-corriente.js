@@ -5,7 +5,7 @@ const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// Emitir: al contado se abre «Cobrar venta» (D-136) y se confirma con el total justo.
+// Emitir: al contado se abre «Cobrar venta» (D-137) y se confirma con el total justo.
 async function emitir(page) {
   await page.click('button:has-text("Emitir")');
   let abierta = false;

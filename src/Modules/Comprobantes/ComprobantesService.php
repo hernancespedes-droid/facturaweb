@@ -649,7 +649,7 @@ final class ComprobantesService
                 $linea['banco'] = (int) $p['banco'];
                 $linea['vencimiento'] = $vto;
             }
-            // lo recibido (pantalla anterior a D-136): si vino y es más que el importe, eso es lo que entregó el cliente con esta forma
+            // lo recibido (pantalla anterior a D-137): si vino y es más que el importe, eso es lo que entregó el cliente con esta forma
             if ($tipo !== 6 && $p['recibido'] !== '') {
                 $rec = Valida::decimal($p['recibido']);
                 if ($rec === null || $rec <= 0 || $rec > Calculadora::MAX_IMPORTE) {
@@ -681,7 +681,7 @@ final class ComprobantesService
         if ($conError()) {
             return null;
         }
-        // DECISIÓN D-136: lo que se paga de más es vuelto y es solo informativo (no frena la venta: puede ser el recargo de una tarjeta).
+        // DECISIÓN D-137: lo que se paga de más es vuelto y es solo informativo (no frena la venta: puede ser el recargo de una tarjeta).
         // En caja queda el total de la venta: lo de más se descuenta primero de la cuenta corriente (no es plata), después de las formas que
         // aceptan vuelto y por último de las demás (de la última a la primera); en cada fila queda lo que entregó (p_recibido) y la diferencia (p_vuelto).
         $sobra = Calculadora::r2($suma - $total);

@@ -1,5 +1,5 @@
 /*
- * «Cómo se paga» y la ventana «Cobrar venta» (D-136; factura, presupuesto, kiosco y cambio de mercadería).
+ * «Cómo se paga» y la ventana «Cobrar venta» (D-137; factura, presupuesto, kiosco y cambio de mercadería).
  * Contado: el cobro se hace en una ventana con los medios de pago (se pueden mezclar: efectivo, tarjeta, cheque, billetera, una parte a cuenta
  * corriente) y un resumen con el total, lo pagado y el vuelto. El vuelto es solo informativo: si se paga de más (con cualquier medio, por
  * ejemplo por un recargo de la tarjeta) se muestra la diferencia y el operador sabe si la da. Lo único que frena es pagar de menos.
