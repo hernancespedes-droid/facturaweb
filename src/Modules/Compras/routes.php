@@ -5,7 +5,7 @@ use App\Http\Router;
 use App\Modules\Auth\Guard;
 use App\Modules\Compras\ComprasController as C;
 
-// Compras y centros de costos (0.34.0). compras.ver: tablero, compras y listados. compras.cargar: cargar y anular compras, proveedores.
+// Compras y centros de costos (0.41.0). compras.ver: tablero, compras y listados. compras.cargar: cargar y anular compras, proveedores.
 // compras.pagar: pagar compras a cuenta corriente. compras.centros: centros, presupuestos, conceptos y plantillas. El Excel va por la misma ruta (?excel=1).
 return function (Router $r): void {
     $r->get('/compras', Guard::permiso('compras.ver', [C::class, 'tablero']));

@@ -254,6 +254,18 @@ final class ComprasListados
      *
      * @return array<string,mixed>
      */
+    /** Lo justo para la tarjeta de compras del inicio (Tablero::EXTRAS): gastado del mes, deuda, vencido y lo que vence en 7 días. @return array<string,mixed> */
+    public static function resumenInicio(?string $hoy = null): array
+    {
+        $hoy ??= date('Y-m-d');
+        $st = Db::pdo()->prepare("SELECT COALESCE(SUM(IF(tipo = 'NC', -1, 1) * costo), 0) FROM compras WHERE estado = 'V' AND fecha BETWEEN ? AND ?");
+        $st->execute([substr($hoy, 0, 7) . '-01', $hoy]);
+        $ap = self::aPagar([], $hoy);
+        return ['gastado' => round((float) $st->fetchColumn(), 2), 'deuda' => $ap['totales']['saldo'],
+            'vencido' => round($ap['totales']['d30'] + $ap['totales']['d60'] + $ap['totales']['mas60'], 2),
+            'semana' => $ap['totales']['semana'], 'semana_cant' => $ap['totales']['vence_semana_cant']];
+    }
+
     public static function tablero(string $periodo, int $meses = 6): array
     {
         $pdo = Db::pdo();

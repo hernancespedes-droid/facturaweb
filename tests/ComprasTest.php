@@ -266,6 +266,7 @@ final class ComprasTest extends ComprobantesTestCase
         $id = $this->grabar();
         $oper = $this->crearUsuario('t_compras_oper', 'operador');
         $this->loginComo($oper);
+        $this->assertStringNotContainsString('Le debemos a proveedores', $this->get('/')->body, 'sin compras.ver no ve la tarjeta del inicio');
         foreach (['/compras', '/compras/nueva', '/compras/lista', '/compras/ver/' . $id, '/compras/centros', '/compras/proveedores', '/compras/iva'] as $ruta) {
             $this->assertSame(403, $this->get($ruta)->status, "el operador no entra a {$ruta}");
         }
@@ -278,6 +279,7 @@ final class ComprasTest extends ComprobantesTestCase
             $r = $this->get($p, $qq);
             $this->assertSame(200, $r->status, "el administrador ve {$ruta}");
         }
+        $this->assertStringContainsString('Le debemos a proveedores', $this->get('/')->body, 'el inicio suma la tarjeta de compras');
         foreach (['/compras/lista', '/compras/a-pagar', '/compras/analisis', '/compras/iva', '/compras/proveedores'] as $ruta) {
             $r = $this->get($ruta, ['excel' => '1']);
             $this->assertStringContainsString('spreadsheetml', $r->headers['Content-Type'] ?? '', "Excel de {$ruta}");
@@ -292,6 +294,7 @@ final class ComprasTest extends ComprobantesTestCase
         try {
             $this->loginComo($oper);
             $this->assertSame(200, $this->get('/compras/nueva')->status);
+            $this->assertStringContainsString('Le debemos a proveedores', $this->get('/')->body, 'con compras.ver ve la tarjeta del inicio');
             $this->assertSame(403, $this->get('/compras/centros')->status);
             $this->assertSame(403, $this->post('/compras/pagar', ['compra' => (string) $id, 'medio' => 'T'])->status);
         } finally {
