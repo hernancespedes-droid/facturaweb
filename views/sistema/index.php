@@ -74,7 +74,7 @@
             <label class="field"><span>.zip con los DBF y datos.dbc</span><input type="file" name="zip" accept=".zip" required></label>
             <label class="check"><input type="checkbox" name="simular" value="1" checked> Simular (no graba: muestra qué pasaría)</label>
             <label class="check"><input type="checkbox" name="reemplazar" value="1"> Reemplazar lo que ya esté cargado</label>
-            <label class="check"><input type="checkbox" name="presupuestos" value="1"> Son comprobantes <b>en negro</b>: sumarlos como <b>Presupuestos</b> (no fiscales; no reemplaza nada)</label>
+            <label class="check"><input type="checkbox" name="presupuestos" value="1"> Son comprobantes <b>no ARCA</b>: sumarlos como <b>Presupuestos</b> (no fiscales; no reemplaza nada)</label>
             <button class="btn" type="submit">Migrar</button>
         </form>
     <?php endif; ?>
