@@ -303,6 +303,23 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.locator('input[type=checkbox][name="valor[presupuestos.sin_iva]"]').uncheck();
     await Promise.all([page.waitForNavigation(), page.click('form button[type=submit]:has-text("Guardar")')]);
 
+    // ---- Apariencia (0.31.0): nombre y color del cliente en todo el sistema; O&S firma al pie
+    await page.goto(BASE + '/configuracion#apariencia');
+    await page.fill('#ap-nombre', 'Negocio E2E');
+    await page.check('[data-ap-color-propio]');
+    await page.locator('[data-ap-color]').evaluate((el) => { el.value = '#c2185b'; el.dispatchEvent(new Event('input')); });
+    ok((await page.locator('[data-ap-muestra]').getAttribute('style') || '').includes('194, 24, 91'), 'apariencia: el botón de muestra toma el color');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Guardar apariencia")')]);
+    ok((await page.textContent('.brand')).includes('Negocio E2E'), 'apariencia: el nombre del cliente va en la barra');
+    const fondoBtn = await page.locator('main .btn').first().evaluate((el) => getComputedStyle(el).backgroundColor);
+    ok(fondoBtn === 'rgb(194, 24, 91)', 'apariencia: los botones toman el color del cliente');
+    ok((await page.textContent('footer.pie')).includes('Organización & Sistemas'), 'apariencia: O&S firma al pie');
+    await page.screenshot({ path: path.join(CAPTURAS, 'apariencia.png') });
+    await page.fill('#ap-nombre', '');
+    await page.uncheck('[data-ap-color-propio]');
+    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Guardar apariencia")')]);
+    ok(!(await page.textContent('.brand')).includes('Negocio E2E'), 'apariencia: al vaciar el nombre se deja de mostrar');
+
     // ---- ticket de cambio: presupuesto de contado, se lee el ticket y se cambia un producto cobrando solo la diferencia
     await page.goto(BASE + '/comprobantes/nuevo?tipo=PR');
     await page.fill('#cliente-q', 'CLIENTE E2E FINAL');

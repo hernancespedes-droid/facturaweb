@@ -8,7 +8,7 @@ use App\Core\Config;
 use App\Core\Db;
 use PDO;
 
-/** Actualización automática de la base (0.30.0): el primer pedido después de actualizar el código aplica los cambios pendientes. */
+/** Actualización automática de la base (0.31.1): el primer pedido después de actualizar el código aplica los cambios pendientes. */
 final class AutoMigracionTest extends DbTestCase
 {
     private string $tmp;
@@ -53,7 +53,7 @@ final class AutoMigracionTest extends DbTestCase
         $this->assertNull(AutoMigracion::asegurar());
         $this->assertSame(AutoMigracion::firma(), $this->firmaGuardada());
         $this->assertNull(AutoMigracion::ultimoError());
-        $this->assertStringContainsString('0030_sistema_estado.sql', AutoMigracion::firma(), 'la firma lleva la última migración');
+        $this->assertStringContainsString(basename((string) max(glob(\App\App::root() . "/database/migrations/*.sql"))), AutoMigracion::firma(), "la firma lleva la última migración");
     }
 
     public function testDespuesDeActualizarElCodigoAplicaSoloLoPendiente(): void
