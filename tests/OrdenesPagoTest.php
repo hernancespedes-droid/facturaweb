@@ -187,6 +187,9 @@ final class OrdenesPagoTest extends ComprobantesTestCase
         $this->assertSame([10.0, 80.0], [$st->saldo('T-ART'), (float) $pdo->query("SELECT costo FROM articulos WHERE codigo = 'T-ART'")->fetchColumn()]);
         $c = $this->c->obtener($id);
         $this->assertSame(['T-ART', '50.0000'], [$c['items'][0]['articulo'], $c['items'][0]['costo_anterior']]);
+        $this->assertSame(['COMPRA', '50.0000', '80.0000'], array_values($pdo->query("SELECT origen, costo_anterior, costo FROM articulos_precios_historial WHERE articulo = 'T-ART' ORDER BY id DESC LIMIT 1")->fetch(\PDO::FETCH_ASSOC)),
+            'el cambio de costo queda en el historial');
+        $pdo->exec("DELETE FROM articulos_precios_historial WHERE articulo = 'T-ART'");
         // nota de crédito: devuelve stock sin tocar el costo
         $this->compra(['tipo' => 'NC', 'neto' => ['21' => '100'], 'con_articulos' => '1', 'actualizar_costo' => '1', 'items' => [['articulo' => 'T-ART', 'cantidad' => '2', 'costo' => '40']]]);
         $this->assertSame([8.0, 80.0], [$st->saldo('T-ART'), (float) $pdo->query("SELECT costo FROM articulos WHERE codigo = 'T-ART'")->fetchColumn()]);

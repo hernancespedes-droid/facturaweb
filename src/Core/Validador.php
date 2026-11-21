@@ -30,7 +30,7 @@ final class Validador
                     $errores[$campo] = 'Completá ' . mb_strtolower($c['label']) . '.';
                     continue;
                 }
-                $valores[$campo] = in_array($c['tipo'], ['entero', 'decimal'], true) ? 0 : null;
+                $valores[$campo] = in_array($c['tipo'], ['entero', 'decimal'], true) && empty($c['nulo']) ? 0 : null; // 'nulo': vacío = sin dato (hereda)
                 continue;
             }
             switch ($c['tipo']) {

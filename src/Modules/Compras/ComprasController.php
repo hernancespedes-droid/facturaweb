@@ -135,7 +135,11 @@ final class ComprasController
             $aviso = $pl['ok'] ? ' El reparto quedó guardado como plantilla.' : ' La plantilla no se guardó: ' . $pl['error'];
         }
         Session::flash('ok', 'Compra grabada.' . $aviso);
-        return Response::redirect(url(($p['seguir'] ?? '') === '1' ? '/compras/nueva' : '/compras/ver/' . $g['id']));
+        $destino = url(($p['seguir'] ?? '') === '1' ? '/compras/nueva' : '/compras/ver/' . $g['id']);
+        $n = count($g['costos'] ?? []);
+        $preguntar = \App\Modules\Articulos\ArticulosController::preguntarPrecios($g['costos'] ?? [],
+            'La compra cambió el costo de ' . ($n === 1 ? '1 artículo.' : $n . ' artículos.'), $destino);
+        return Response::redirect($preguntar ?? $destino);
     }
 
     public static function ver(Request $req, array $params, ?string $error = null, int $status = 200): Response
