@@ -61,6 +61,17 @@ async function elegirMenu(page, valor) {
     if (ahora) { await grupo.locator('.menu-grupo-btn').click(); }
     await page.reload();
     ok((await page.locator('.menu-grupo').first().evaluate(g => g.classList.contains('plegado'))) === false, 'escritorio: lo que se abrió queda abierto al recargar');
+    ok((await page.locator('.menu-grupo-btn .menu-grupo-ico svg').count()) === (await page.locator('.menu-grupo').count()), 'escritorio: cada grupo tiene su ícono');
+    ok((await page.locator('.menu-sub a svg.menu-ico').count()) === (await page.locator('.menu-sub a').count()), 'escritorio: cada opción tiene su ícono');
+    const estilos = await page.evaluate(() => {
+      const g = getComputedStyle(document.querySelector('.menu-grupo-btn'));
+      const o = getComputedStyle(document.querySelector('.menu-grupo:not(.plegado) .menu-sub a'));
+      return { gPeso: g.fontWeight, gMay: g.textTransform, oPeso: o.fontWeight, oMay: o.textTransform, gCol: g.color, oCol: o.color };
+    });
+    ok(estilos.gMay === 'none' && estilos.oMay === 'none', 'escritorio: grupos y opciones sin mayúsculas sostenidas');
+    ok(Number(estilos.gPeso) > Number(estilos.oPeso) && estilos.gCol !== estilos.oCol, 'escritorio: el título del grupo se distingue de las opciones (peso y color)');
+    await page.goto(BASE + '/clientes');
+    ok(await page.locator('.menu-sub a.activo').isVisible(), 'escritorio: la opción de la pantalla actual queda resaltada y a la vista');
     await foto(page, '1-lateral-claro');
     await page.click('[data-tema-cambiar]');
     await page.waitForTimeout(150);
@@ -83,6 +94,7 @@ async function elegirMenu(page, valor) {
     ok(await pc.locator('nav.menu').isVisible(), 'celular: ☰ lo abre');
     const mb = await pc.locator('main').boundingBox();
     ok(mb && mb.x < 5, 'celular: el contenido usa todo el ancho');
+    ok(await pc.locator('.menu-grupo-btn .menu-grupo-ico svg').first().isVisible(), 'celular: los grupos muestran su ícono');
     await foto(pc, '3-celular');
     await cel.close();
 

@@ -291,4 +291,19 @@ final class AparienciaTest extends DbTestCase
         Configuracion::reset();
         $this->assertStringNotContainsString('menu-lateral', $this->get('/login')->body);
     }
+
+    public function testElMenuLlevaIconosEnGruposYOpciones(): void
+    {
+        $this->loginComo($this->crearUsuario('t_adm_ico', 'admin'));
+        $html = $this->get('/')->body;
+        $grupos = substr_count($html, 'class="menu-grupo-btn"');
+        $this->assertTrue($grupos > 0);
+        $this->assertSame($grupos, substr_count($html, '<span class="menu-grupo-ico"><svg class="menu-ico"'), 'cada grupo con su ícono');
+        $this->assertStringContainsString('class="menu-inicio', $html);
+        $this->assertTrue(preg_match_all('#<a href="[^"]*" class="[^"]*"><svg class="menu-ico"#', $html) >= $grupos, 'las opciones también');
+        // toda opción declarada tiene ícono propio o el de su grupo
+        foreach (\App\Core\Menu::opciones() as $k => $o) {
+            $this->assertStringContainsString('<svg class="menu-ico"', \App\Core\Menu::icono($k, $o['grupo']));
+        }
+    }
 }
