@@ -47,8 +47,11 @@ use App\Modules\Comprobantes\Tipos;
             Cliente: <b data-cliente-nombre><?= e((string) ($cliente['razon_social'] ?? 'Elegí el cliente')) ?></b>
             <button type="button" class="btn btn-ghost btn-sm" data-cambiar-cliente>Cambiar</button>
             <div data-cliente-caja hidden>
-                <input type="search" data-cliente-q autocomplete="off" placeholder="Nombre, código o CUIT" aria-label="Buscar cliente">
-                <ul class="picker-lista" data-cliente-lista hidden></ul>
+                <div class="campo-con-boton">
+                    <input type="search" data-cliente-q autocomplete="off" placeholder="Nombre, código o CUIT" aria-label="Buscar cliente">
+                    <?= icono_nuevo_cliente() ?>
+                    <ul class="picker-lista" data-cliente-lista hidden></ul>
+                </div>
             </div>
         </div>
         <?php if (count($sucursales) > 1): ?>
@@ -70,4 +73,5 @@ use App\Modules\Comprobantes\Tipos;
 </div>
 <script src="<?= e(asset('assets/stock-articulo.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/reservas.js')) ?>" defer></script>
+<?php require __DIR__ . '/../clientes/_alta_rapida.php'; ?>
 <script src="<?= e(asset('assets/kiosco.js')) ?>" defer></script>

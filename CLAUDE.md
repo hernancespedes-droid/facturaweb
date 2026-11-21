@@ -85,6 +85,12 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `Modules/MercadoPago/MercadoPago` es el único que habla con la API (modos `mp.modo` apagado|simulado|produccion en `config/local.php`; `MercadoPago::$transporte` permite probar sin red). `MercadoPagoService`: «Cobrar con Mercado Pago» deja la venta en un cobro `pendiente` (tabla `mp_cobros`, sin claves) y **solo se emite al acreditarse el pago** (`confirmar` → `emitir`, idempotente con el token como clave de operación; `CajaService::$actor` pone al cajero cuando no hay sesión). La notificación va por `/api/v1/mercadopago/webhook` (sin sesión ni CSRF) con firma HMAC verificada y el pago se vuelve a consultar en Mercado Pago. `ComprobantesService::armar` acepta `$autorizoPrevio` (solo desde el código) para la autorización de stock ya resuelta.
 
+## Alta de clientes desde el CUIT (0.37.0)
+
+`Arca/Padron` consulta la constancia de inscripción (`ws_sr_constancia_inscripcion`, `getPersona_v2`, mismo certificado y `Arca::afip()->wsaa`) y la normaliza (condición de IVA → `clientes.iva`, D-70); guarda cada respuesta en `padron_consultas` (caché `afip.padron_dias`, 30). `ArcaSimulador::padron` contesta sin internet (ver los CUIT de ejemplo en su docblock; `Padron::$transporte` para pruebas).
+`Clientes/AltaCliente`: `propuesta()` (CUIT → existentes + datos del formulario con la provincia de la tabla + letra) y `crear()` (alta rápida, solo `CAMPOS_RAPIDOS`). Rutas `GET /clientes/padron` y `POST /clientes/rapido` con `clientes.alta` o `clientes.editar`.
+Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_cliente()` junto a la lupa, `require views/clientes/_alta_rapida.php` y `AltaCliente.itemLista(q, elegir)` al final de la lista (ver `comprobante.js` y `kiosco.js`).
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.

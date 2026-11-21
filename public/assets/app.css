@@ -1230,3 +1230,35 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 .ap-fondo img { max-width: 100%; max-height: 60px; }
 .ap-fondo-oscuro { background: #171b22; }
 .ap-fondo-claro { background: #fff; }
+
+/* Alta de clientes desde el CUIT (alta-cliente.js) */
+.alta-cliente { width: min(760px, 96vw); max-height: 94vh; overflow: auto; }
+.alta-cliente .ac-form { display: grid; gap: 12px; }
+.alta-cliente .ac-cuit { display: grid; gap: 4px; }
+.alta-cliente .ac-cuit input { font-size: 1.15rem; letter-spacing: .04em; }
+.alta-cliente .ac-ancho { grid-column: 1 / -1; }
+.alta-cliente .ac-acciones { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.alta-cliente .ac-existe, .alta-cliente .ac-ficha { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--panel-2); }
+.alta-cliente .ac-existe { border-color: var(--warn); }
+.alta-cliente .ac-existe p { margin: 0 0 6px; }
+.ac-lista-existe { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 6px; }
+.ac-lista-existe li { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ac-ficha-cab { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.ac-fuente { margin-left: auto; }
+.ac-datos { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: .92rem; }
+.ac-datos dt { color: var(--muted); }
+.ac-datos dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .ac-datos { grid-template-columns: 1fr; } .ac-datos dd { margin-bottom: 6px; } .ac-fuente { margin-left: 0; } }
+.ac-avisos { margin: 8px 0 0; padding-left: 18px; color: var(--warn); }
+.ac-estado:empty { display: none; }
+.ac-mal { color: var(--danger); }
+.ac-aviso { color: var(--warn); }
+.ac-ok { color: var(--ok); }
+.ac-cambiado { border-color: var(--ok) !important; box-shadow: 0 0 0 2px color-mix(in srgb, var(--ok) 25%, transparent); }
+.ac-girando { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: ac-gira .7s linear infinite; vertical-align: -1px; }
+@keyframes ac-gira { to { transform: rotate(360deg); } }
+.picker-lista li.ac-item { border-top: 1px dashed var(--line-2); color: var(--brand-2, var(--brand)); }
+.btn-link { background: none; border: 0; padding: 0; color: var(--brand-2, var(--brand)); text-decoration: underline; cursor: pointer; font: inherit; }
+.traer-arca { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: -4px 0 8px; }
+.traer-arca { grid-column: 1 / -1; }
+.alta-cliente .ac-acciones { position: sticky; bottom: -16px; margin: 0 -16px -16px; padding: 12px 16px; background: var(--panel, #fff); border-top: 1px solid var(--line-2); }
