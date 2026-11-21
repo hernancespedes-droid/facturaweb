@@ -88,7 +88,7 @@ final class CambiosController
         return Response::redirect(url('/comprobantes/' . $e['id']));
     }
 
-    /** Ticket de cambio en PDF de un presupuesto o una factura. */
+    /** Ticket de cambio en PDF de un presupuesto o una factura, en A4 o en ticket de 80 / 50 mm según Parámetros. */
     public static function ticket(Request $req, array $params): Response
     {
         if (!CambiosService::habilitado()) {
@@ -99,7 +99,8 @@ final class CambiosController
         if ($h === null || !in_array($h['tipo'], ['FC', 'PR'], true) || $h['estado'] !== '' || (int) $h['solo_subdiario'] === 1) {
             return new Response(404);
         }
-        $pdf = TicketCambioPdf::generar($h, $svc->emisor());
+        // mismo papel que el resto de los comprobantes (Parámetros → impresión), o el que se pida con ?papel=a4|t80|t50 (D-141)
+        $pdf = TicketCambioPdf::generar($h, $svc->emisor(), isset($req->query['papel']) ? (string) $req->query['papel'] : null);
         return new Response(200, $pdf, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="ticket-de-cambio.pdf"', 'Cache-Control' => 'no-store']);
     }
 

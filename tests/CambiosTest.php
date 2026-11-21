@@ -207,6 +207,24 @@ final class CambiosTest extends ComprobantesTestCase
         $pdf = $this->get('/cambios/ticket/' . $pr['id']);
         $this->assertSame(200, $pdf->status);
         $this->assertStringContainsString('%PDF', substr($pdf->body, 0, 8));
+        // el ticket respeta la impresión de Parámetros como los demás comprobantes (D-141): A4, 80 o 50 mm, y ?papel= lo cambia
+        $ancho = static function (string $b): float {
+            preg_match('/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/', $b, $mm);
+            return round((float) $mm[1] / (72 / 25.4), 1);
+        };
+        $this->assertSame(210.0, $ancho($pdf->body), 'A4 por omisión');
+        Db::pdo()->exec("UPDATE parametros SET impresion = 't80' WHERE id = 1");
+        try {
+            $t80 = $this->get('/cambios/ticket/' . $pr['id']);
+            $this->assertSame(200, $t80->status);
+            $this->assertSame(80.0, $ancho($t80->body), 'con impresora de 80 mm sale en 80 mm');
+            $this->assertSame(50.0, $ancho($this->get('/cambios/ticket/' . $pr['id'], ['papel' => 't50'])->body));
+            $this->assertSame(210.0, $ancho($this->get('/cambios/ticket/' . $pr['id'], ['papel' => 'a4'])->body));
+            Db::pdo()->exec("UPDATE parametros SET impresion = 't50' WHERE id = 1");
+            $this->assertSame(50.0, $ancho($this->get('/cambios/ticket/' . $pr['id'])->body));
+        } finally {
+            Db::pdo()->exec("UPDATE parametros SET impresion = 'a4' WHERE id = 1");
+        }
         // el POST completo (como lo manda la pantalla)
         $post = $this->post('/cambios', ['original' => (string) $pr['id'], 'operacion' => bin2hex(random_bytes(16)), 'devolver' => [$pr['linea'] => '1'],
             'nuevos' => [['articulo' => 'T-ART2', 'cantidad' => '1', 'precio' => '100']]]);
