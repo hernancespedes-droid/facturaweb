@@ -82,6 +82,99 @@ final class Menu
         return $o;
     }
 
+    /**
+     * Íconos del menú (0.54.0, D-138): trazos simples de 24×24 dibujados para FacturaWeb, con el color del texto (currentColor),
+     * así siguen al tema claro/oscuro y al color del cliente. Sin librerías ni archivos aparte.
+     */
+    private const SVG = [
+        'inicio' => '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+        'usuario' => '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+        'usuarios' => '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.5c2.4.6 4 2.4 4 5.5"/>',
+        'caja_art' => '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4"/><path d="M12 11v10"/>',
+        'etiqueta' => '<path d="M3 12V3h9l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+        'ticket' => '<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+        'doc_mas' => '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/><path d="M12 11v6M9 14h6"/>',
+        'doc_menos' => '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/><path d="M9 14h6"/>',
+        'docs' => '<path d="M8 3h8l4 4v12H8z"/><path d="M4 7v14h12"/>',
+        'portapapeles' => '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.5h6V4"/><path d="M9 11h6M9 15h4"/>',
+        'carrito' => '<path d="M3 4h2l2.5 11h11L21 7H6.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>',
+        'cambio' => '<path d="M4 12V9a3 3 0 0 1 3-3h12l-3-3"/><path d="M20 12v3a3 3 0 0 1-3 3H5l3 3"/>',
+        'billetera' => '<path d="M19 7V5a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15v12H5a2 2 0 0 1-2-2V6"/><circle cx="16" cy="14" r="1.2"/>',
+        'enlace' => '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+        'ajustes' => '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+        'billete' => '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>',
+        'celular' => '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',
+        'ingreso' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 13l4 4 4-4"/>',
+        'caja' => '<rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 10V5h10v5"/><path d="M10 7.5h4"/><path d="M7 15h.01M12 15h.01M17 15h.01"/>',
+        'reloj' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        'escudo' => '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+        'barras' => '<path d="M4 4v16h16"/><path d="M8 16v-4M12 16V8M16 16v-6M20 16V5"/>',
+        'porcentaje' => '<path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>',
+        'libro' => '<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
+        'tendencia' => '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+        'monedas' => '<ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v5c0 1.7 2.7 3 6 3s6-1.3 6-3V7"/><path d="M9 15v2c0 1.7 2.7 3 6 3s6-1.3 6-3v-5c0-1.7-2.7-3-6-3"/>',
+        'bolsa' => '<path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+        'camion' => '<path d="M2 6h12v10H2z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+        'lista' => '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
+        'calendario' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+        'torta' => '<path d="M11 4a8 8 0 1 0 9 9h-9z"/><path d="M14 2.5A8 8 0 0 1 21.5 10H14z"/>',
+        'qr' => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM21 14v.01M14 21h.01M18 21h3v-4"/>',
+        'tabla' => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>',
+        'capas' => '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+        'flechas' => '<path d="M4 8h15l-3-3M20 16H5l3 3"/>',
+        'alerta' => '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+        'deposito' => '<path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-8h10v8"/><path d="M7 17h10"/>',
+        'engranaje' => '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.5"/>',
+        'llave' => '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M18 5l2 2"/>',
+        'subir' => '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v5h16v-5"/>',
+        'sincronizar' => '<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 21v-5h-5"/>',
+        'edificio' => '<path d="M3 21h18M5 18v-8M10 18v-8M14 18v-8M19 18v-8"/><path d="M2 10l10-6 10 6z"/>',
+        'servidor' => '<rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+        'ayuda' => '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17h.01"/>',
+        'bandeja' => '<path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 2h6l1-2h5"/>',
+    ];
+
+    /** Ícono de cada grupo (también el de sus opciones sin ícono propio, como las tablas). */
+    private const ICONO_GRUPO = [
+        'Maestros' => 'usuarios', 'Facturación' => 'ticket', 'Cuenta corriente' => 'billetera', 'Caja' => 'caja',
+        'Listados' => 'barras', 'Compras' => 'bolsa', 'Tablas' => 'tabla', 'Stock' => 'capas', 'Sistema' => 'engranaje', 'Ayuda' => 'ayuda',
+    ];
+
+    /** Ícono de cada opción del menú. */
+    private const ICONO = [
+        'inicio' => 'inicio', 'clientes' => 'usuario', 'articulos' => 'caja_art', 'articulos_precios' => 'etiqueta',
+        'comprobantes_fc' => 'doc_mas', 'comprobantes_pr' => 'portapapeles', 'kiosco' => 'carrito', 'cambios' => 'cambio',
+        'comprobantes_nc' => 'doc_menos', 'comprobantes_nd' => 'doc_mas', 'comprobantes' => 'docs', 'mp_ingresos' => 'ingreso', 'mp' => 'celular',
+        'ctacte' => 'billetera', 'recibos_nuevo' => 'doc_mas', 'recibos' => 'ticket', 'imputar' => 'enlace', 'ctacte_ajuste' => 'ajustes', 'cheques' => 'billete',
+        'caja' => 'caja', 'caja_turnos' => 'reloj', 'caja_auditoria' => 'escudo',
+        'caja_diaria' => 'calendario', 'ventas_diarias' => 'tendencia', 'iva_ventas' => 'porcentaje', 'libro_iva' => 'libro',
+        'estadistica' => 'barras', 'rentabilidad' => 'monedas', 'lista_costos' => 'etiqueta',
+        'compras' => 'barras', 'compras_nueva' => 'doc_mas', 'compras_qr' => 'qr', 'compras_lista' => 'lista', 'compras_apagar' => 'calendario',
+        'compras_pagos' => 'billete', 'compras_cuenta' => 'billetera', 'compras_analisis' => 'torta', 'compras_presupuesto' => 'tendencia',
+        'compras_iva' => 'porcentaje', 'compras_arca' => 'edificio', 'compras_resultado' => 'monedas', 'proveedores' => 'camion', 'compras_centros' => 'torta',
+        'stock' => 'capas', 'stock_movimientos' => 'flechas', 'stock_existencias' => 'deposito', 'stock_ventas_sin_stock' => 'alerta',
+        'stock_ajuste' => 'ajustes', 'stock_transferir' => 'flechas', 'stock_depositos' => 'deposito',
+        'usuarios' => 'usuarios', 'roles' => 'llave', 'configuracion' => 'ajustes', 'importar' => 'subir', 'agente' => 'sincronizar',
+        'arca' => 'edificio', 'sistema' => 'engranaje', 'instancias' => 'servidor', 'soporte_bandeja' => 'bandeja', 'soporte' => 'ayuda',
+    ];
+
+    /** SVG del ícono de una opción (o del de su grupo si no tiene propio). Es código fijo: se imprime sin escapar. */
+    public static function icono(string $clave, string $grupo = ''): string
+    {
+        return self::svg(self::ICONO[$clave] ?? self::ICONO_GRUPO[$grupo] ?? 'lista');
+    }
+
+    public static function iconoGrupo(string $grupo): string
+    {
+        return self::svg(self::ICONO_GRUPO[$grupo] ?? 'lista');
+    }
+
+    private static function svg(string $nombre): string
+    {
+        return '<svg class="menu-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"'
+            . ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . (self::SVG[$nombre] ?? self::SVG['lista']) . '</svg>';
+    }
+
     public static function texto(string $clave): string
     {
         return self::opciones()[$clave]['texto'] ?? $clave;
