@@ -121,6 +121,10 @@ Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_c
 pasa por `Precios::aplicar` o `registrar`.** Para preguntar por los precios después de cambiar costos: `ArticulosController::preguntarPrecios($codigos, $motivo, $volver)` → `/articulos/precios?pendientes=1`.
 Permiso `articulos.precios` (costo, márgenes, automático, `/articulos/precios`; el ingreso de stock con costo).
 
+**Actualización por filtro (0.60.0, D-144…D-146):** `Articulos/ActualizacionMasiva` (+ `ActualizacionController`, `/articulos/actualizacion`, menú «Actualización de precios»; la de márgenes pasó a llamarse «Precios por margen»):
+filtros desde/hasta, una lista / todas / costo / todas y costo, coeficiente / porcentaje / monto fijo; `simular` da la vista previa y una firma que `confirmar` revisa con las filas bloqueadas;
+cada una en `precios_actualizaciones` + `articulos_precios_historial.actualizacion_id` (origen `AUMENTO`), `deshacer` la última vigente sin pisar lo que cambió después. Automáticos: con costo se recalculan; solo listas → pasan a manual o se excluyen.
+
 ## Tablero de inicio (0.40.0)
 
 `Modules/Tablero`: `Tablero::datos()` arma todo lo del inicio según permisos y módulos (D-90; «venta» = lo vendido de la caja diaria, D-91; avisos, D-92) y `Graficos` dibuja los SVG en el servidor

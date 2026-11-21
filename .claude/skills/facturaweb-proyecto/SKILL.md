@@ -243,3 +243,8 @@ Pendiente: verificar con una cuenta real si las transferencias bancarias al CVU 
 - Instalación `gogolinas.orgysis.site` (cliente 3212 del master), misma carpeta que el master por ahora. VFP en `G:\gogolinas` (raíz = facturador; `bup\` = comprobantes no ARCA con `datosbup.dbc`; `Data\` = sistema de proveedores, no se migra).
 - Migración: maestros desde la raíz (zip de 23 tablas, 5 MB); los comprobantes no ARCA con la casilla «no ARCA → Presupuestos» (0.45.0, D-93). Los 54 fiscales viejos (hasta abr-2025) no se traen (decisión de Hernán): su `fe_clave` no entra en INT.
 - Stock del VFP no confiable (664 de 1.562 artículos en negativo): se arranca con conteo (`conteo_stock_gogolinas.xlsx` → Sistema → Importar datos → Stock, «dejar en esa cantidad»).
+
+## Actualización de precios por filtro (0.60.0, 21/11/2026)
+Pedido de Hernán: aumentar por inflación aunque el costo no cambie, como «Actualización de Precios» del VFP. Maestros → Actualización de precios: filtros desde/hasta (código, proveedor, rubro, subrubro),
+una lista / todas / costo / todas y costo, coeficiente / porcentaje / monto fijo, vista previa, confirmar y deshacer la última. Los automáticos (D-133) recalculan si cambia el costo y pasan a manual si se tocan solo listas (D-144…D-146, a confirmar por Hernán).
+La pantalla de márgenes se renombró «Precios por margen». Nota `docs/entregas/0.60.0-actualizacion-precios.md`.

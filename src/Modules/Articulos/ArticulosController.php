@@ -105,7 +105,7 @@ final class ArticulosController
         }
         $f['ver'] = in_array($f['ver'] ?? '', ['automaticos', 'todos', 'cambian'], true) ? $f['ver'] : 'automaticos';
         $svc = new Precios();
-        return Response::html(View::render('articulos/precios', ['title' => 'Actualizar precios', 'nav' => 'articulos_precios', 'f' => $f, 'r' => $svc->propuesta($f),
+        return Response::html(View::render('articulos/precios', ['title' => 'Precios por margen', 'nav' => 'articulos_precios', 'f' => $f, 'r' => $svc->propuesta($f),
             'cfg' => $svc->config(), 'pend' => $pend, 'rubros' => Validador::opciones('rubros')]));
     }
 

@@ -11,7 +11,8 @@ $red = \App\Modules\Tablas\Definiciones::REDONDEOS[(string) $cfg['redondeo']] ??
 $general = array_filter($cfg['margenes'], static fn ($x) => $x !== null);
 ?>
 <p><a href="<?= e(url('/articulos')) ?>">← Artículos</a></p>
-<div class="page-head"><div><p class="eyebrow">Artículos</p><h1>Actualizar precios</h1></div></div>
+<div class="page-head"><div><p class="eyebrow">Artículos</p><h1>Precios por margen</h1></div>
+    <div class="actions"><a class="btn btn-ghost" href="<?= e(url('/articulos/actualizacion')) ?>">Actualización por filtro (inflación)</a></div></div>
 <?php if ($pend !== null): ?>
     <div class="alerta alerta-info" role="status"><b><?= e($pend['motivo']) ?></b> ¿Actualizo también los precios con los márgenes? Revisá cómo quedan, destildá los que no querés tocar y confirmá.</div>
 <?php else: ?>

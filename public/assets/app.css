@@ -1627,3 +1627,23 @@ tr.mp-no-visto td { background: color-mix(in srgb, var(--ok) 10%, transparent); 
 .clave-temporal { border-color: color-mix(in srgb, var(--brand) 55%, transparent); background: color-mix(in srgb, var(--brand) 7%, var(--panel)); }
 .clave-temporal-valor { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
 .clave-temporal-valor code { font-size: 1.5rem; letter-spacing: .08em; padding: .3rem .7rem; user-select: all; overflow-wrap: anywhere; }
+
+/* ---------- Actualización de precios por filtro (0.60.0) ---------- */
+.actualizacion-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.desde-hasta { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); gap: 8px 10px; align-items: center; }
+.desde-hasta legend { grid-column: 1 / -1; }
+.desde-hasta .dh-tit { font: 600 .8rem/1.2 var(--f-head); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); text-align: center; }
+.desde-hasta .dh-lbl { font: 600 .92rem/1.2 var(--f-head); text-transform: uppercase; letter-spacing: .06em; }
+.desde-hasta .dh-nota { grid-column: 1 / -1; margin: 4px 0 0; }
+.radios-col { display: flex; flex-direction: column; margin-bottom: 8px; }
+.radios-col label.check { margin: 4px 0; }
+.actualizacion-opciones { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; margin: 14px 0; }
+.actualizacion-opciones .field-inline select { max-width: 100%; }
+@media (max-width: 1000px) { .actualizacion-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .actualizacion-grid .desde-hasta { grid-column: 1 / -1; } }
+@media (max-width: 640px) {
+  .actualizacion-grid { grid-template-columns: minmax(0, 1fr); }
+  .desde-hasta { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .desde-hasta > span:first-of-type { display: none; }
+  .desde-hasta .dh-lbl { grid-column: 1 / -1; margin-top: 6px; }
+  .actualizacion-opciones .field-inline { flex-wrap: wrap; }
+}

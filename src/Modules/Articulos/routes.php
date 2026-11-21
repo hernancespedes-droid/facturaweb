@@ -12,6 +12,11 @@ return function (Router $r): void {
     // Actualizar precios con los márgenes (D-130): también es donde preguntan el stock, las compras y el importador después de cambiar costos
     $r->get('/articulos/precios', Guard::permiso('articulos.precios', [C::class, 'precios']));
     $r->post('/articulos/precios', Guard::permiso('articulos.precios', [C::class, 'actualizarPrecios']));
+    // Actualización de precios por filtro (coeficiente, porcentaje o monto fijo; D-144…D-146), con vista previa y deshacer la última
+    $r->get('/articulos/actualizacion', Guard::permiso('articulos.precios', [\App\Modules\Articulos\ActualizacionController::class, 'form']));
+    $r->post('/articulos/actualizacion', Guard::permiso('articulos.precios', [\App\Modules\Articulos\ActualizacionController::class, 'confirmar']));
+    $r->post('/articulos/actualizacion/deshacer', Guard::permiso('articulos.precios', [\App\Modules\Articulos\ActualizacionController::class, 'deshacer']));
+    $r->get('/articulos/actualizacion/buscar-articulo', Guard::permiso('articulos.precios', [\App\Modules\Articulos\ActualizacionController::class, 'buscarArticulo']));
     $r->get('/articulos/ficha', Guard::permiso('articulos.ver', [C::class, 'ver']));
     $r->post('/articulos/ficha', Guard::permiso('articulos.editar', [C::class, 'actualizar']));
     // Foto del artículo: la ven todos los que trabajan con artículos (tarjetas del kiosco, buscadores, fichas); subirla o quitarla es de quien edita

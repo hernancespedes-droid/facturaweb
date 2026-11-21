@@ -18,7 +18,8 @@ final class Menu
         $o = [
             'clientes' => ['texto' => 'Clientes', 'ruta' => '/clientes', 'permiso' => 'clientes.ver', 'grupo' => 'Maestros'],
             'articulos' => ['texto' => 'Artículos', 'ruta' => '/articulos', 'permiso' => 'articulos.ver', 'grupo' => 'Maestros'],
-            'articulos_precios' => ['texto' => 'Actualizar precios', 'ruta' => '/articulos/precios', 'permiso' => 'articulos.precios', 'grupo' => 'Maestros'],
+            'articulos_precios' => ['texto' => 'Precios por margen', 'ruta' => '/articulos/precios', 'permiso' => 'articulos.precios', 'grupo' => 'Maestros'],
+            'articulos_actualizacion' => ['texto' => 'Actualización de precios', 'ruta' => '/articulos/actualizacion', 'permiso' => 'articulos.precios', 'grupo' => 'Maestros'],
         ];
         $o['comprobantes_fc'] = ['texto' => 'Nueva factura', 'ruta' => '/comprobantes/nuevo?tipo=FC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes_pr'] = ['texto' => 'Nuevo presupuesto', 'ruta' => '/comprobantes/nuevo?tipo=PR', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
@@ -142,7 +143,7 @@ final class Menu
 
     /** Ícono de cada opción del menú. */
     private const ICONO = [
-        'inicio' => 'inicio', 'clientes' => 'usuario', 'articulos' => 'caja_art', 'articulos_precios' => 'etiqueta',
+        'inicio' => 'inicio', 'clientes' => 'usuario', 'articulos' => 'caja_art', 'articulos_precios' => 'etiqueta', 'articulos_actualizacion' => 'tendencia',
         'comprobantes_fc' => 'doc_mas', 'comprobantes_pr' => 'portapapeles', 'kiosco' => 'carrito', 'cambios' => 'cambio',
         'comprobantes_nc' => 'doc_menos', 'comprobantes_nd' => 'doc_mas', 'comprobantes' => 'docs', 'mp_ingresos' => 'ingreso', 'mp' => 'celular',
         'ctacte' => 'billetera', 'recibos_nuevo' => 'doc_mas', 'recibos' => 'ticket', 'imputar' => 'enlace', 'ctacte_ajuste' => 'ajustes', 'cheques' => 'billete',
