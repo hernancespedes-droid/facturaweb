@@ -76,7 +76,34 @@ async function elegirMenu(page, valor) {
     await page.click('[data-tema-cambiar]');
     await page.waitForTimeout(150);
     await foto(page, '2-lateral-oscuro');
+
+    // Contraer y expandir (D-139)
+    const ancho = async () => (await page.locator('nav.menu').boundingBox()).width;
+    const anchoAbierto = await ancho();
+    await page.click('[data-menu-contraer]');
+    await page.waitForTimeout(300);
+    ok(await page.evaluate(() => document.body.classList.contains('menu-contraido')) && (await ancho()) < 80, 'escritorio: «Contraer menú» lo deja en una franja de íconos');
+    ok(!(await page.locator('.menu-grupo-txt').first().isVisible()), 'escritorio: contraído no muestra los nombres de los grupos');
+    const mainC = await page.locator('main').boundingBox();
+    ok(mainC.x < 80, 'escritorio: el contenido gana el ancho del menú');
+    const gFac = page.locator('.menu-grupo[data-grupo="Facturación"]');
+    await gFac.locator('.menu-grupo-btn').hover();
+    await page.waitForTimeout(100);
+    ok(await gFac.locator('.menu-sub').isVisible(), 'escritorio: al pasar el mouse un grupo muestra sus opciones al costado');
+    await page.waitForTimeout(200);
+    await foto(page, '5-contraido-oscuro');
+    await page.mouse.move(800, 400);
+    await page.reload();
+    ok(await page.evaluate(() => document.body.classList.contains('menu-contraido')), 'escritorio: sigue contraído al recargar (se recuerda)');
     await page.click('[data-tema-cambiar]');
+    await page.locator('.menu-grupo[data-grupo="Maestros"] .menu-grupo-btn').click();
+    await page.waitForTimeout(200);
+    ok(await page.locator('.menu-grupo[data-grupo="Maestros"] .menu-sub').isVisible(), 'escritorio: contraído, con clic también se abre el grupo');
+    await foto(page, '6-contraido-claro');
+    await page.keyboard.press('Escape');
+    await page.click('[data-menu-contraer]');
+    await page.waitForTimeout(300);
+    ok(!(await page.evaluate(() => document.body.classList.contains('menu-contraido'))) && Math.abs((await ancho()) - anchoAbierto) < 2, 'escritorio: «Expandir menú» lo vuelve a abrir');
 
     // otro usuario (operador) de la misma instalación también lo ve lateral
     const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -90,6 +117,7 @@ async function elegirMenu(page, valor) {
     pc.on('pageerror', e => errores.push(e.message));
     await login(pc, 'e2e_admin');
     ok(!(await pc.locator('nav.menu').isVisible()), 'celular: con «Lateral» el menú sigue escondido detrás de ☰');
+    ok(!(await pc.locator('[data-menu-contraer]').isVisible()), 'celular: no hay botón de contraer');
     await pc.click('label.menu-btn');
     ok(await pc.locator('nav.menu').isVisible(), 'celular: ☰ lo abre');
     const mb = await pc.locator('main').boundingBox();

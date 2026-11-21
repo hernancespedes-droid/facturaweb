@@ -271,7 +271,11 @@ document.addEventListener('DOMContentLoaded', function () {
   //  - Lateral y celular: cada agrupador se pliega y despliega con su título. Arranca abierto solo el de la
   //    pantalla actual; lo que el usuario abre o cierra se recuerda en este navegador.
   var grupos = document.querySelectorAll('.menu-grupo');
-  var desplegable = function () { return !document.body.classList.contains('menu-lateral') && window.matchMedia('(min-width: 821px)').matches; };
+  // Lateral contraído (franja de íconos): los grupos se despliegan al costado, como en el horizontal.
+  var desplegable = function () {
+    var b = document.body.classList;
+    return (!b.contains('menu-lateral') || b.contains('menu-contraido')) && window.matchMedia('(min-width: 821px)').matches;
+  };
   var PLEGADO = 'facturaweb-menu-plegado';
   var guardado = {};
   try { guardado = JSON.parse(localStorage.getItem(PLEGADO) || '{}') || {}; } catch (e) { guardado = {}; }
@@ -312,6 +316,18 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.addEventListener('click', function (ev) { if (desplegable() && !ev.target.closest('.menu-grupo')) cerrarGrupos(null); });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && desplegable()) cerrarGrupos(null); });
+  // Contraer / expandir el menú lateral (D-139): se recuerda en este navegador con la cookie menu_contraido.
+  document.querySelectorAll('[data-menu-contraer]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var si = !document.body.classList.contains('menu-contraido');
+      document.body.classList.toggle('menu-contraido', si);
+      document.cookie = 'menu_contraido=' + (si ? '1' : '0') + '; path=/; max-age=31536000; SameSite=Lax';
+      var t = si ? 'Expandir menú' : 'Contraer menú';
+      b.setAttribute('aria-label', t); b.setAttribute('title', t); b.setAttribute('aria-expanded', si ? 'false' : 'true');
+      cerrarGrupos(null);
+      aplicarPlegado();
+    });
+  });
   // Menú lateral: arranca justo debajo del encabezado.
   var top = document.querySelector('.topbar');
   if (top && document.body.classList.contains('menu-lateral')) {
