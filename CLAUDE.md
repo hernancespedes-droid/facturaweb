@@ -82,6 +82,7 @@ Después de cobrar, `Session::flash('vuelto', importe)` muestra el cartel grande
 **Cobrar venta (0.55.0, D-137):** al contado «Emitir» abre la ventana `dialog[data-cobro]` de `_pago.php` (`pago.js`: medios `pagos[n][fpago|importe]` mezclados, resumen total/pagado/vuelto,
 billetes con `vuelto.js`). El vuelto es informativo: `resolverPagos` acepta pagar de más (solo frena lo de menos) y deja en caja el total, descontando lo de más de cuenta corriente → efectivo → el resto.
 En e2e, emitir al contado = clic en «Emitir» + `[data-confirmar-cobro]` (helper `emitir(page)` de `recorrido.js`).
+**Importes (0.57.0, D-140):** la máscara de miles de `app.js` escucha `input` en captura (corre antes que cualquier manejador de pantalla) y `Vuelto.num` descarta todo punto (miles) y toma la coma como decimal. Un manejador nuevo de importes tiene que leer con `Vuelto.num` o `Valida::decimal`.
 
 ## Caja (0.25.0)
 
