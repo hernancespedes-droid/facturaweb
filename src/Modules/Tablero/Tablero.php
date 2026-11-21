@@ -13,18 +13,18 @@ use App\Modules\Listados\Estadistica;
 /**
  * Tablero de inicio (0.40.0): cómo viene el negocio en números y gráficos, y lo que hay que atender.
  *
- * DECISIÓN D-90 (Claude, a confirmar por Hernán): las cifras de dinero del tablero (ventas, cobros, rankings) se ven solo con `listados.ver`
+ * DECISIÓN D-90 (Claude, aprobada por Hernán el 21/11/2026): las cifras de dinero del tablero (ventas, cobros, rankings) se ven solo con `listados.ver`
  * (son las mismas que los listados); quien solo tiene `comprobantes.ver` ve cuántos comprobantes se hicieron, sin importes. El margen, solo con
  * `listados.costos`; la deuda y los cheques con `ctacte.ver`; el stock con `stock.ver`; el turno con `caja.turno`; ARCA con `arca.administrar`;
  * Mercado Pago con `mercadopago.cobrar`. Cada parte respeta además el módulo encendido de la instalación (`Core\Modulos`).
  *
- * DECISIÓN D-91 (Claude, a confirmar por Hernán): «venta» es lo mismo que «lo vendido» de la caja diaria: el total final de cada comprobante
+ * DECISIÓN D-91 (Claude, aprobada por Hernán el 21/11/2026): «venta» es lo mismo que «lo vendido» de la caja diaria: el total final de cada comprobante
  * (`subdiario.neto`, que en el esquema O&S es el total con IVA) de FC, ND, PR y CM menos NC y NX, sin la factura que sale de un presupuesto
  * (solo_subdiario = 1) ni lo anulado. Los rankings salen de la estadística (también con IVA); el margen es el neto sin IVA contra el costo.
  * La comparación es contra el mismo tramo del período anterior: hoy contra el mismo día de la semana pasada, el mes en curso contra los mismos
  * días del mes anterior, el mes pasado contra el anterior y los últimos 12 meses contra los 12 de antes.
  *
- * DECISIÓN D-92 (Claude, a confirmar por Hernán): cheques «por vencer» = en cartera con vencimiento de hoy a 7 días; deuda vencida = débitos con
+ * DECISIÓN D-92 (Claude, aprobada por Hernán el 21/11/2026): cheques «por vencer» = en cartera con vencimiento de hoy a 7 días; deuda vencida = débitos con
  * saldo cuyo vencimiento (o fecha, si no tiene) ya pasó; stock bajo = artículos activos que controlan stock con mínimo cargado y saldo menor.
  */
 final class Tablero
@@ -46,7 +46,9 @@ final class Tablero
      * Tarjetas que agregan otros módulos al tablero (por ejemplo compras): ['modulo' => 'compras', 'permiso' => 'compras.ver', 'vista' => 'compras/_tablero'].
      * La vista recibe $tb (estos datos) y se dibuja en su propia fila.
      */
-    public const EXTRAS = [];
+    public const EXTRAS = [
+        ['modulo' => 'compras', 'permiso' => 'compras.ver', 'vista' => 'compras/_tablero'],
+    ];
 
     private const MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
     private const MESES_CORTO = ['', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];

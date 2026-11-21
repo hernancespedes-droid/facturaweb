@@ -1,4 +1,4 @@
--- Tickets de soporte (0.42.0). Viven SOLO en la base del sitio master (oys.orgysis.site): cada instalación de cliente los manda y los
+-- Tickets de soporte (0.44.0). Viven SOLO en la base del sitio master (oys.orgysis.site): cada instalación de cliente los manda y los
 -- lee por la API /api/v1/soporte con su clave (config del cliente: 'soporte' => ['url' => …, 'clave' => …], la escribe el master).
 -- En las bases de los clientes estas tablas quedan vacías (la migración corre igual en todas).
 --   soporte_tickets.instancia: dirección del cliente (vacía = la propia instalación principal).

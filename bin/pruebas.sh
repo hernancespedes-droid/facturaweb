@@ -27,3 +27,4 @@ node e2e/cuenta-corriente.js
 node e2e/importacion.js
 node e2e/alta-cliente.js
 node e2e/soporte.js
+node e2e/compras.js

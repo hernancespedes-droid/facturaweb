@@ -108,6 +108,15 @@ Pantalla con buscador de clientes que tenga que permitir el alta: `icono_nuevo_c
 (colores por variables CSS: `--g-marca` = color del cliente legible, `--g-comp` gris de comparación, `--g-1..5` paleta fija validada para «Cómo te pagaron»). `public/assets/tablero.js` pone la guía y el cartel
 (`data-tip` con renglones separados por «|»). Otro módulo suma su tarjeta con `Tablero::EXTRAS` (modulo, permiso, vista), sin tocar `home.php`.
 
+## Compras y centros de costos (0.43.0)
+
+`Modules/Compras` (módulo `compras` de `Core\Modulos`, apagado por omisión; permisos `compras.ver`, `compras.cargar`, `compras.pagar`, `compras.centros`): `CentrosService` (centros de dos niveles con «General»
+que no se desactiva, D-110; presupuesto mensual `centros_presupuesto`; conceptos de gasto; plantillas de reparto), `ProveedoresService` (tabla `proveedores`, buscador con `cliente-picker.js` + lupa
+`VentanaLista.proveedores`), `ComprasService` (`armar` valida y calcula: IVA por alícuota, percepciones, costo D-111, controles D-112, reparto entre centros que suma 100 %; `grabar` en una transacción
+con adjuntos en la base; pagos: efectivo = `caja_movimientos` del turno, D-113, que `CajaService::anular` no deja anular) y `ComprasListados` (análisis, presupuesto contra gastado, a pagar por antigüedad,
+subdiario de IVA compras, `tablero()` para `/compras` con gráficos SVG en `compras-graficos.js` y `resumenInicio()` para la tarjeta del inicio). **Los gastos suman `compras_reparto.importe`
+(costo sin IVA computable ni percepciones) y las NC restan.** Entregas B (órdenes de pago con retenciones, compras con artículos y stock) y C quedan para después.
+
 ## Libro IVA Digital (ventas)
 
 - `Modules/Listados/LibroIvaDigital::generar('AAAA-MM')` arma los dos archivos de ARCA (diseño de registros RG 4597, rev. 07/2025: CBTE = 266 caracteres, ALICUOTAS = 62; ANSI, CRLF, importes de 15 posiciones sin coma). Solo comprobantes con CAE y `es_prueba = 0`. Los comprobantes internos de la web nacen con `es_prueba = 1`: en las pruebas un comprobante se hace «fiscal» seteando `fe_ccae`, `fe_nrocbte` y `es_prueba = 0`.
@@ -138,7 +147,7 @@ codificación detectados; números del Excel con coma decimal), `Destinos` (camp
 Clientes/artículos: al actualizar solo cambian las columnas elegidas y con dato. Comprobantes históricos: `subdiario` canal `I` + `importacion_id`, `iva`, `ctact` solo con saldo, sin caja ni stock;
 la clave para no duplicar es tipo + letra + punto de venta + número + fecha. Registro en `importaciones`. Campo nuevo en clientes/artículos: si debe importarse, sumarle sinónimos en `Destinos`.
 
-## Tickets de soporte (0.42.0)
+## Tickets de soporte (0.44.0)
 
 `Modules/Soporte`: los tickets viven **solo en la base del master** (`soporte_tickets`, `soporte_mensajes` con `interno`, `soporte_adjuntos`). `SoporteService` (lado master: crear, responder, bandeja,
 avisos por mail a `configuracion.soporte.mail_aviso` y al `usuario_mail` del ticket; `$enviador` para pruebas), `SoporteApi` (`/api/v1/soporte/…`, cabeceras `X-FW-Instancia` + `X-FW-Clave`, solo en la principal)

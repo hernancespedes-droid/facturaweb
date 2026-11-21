@@ -275,7 +275,7 @@ final class InstanciasService
     }
 
     /**
-     * Soporte (0.42.0): cada cliente necesita la dirección del master y su clave para mandar tickets ('soporte' => ['url', 'clave'] en su config).
+     * Soporte (0.44.0): cada cliente necesita la dirección del master y su clave para mandar tickets ('soporte' => ['url', 'clave'] en su config).
      * Se completa sola al entrar al panel o a la bandeja de soporte; la clave no cambia una vez creada. Devuelve cuántos configs se escribieron.
      */
     public static function asegurarSoporte(string $urlMaster): int

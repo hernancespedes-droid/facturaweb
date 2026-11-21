@@ -2,7 +2,7 @@
  * Buscador de clientes de las pantallas de cuenta corriente (mismo comportamiento que el de la factura): se escribe nombre, código o CUIT,
  * se muestran las coincidencias debajo y el usuario SIEMPRE elige una (mouse, ↑ ↓ o Enter sobre la marcada). Nunca se toma la primera sola.
  * Marcado: <div data-picker data-url="…buscar-cliente"> con [data-cliente-q], [data-cliente] (oculto), [data-cliente-lista] y, opcional,
- * [data-lista-clientes] (la lupa). Si el formulario lleva data-enviar-al-elegir, al elegir el cliente se envía (pantallas de "primero el cliente").
+ * [data-lista-clientes] (la lupa; data-preset="proveedores" en el picker para la lista de proveedores). Al elegir dispara 'picker:elegido'. Si el formulario lleva data-enviar-al-elegir, al elegir el cliente se envía (pantallas de "primero el cliente").
  */
 (function () {
   'use strict';
@@ -20,6 +20,7 @@
       q.value = c.razon_social;
       lista.hidden = true;
       lista.innerHTML = '';
+      picker.dispatchEvent(new CustomEvent('picker:elegido', { detail: c, bubbles: true })); // la pantalla puede completar lo que dependa (compras)
       if (form && form.hasAttribute('data-enviar-al-elegir')) form.submit();
     }
     function marcar(i) {
@@ -37,7 +38,7 @@
             var li = document.createElement('li');
             li.setAttribute('role', 'option');
             li.tabIndex = 0;
-            li.innerHTML = '<b>' + esc(c.razon_social) + '</b> <small>' + esc(c.codigo + (c.cuit ? ' · ' + c.cuit : '') + (c.localidad ? ' · ' + c.localidad : '')) + '</small>';
+            li.innerHTML = '<b>' + esc(c.razon_social) + '</b> <small>' + esc((c.numero || c.codigo) + (c.cuit ? ' · ' + c.cuit : '') + (c.localidad ? ' · ' + c.localidad : '')) + '</small>';
             li.addEventListener('click', function () { elegir(c); });
             li.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); elegir(c); } });
             li._cliente = c;
@@ -65,7 +66,7 @@
     document.addEventListener('click', function (ev) { if (!picker.contains(ev.target)) lista.hidden = true; });
     var lupa = picker.querySelector('[data-lista-clientes]');
     if (lupa) lupa.addEventListener('click', function () {
-      if (window.VentanaLista) window.VentanaLista.clientes(url, function (c) { elegir(c); });
+      if (window.VentanaLista) window.VentanaLista[picker.getAttribute('data-preset') || 'clientes'](url, function (c) { elegir(c); });
     });
   });
 })();

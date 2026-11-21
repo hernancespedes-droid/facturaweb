@@ -1,4 +1,4 @@
-// Recorrido de navegador: tickets de soporte (0.42.0) en la instalación principal.
+// Recorrido de navegador: tickets de soporte (0.44.0) en la instalación principal.
 //   node e2e/soporte.js   levanta su propio servidor en el puerto 8084
 // El operador abre un ticket con captura, O&S (Master) lo ve en la bandeja, deja una nota interna y responde; el operador ve la respuesta
 // (no la nota), contesta y lo cierra. También en celular.

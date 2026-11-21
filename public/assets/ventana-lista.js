@@ -3,6 +3,7 @@
  * nunca se elige solo. Sirve para artículos y para clientes:
  *   VentanaLista.articulos(urlBuscador, function (articulo) { ... })   urlBuscador = la ruta de buscar-articulo de la pantalla
  *   VentanaLista.clientes(urlBuscador, function (cliente) { ... })     urlBuscador = la ruta de buscar-cliente
+ *   VentanaLista.proveedores(urlBuscador, function (proveedor) { ... }) compras: /compras/buscar-proveedor (mismo formato que clientes)
  * (VentanaArticulos.abrir es lo mismo que VentanaLista.articulos.) El servidor responde con ?listar=1&pagina=N&q=… → {items, hay_mas}.
  */
 (function () {
@@ -24,6 +25,16 @@
         { rotulo: 'Descripción', valor: function (a) { return a.descripcion; } },
         { rotulo: 'SKU / EAN', valor: function (a) { return [a.sku, a.ean13].filter(Boolean).join(' · '); }, chica: true },
         { rotulo: 'Precio', valor: function (a) { return a.precio ? '$ ' + a.precio : ''; }, num: true }
+      ]
+    },
+    proveedores: {
+      titulo: 'Buscar proveedor', placeholder: 'Filtrar por nombre, código o CUIT',
+      columnas: [
+        { rotulo: 'Código', valor: function (c) { return String(c.numero || c.codigo); } },
+        { rotulo: 'Razón social', valor: function (c) { return c.razon_social; } },
+        { rotulo: 'CUIT', valor: function (c) { return c.cuit; }, chica: true },
+        { rotulo: 'Condición de IVA', valor: function (c) { return c.iva_texto; }, chica: true },
+        { rotulo: 'Localidad', valor: function (c) { return c.localidad; }, chica: true }
       ]
     },
     clientes: {
@@ -110,7 +121,8 @@
   }
   window.VentanaLista = {
     articulos: function (url, cb) { abrir('articulos', url, cb); },
-    clientes: function (url, cb) { abrir('clientes', url, cb); }
+    clientes: function (url, cb) { abrir('clientes', url, cb); },
+    proveedores: function (url, cb) { abrir('proveedores', url, cb); }
   };
   window.VentanaArticulos = { abrir: window.VentanaLista.articulos };
 })();
