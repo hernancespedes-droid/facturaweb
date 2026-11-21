@@ -39,7 +39,7 @@ $badgeSus = ['activa' => 'badge-ok', 'aviso' => 'badge-warn', 'sin_emision' => '
                         <?= csrf_field() ?><button class="btn btn-sm" type="submit">Pasar a clientes</button></form>
                     <?php else: ?>Pasar el commit <code><?= e($corto($master['commit'])) ?></code> a la rama <b><?= e($rama) ?></b> (pedíselo a Code, o cargá el token de GitHub para hacerlo con un botón).<?php endif; ?></li>
                 <li>En el hosting: GIT → la carpeta de clientes → actualizar.</li>
-                <li>Acá: <b>Aplicar cambios en todas</b>.</li>
+                <li>Los cambios de base se aplican solos con el primer ingreso de cada cliente (o acá: <b>Aplicar cambios en todas</b>, para no esperar).</li>
             </ol>
         <?php endif; ?>
     <?php else: ?>

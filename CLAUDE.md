@@ -132,6 +132,12 @@ codificación detectados; números del Excel con coma decimal), `Destinos` (camp
 Clientes/artículos: al actualizar solo cambian las columnas elegidas y con dato. Comprobantes históricos: `subdiario` canal `I` + `importacion_id`, `iva`, `ctact` solo con saldo, sin caja ni stock;
 la clave para no duplicar es tipo + letra + punto de venta + número + fecha. Registro en `importaciones`. Campo nuevo en clientes/artículos: si debe importarse, sumarle sinónimos en `Destinos`.
 
+## Base que se actualiza sola (0.40.1)
+
+`Core\AutoMigracion::asegurar()` corre al principio de `App::handle` (salvo `/salud` e `/instalar`): si la firma (versión + migraciones) no coincide con
+`sistema_estado`, aplica lo pendiente con el candado `fw_migrar:<base>` (el mismo de «Aplicar cambios»); los demás pedidos ven «Actualizando» (503). Si falla, no bloquea: queda en
+`App::storage('automigracion_error.json')`, el Master lo ve en Sistema y `/salud` da `migracion_error`. Por eso las migraciones **tienen que ser aditivas e idempotentes**: se aplican sin que nadie mire.
+
 ## Estructura y convenciones
 
 - Módulos en `src/Modules/<Nombre>/` con `routes.php`; vistas en `views/<modulo>/`. Handlers `function (Request $req, array $params): Response`.
