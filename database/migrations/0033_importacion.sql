@@ -1,4 +1,4 @@
--- Importadores desde Excel, CSV y TXT (0.32.0): clientes, artículos, stock inicial y comprobantes históricos (subdiario), para los clientes
+-- Importadores desde Excel, CSV y TXT (0.33.0): clientes, artículos, stock inicial y comprobantes históricos (subdiario), para los clientes
 -- que no vienen del VFP. Sirve para cualquier cliente sin código propio: cada uno arma su «modelo» (qué columna de su archivo va a cada campo).
 --   importacion_modelos: modelos guardados (por destino). El mapa guarda el TÍTULO de la columna del archivo, así sirve aunque cambie el orden.
 --   importaciones: registro de cada importación grabada (quién, qué archivo, cuántas filas, el resumen).

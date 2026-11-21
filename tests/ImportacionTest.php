@@ -12,7 +12,7 @@ use App\Modules\Importacion\Importador;
 use App\Modules\Importacion\Lector;
 
 /**
- * Importadores desde Excel/CSV/TXT (0.32.0): lectura de los formatos, columnas sugeridas, clientes, artículos, stock y comprobantes
+ * Importadores desde Excel/CSV/TXT (0.33.0): lectura de los formatos, columnas sugeridas, clientes, artículos, stock y comprobantes
  * históricos, prueba sin grabar, todo o nada, re-importar sin duplicar, y permisos.
  * Los clientes de prueba van del 990001 al 990099 (los borra ComprobantesTestCase); los artículos empiezan con T-.
  */

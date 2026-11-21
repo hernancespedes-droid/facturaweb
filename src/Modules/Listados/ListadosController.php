@@ -151,4 +151,80 @@ final class ListadosController
             'Content-Type' => 'text/plain; charset=ISO-8859-1', 'Content-Disposition' => 'attachment; filename="' . $nombre . $sufijo . '.txt"', 'Cache-Control' => 'no-store',
         ]);
     }
+
+    // ------------------------------------------------------------------ Estadística, rentabilidad y costos (0.32.0)
+
+    /** @param string[] $claves @return array<string,string> */
+    private static function tomar(Request $req, array $claves): array
+    {
+        return array_map(static fn ($x) => is_string($x) ? trim($x) : '', array_intersect_key($req->query, array_flip($claves)));
+    }
+
+    private const FILTROS_ESTADISTICA = ['desde', 'hasta', 'sucursal', 'tipo', 'cliente', 'cliente_nombre', 'articulo', 'rubro', 'subrubro', 'proveedor', 'vendedor', 'fiscales',
+        'agrupar', 'primeros', 'por', 'detalle', 'orden'];
+
+    /** Opciones de los filtros: rubros, subrubros, vendedores y sucursales. @return array<string,array<int,array<string,mixed>>> */
+    public static function opciones(): array
+    {
+        $pdo = \App\Core\Db::pdo();
+        return [
+            'rubros' => $pdo->query('SELECT codigo, descripcion FROM rubros ORDER BY descripcion')->fetchAll(),
+            'subrubros' => $pdo->query('SELECT rubro, codigo, descripcion FROM subrubros ORDER BY rubro, descripcion')->fetchAll(),
+            'vendedores' => $pdo->query('SELECT codigo, descripcion FROM vendedores ORDER BY descripcion')->fetchAll(),
+            'sucursales' => $pdo->query('SELECT codigo, descripcion FROM sucursales ORDER BY codigo')->fetchAll(),
+        ];
+    }
+
+    private static function estadisticaVista(Request $req, bool $rentabilidad): Response
+    {
+        $f = self::tomar($req, self::FILTROS_ESTADISTICA);
+        if (!array_key_exists('desde', $req->query)) { // por omisión, el mes en curso
+            $f['desde'] = date('01/m/Y');
+            $f['hasta'] = date('t/m/Y');
+        }
+        $detalle = ($f['detalle'] ?? '') === '1';
+        $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
+        $por = Configuracion::porPagina();
+        $datos = ['f' => $f, 'detalle' => $detalle, 'rentabilidad' => $rentabilidad, 'costos' => $rentabilidad || \App\Modules\Auth\Auth::puede('listados.costos'),
+            'opciones' => self::opciones(), 'pagina' => $pagina, 'porPagina' => $por];
+        $datos['r'] = Estadistica::resumen($f);
+        if ($detalle) {
+            $datos['d'] = Estadistica::detalle($f, $pagina, $por);
+        }
+        $titulo = $rentabilidad ? 'Rentabilidad de ventas' : 'Estadística de ventas';
+        return Response::html(View::render('listados/estadistica', ['title' => $titulo, 'nav' => $rentabilidad ? 'rentabilidad' : 'estadistica'] + $datos));
+    }
+
+    public static function estadistica(Request $req, array $params): Response
+    {
+        return self::estadisticaVista($req, false);
+    }
+
+    /** Permiso listados.costos (lo controla la ruta). */
+    public static function rentabilidad(Request $req, array $params): Response
+    {
+        return self::estadisticaVista($req, true);
+    }
+
+    /** Lista de costos y márgenes de los artículos (permiso listados.costos). */
+    public static function costos(Request $req, array $params): Response
+    {
+        $f = self::tomar($req, ['q', 'rubro', 'subrubro', 'proveedor', 'moneda', 'bajas', 'ver', 'margen', 'precios', 'orden']);
+        $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
+        $por = Configuracion::porPagina();
+        $r = ListaCostos::listar($f, $pagina, $por);
+        return Response::html(View::render('listados/costos', ['title' => 'Costos y márgenes', 'nav' => 'lista_costos', 'f' => $f, 'r' => $r, 'opciones' => self::opciones(),
+            'pagina' => $pagina, 'porPagina' => $por]));
+    }
+
+    /** Buscadores de artículos y clientes de los listados (los mismos de siempre, con el permiso de los listados). */
+    public static function buscarArticulo(Request $req, array $params): Response
+    {
+        return \App\Modules\Stock\StockController::buscarArticulo($req, $params);
+    }
+
+    public static function buscarCliente(Request $req, array $params): Response
+    {
+        return \App\Modules\Comprobantes\ComprobantesController::buscarCliente($req, $params);
+    }
 }

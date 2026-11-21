@@ -16,7 +16,7 @@ use PDO;
  *  - Todo en una transacción. Con $simular se hace todo y al final se deshace (para ver los errores antes). Si hay filas con error no se graba
  *    nada, salvo que se pida «importar igual las filas sin error» (cada fila va en su propio SAVEPOINT: una fila con error no deja nada a medias).
  *  - Clientes y artículos se validan con las mismas reglas de sus pantallas (Validador + campos()). Un campo opcional que no es válido no frena la
- *    fila: se deja sin cargar y se avisa (DECISIÓN D-60). Al actualizar solo se cambian las columnas elegidas.
+ *    fila: se deja sin cargar y se avisa (DECISIÓN D-66). Al actualizar solo se cambian las columnas elegidas.
  *  - Los códigos de las tablas (provincia, rubro, vendedor…) se aceptan por código o por nombre; las condiciones (IVA, forma de pago) por código o texto.
  *  - Comprobantes: canal 'I', con importacion_id, sin caja ni stock; la cuenta corriente solo si viene el saldo. Un comprobante que ya está
  *    (tipo + letra + punto de venta + número + fecha) se saltea, así se puede volver a importar el mismo archivo.
@@ -289,7 +289,7 @@ final class Importador
         return null;
     }
 
-    /** Agrega a la tabla un código que falta (con el nombre que vino), con el próximo número libre. DECISIÓN D-61. */
+    /** Agrega a la tabla un código que falta (con el nombre que vino), con el próximo número libre. DECISIÓN D-67. */
     private function crearCodigo(string $tabla, string $nombre): ?string
     {
         $largo = (int) (\App\Modules\Tablas\Definiciones::de($tabla)['campos']['codigo']['largo'] ?? 3);
@@ -342,7 +342,7 @@ final class Importador
                 continue;
             }
             if ($pv === '' && !$alta) {
-                continue; // al actualizar, una celda vacía no borra lo que hay (DECISIÓN D-62)
+                continue; // al actualizar, una celda vacía no borra lo que hay (DECISIÓN D-68)
             }
             $datos[$k] = $pv;
             $campos[$k] = $c;
@@ -412,7 +412,7 @@ final class Importador
             $existente = $hay[0] ?? null;
         }
         if ($existente === null && $codigo === null && ($f['razon_social'] ?? '') !== '' && (($f['cuit'] ?? '') === '' || !Valida::cuit($f['cuit']))) {
-            // Sin código ni CUIT: el mismo nombre es el mismo cliente (así volver a importar el archivo no lo duplica). DECISIÓN D-65.
+            // Sin código ni CUIT: el mismo nombre es el mismo cliente (así volver a importar el archivo no lo duplica). DECISIÓN D-71.
             $this->repetida('r' . mb_strtolower($f['razon_social']), 'El cliente «' . $f['razon_social'] . '»');
             $st = $this->pdo->prepare('SELECT codigo, iva, cuit FROM clientes WHERE razon_social = ? AND cuit IS NULL ORDER BY activo DESC, codigo LIMIT 1');
             $st->execute([$f['razon_social']]);
@@ -752,7 +752,7 @@ final class Importador
     /** @var array<int,int> punto de venta => sucursal */
     private array $sucursales = [];
 
-    /** La sucursal que tiene ese punto de venta; si ninguna lo tiene, la primera (DECISIÓN D-63: el punto de venta queda en prefijo). */
+    /** La sucursal que tiene ese punto de venta; si ninguna lo tiene, la primera (DECISIÓN D-69: el punto de venta queda en prefijo). */
     private function sucursal(int $pv): int
     {
         if (!isset($this->sucursales[$pv])) {
@@ -771,7 +771,7 @@ final class Importador
     }
 
     /**
-     * El cliente del comprobante: por código, después por CUIT, después por razón social (exacta); si no está y se pidió, se crea. DECISIÓN D-64.
+     * El cliente del comprobante: por código, después por CUIT, después por razón social (exacta); si no está y se pidió, se crea. DECISIÓN D-70.
      *
      * @param array<string,string> $f
      * @return array<string,mixed>
