@@ -259,6 +259,10 @@ final class CajaService
                 $this->pdo->rollBack();
                 return ['ok' => false, 'error' => 'Ese movimiento ya fue anulado.'];
             }
+            if (\App\Modules\Compras\ComprasService::esPagoDeCompra($movimientoId)) {
+                $this->pdo->rollBack();
+                return ['ok' => false, 'error' => 'Ese movimiento es el pago de una compra: se anula anulando la compra (Compras).'];
+            }
             $contra = $m['tipo'] === 'I' ? 'E' : 'I';
             $this->pdo->prepare('INSERT INTO caja_movimientos (creado_en, usuario_id, turno_id, tipo, importe, motivo, anula_id) VALUES (NOW(), ?, ?, ?, ?, ?, ?)')
                 ->execute([$usuarioId, $turno['id'], $contra, $m['importe'], 'Anula movimiento ' . $movimientoId . ': ' . $motivo, $movimientoId]);

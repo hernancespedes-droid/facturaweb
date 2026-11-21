@@ -46,7 +46,9 @@ final class Tablero
      * Tarjetas que agregan otros módulos al tablero (por ejemplo compras): ['modulo' => 'compras', 'permiso' => 'compras.ver', 'vista' => 'compras/_tablero'].
      * La vista recibe $tb (estos datos) y se dibuja en su propia fila.
      */
-    public const EXTRAS = [];
+    public const EXTRAS = [
+        ['modulo' => 'compras', 'permiso' => 'compras.ver', 'vista' => 'compras/_tablero'],
+    ];
 
     private const MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
     private const MESES_CORTO = ['', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];

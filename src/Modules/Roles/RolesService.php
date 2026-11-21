@@ -32,6 +32,8 @@ final class RolesService
         'caja_auditoria' => ['caja.auditar', []],
         'iva_ventas' => ['listados.ver', []],
         'lista_costos' => ['listados.costos', []],
+        'compras' => ['compras.ver', ['compras.cargar', 'compras.pagar']],
+        'compras_centros' => ['compras.centros', []],
         'stock' => ['stock.ver', ['stock.mover', 'stock.administrar', 'stock.autorizar']],
         'sucursales' => ['tablas.sucursales', []],
         'rubros' => ['tablas.rubros', []],

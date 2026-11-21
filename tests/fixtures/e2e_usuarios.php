@@ -33,6 +33,15 @@ $limpiar = static function () use ($pdo, $copia): void {
         }
         unlink($copia);
     }
+    // Compras del recorrido de compras (proveedores "E2E") y todo lo que cuelga de ellas
+    $ids = $pdo->query("SELECT c.id FROM compras c JOIN proveedores p ON p.id = c.proveedor_id WHERE p.razon_social LIKE 'E2E%'")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($ids as $id) {
+        foreach (['compras_iva', 'compras_tributos', 'compras_reparto', 'compras_adjuntos', 'compras_pagos'] as $tabla) {
+            $pdo->prepare("DELETE FROM {$tabla} WHERE compra_id = ?")->execute([$id]);
+        }
+        $pdo->prepare('DELETE FROM compras WHERE id = ?')->execute([$id]);
+    }
+    $pdo->exec("DELETE FROM proveedores WHERE razon_social LIKE 'E2E%'");
     // Comprobantes que emitió el recorrido (los clientes "E2E") y todo lo que cuelga de ellos
     $claves = $pdo->query("SELECT fe_clave FROM subdiario WHERE cliente_razon_social LIKE '%E2E%'")->fetchAll(PDO::FETCH_COLUMN);
     foreach ($claves as $clave) {
