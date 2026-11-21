@@ -498,7 +498,7 @@ details.plegable[open] > summary { margin-bottom: 12px; }
   body:not(.menu-lateral) .menu-grupo-ico, body:not(.menu-lateral) .menu > a.menu-inicio .menu-ico { display: none; }
   body:not(.menu-lateral) .menu-sub a { display: flex; align-items: center; gap: 10px; }
   body:not(.menu-lateral) .menu-sub a .menu-ico { flex: none; width: 16px; height: 16px; opacity: .75; }
-  /* Lateral: cada grupo es un título con su ícono en una placa de color; sus opciones van debajo, más chicas, con una guía a la izquierda (D-137). */
+  /* Lateral: cada grupo es un título con su ícono en una placa de color; sus opciones van debajo, más chicas, con una guía a la izquierda (D-138). */
   body.menu-lateral .menu-sub a, body.menu-lateral .menu > a.menu-inicio { display: flex; align-items: center; gap: 10px; }
   body.menu-lateral .menu-grupo-btn, body.menu-lateral .menu-grupo.activo > .menu-grupo-btn { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 4px; padding: 6px 8px; border: 0; border-radius: 10px; cursor: pointer; text-align: left; background: none; box-shadow: none; color: var(--text); font: 600 .95rem/1.2 var(--f-body); text-transform: none; letter-spacing: 0; }
   body.menu-lateral .menu-grupo-btn:hover, body.menu-lateral .menu > a.menu-inicio:hover { background: var(--panel-2); color: var(--text); }

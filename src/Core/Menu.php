@@ -83,7 +83,7 @@ final class Menu
     }
 
     /**
-     * Íconos del menú (0.53.0, D-137): trazos simples de 24×24 dibujados para FacturaWeb, con el color del texto (currentColor),
+     * Íconos del menú (0.54.0, D-138): trazos simples de 24×24 dibujados para FacturaWeb, con el color del texto (currentColor),
      * así siguen al tema claro/oscuro y al color del cliente. Sin librerías ni archivos aparte.
      */
     private const SVG = [
