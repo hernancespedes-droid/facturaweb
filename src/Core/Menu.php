@@ -61,6 +61,8 @@ final class Menu
         $o['arca'] = ['texto' => 'ARCA', 'ruta' => '/arca', 'permiso' => 'arca.administrar', 'grupo' => 'Sistema'];
         $o['sistema'] = ['texto' => 'Sistema', 'ruta' => '/sistema', 'permiso' => null, 'grupo' => 'Sistema'];
         $o['instancias'] = ['texto' => 'Instalaciones de clientes', 'ruta' => '/instancias', 'permiso' => null, 'grupo' => 'Sistema'];
+        $o['soporte_bandeja'] = ['texto' => 'Tickets de soporte', 'ruta' => '/soporte/bandeja', 'permiso' => null, 'grupo' => 'Sistema'];
+        $o['soporte'] = ['texto' => 'Soporte de O&S (tickets)', 'ruta' => '/soporte', 'permiso' => 'soporte.usar', 'grupo' => 'Ayuda'];
         return $o;
     }
 
@@ -90,6 +92,12 @@ final class Menu
         }
         if ($clave === 'instancias') {
             return Auth::esMaster() && \App\Modules\Instancias\InstanciasService::disponible(); // solo en la principal
+        }
+        if ($clave === 'soporte_bandeja') {
+            return Auth::esMaster() && \App\Modules\Instancias\InstanciasService::disponible(); // bandeja de O&S: solo en la principal
+        }
+        if ($clave === 'soporte' && Auth::esMaster() && \App\Modules\Instancias\InstanciasService::disponible()) {
+            return false; // O&S en el master usa la bandeja
         }
         if ($clave === 'sistema') {
             return Auth::esMaster() || Auth::esAdmin();

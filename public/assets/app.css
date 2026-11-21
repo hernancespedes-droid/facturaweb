@@ -1272,3 +1272,17 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 .traer-arca { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: -4px 0 8px; }
 .traer-arca { grid-column: 1 / -1; }
 .alta-cliente .ac-acciones { position: sticky; bottom: -16px; margin: 0 -16px -16px; padding: 12px 16px; background: var(--panel, #fff); border-top: 1px solid var(--line-2); }
+
+/* Soporte (0.42.0): conversación de un ticket. */
+.soporte-conversacion { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.soporte-msg { padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--panel); max-width: 860px; }
+.soporte-msg.de-oys { border-left: 4px solid var(--brand); margin-left: min(6vw, 48px); }
+.soporte-msg.de-cliente { border-left: 4px solid var(--line-2); }
+.soporte-msg.interno { background: rgba(245, 165, 36, .08); border-color: var(--warn); border-style: dashed; }
+.soporte-msg-cab { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 6px; }
+.soporte-msg-texto { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+.soporte-captura { display: block; max-width: min(100%, 420px); max-height: 280px; border: 1px solid var(--line-2); border-radius: 6px; margin-top: 4px; }
+.soporte-datos p { margin: 4px 0; }
+.fila-destacada td { background: var(--brand-soft); }
+@media (max-width: 640px) { .soporte-msg.de-oys { margin-left: 12px; } }
+.texto-error { color: var(--danger); }
