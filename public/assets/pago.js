@@ -24,6 +24,25 @@
   var btnAgregar = q('[data-agregar-pago]'), btnCompletar = q('[data-completar-pago]'), plantilla = q('template[data-plantilla-pago]');
   var siguiente = lineas().length;
 
+  // calculadora de vuelto (vuelto.js) de cada línea que acepta vuelto: se arma la primera vez y se esconde si cambia la forma de pago
+  function calculadora(l, acepta) {
+    if (!window.Vuelto) return null;
+    if (!l._vuelto && acepta) l._vuelto = window.Vuelto.crear(l.querySelector('[data-recibido]'), l.querySelector('[data-recibido-caja]'));
+    if (l._vuelto) l._vuelto.caja.hidden = !acepta;
+    return acepta ? l._vuelto : null;
+  }
+  // lo recibido no alcanza en alguna línea: no se emite (el servidor también lo rechaza, pero así no se pierde el paso)
+  function faltaRecibido() {
+    var r = document.querySelector('[name="forma_pago"]:checked');
+    if (!r || r.value !== '1') return null;
+    var malo = null;
+    lineas().forEach(function (l) {
+      var campo = l.querySelector('[data-recibido]');
+      if (!malo && !l.querySelector('[data-recibido-caja]').hidden && campo.getAttribute('aria-invalid') === 'true') malo = campo;
+    });
+    return malo;
+  }
+
   function actualizar() {
     var total = totalActual();
     var r = document.querySelector('[name="forma_pago"]:checked');
@@ -43,8 +62,10 @@
       suma += imp;
       var quitar = l.querySelector('[data-quitar-pago]');
       if (quitar) quitar.hidden = !varias;
+      var calc = calculadora(l, acepta);
       if (acepta) {
         var rec = num(l.querySelector('[data-recibido]').value);
+        if (calc) calc.actualizar(imp);
         if (rec > 0) {
           var dif = r2(rec - imp);
           if (dif > 0) { vueltoTotal += dif; msgs.push('DAR VUELTO AL CLIENTE: ' + fmt(dif) + ' (recibís ' + fmt(rec) + ' por ' + fmt(imp) + ')'); }
@@ -96,6 +117,35 @@
   });
   btnAgregar.addEventListener('click', agregar);
   btnCompletar.addEventListener('click', completar);
+  // Enter en «Recibido» con plata de menos no emite: marca lo que falta
+  sec.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter' && ev.target.matches('[data-recibido]') && ev.target.getAttribute('aria-invalid') === 'true') {
+      ev.preventDefault();
+      avisarFalta(ev.target);
+    }
+  });
+  function avisarFalta(campo) {
+    var caja = campo.closest('[data-linea]').querySelector('[data-vuelto-caja]');
+    if (caja) { caja.classList.remove('sacudir'); void caja.offsetWidth; caja.classList.add('sacudir'); }
+    campo.focus({ preventScroll: true });
+  }
+  var form = sec.querySelector('[data-recibido]') ? document.getElementById(sec.querySelector('[data-recibido]').getAttribute('form')) : null;
+  if (form) {
+    form.addEventListener('submit', function (ev) {
+      var malo = faltaRecibido();
+      if (malo) {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        malo.scrollIntoView({ block: 'center' });
+        avisarFalta(malo);
+      }
+    }, true);
+  }
   sec.addEventListener('pago:total', actualizar); // el total puede cambiar (cambio de mercadería: la diferencia a cobrar)
   actualizar();
+  // desde el kiosco el cajero va directo a «Recibido» (una sola forma que acepta vuelto)
+  if (sec.hasAttribute('data-enfocar-recibido') && lineas().length === 1) {
+    var rc = lineas()[0].querySelector('[data-recibido]');
+    if (rc && !lineas()[0].querySelector('[data-recibido-caja]').hidden) { rc.scrollIntoView({ block: 'center' }); rc.focus({ preventScroll: true }); }
+  }
 })();

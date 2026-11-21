@@ -230,17 +230,39 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await page.fill('[data-recibido]', '1.500');
     const aviso = await page.textContent('[data-vuelto-aviso]');
     ok(aviso.includes('DAR VUELTO AL CLIENTE') && aviso.includes('290,00'), 'avisa el vuelto (1.500 − 1.210 = 290)');
+    // calculadora de vuelto (D-129): cifras grandes, montos redondos y billetes para sumar
+    ok((await page.textContent('[data-v-resultado]')).includes('290,00') && (await page.textContent('[data-v-etiqueta]')).includes('vuelto'), 'calculadora: muestra el vuelto en grande');
+    ok((await page.textContent('[data-v-desglose]')).includes('1 de $ 200'), 'calculadora: sugiere con qué billetes darlo');
+    await page.click('[data-v-borrar]');
+    await page.click('[data-v-sumar="1000"]');
+    await page.click('[data-v-sumar="1000"]');
+    ok((await page.inputValue('[data-recibido]')) === '2.000,00' && (await page.textContent('[data-v-resultado]')).includes('790,00'), 'calculadora: tocar billetes suma lo recibido (2 × 1.000 → vuelto 790)');
+    await page.click('[data-v-monto="1500"]');
+    ok((await page.inputValue('[data-recibido]')) === '1.500,00', 'calculadora: los montos redondos cargan lo recibido');
+    await page.click('[data-v-justo]');
+    ok((await page.textContent('[data-v-resultado]')).includes('Sin vuelto'), 'calculadora: «Justo» es sin vuelto');
+    await page.fill('[data-recibido]', '1.500');
     await page.screenshot({ path: path.join(CAPTURAS, 'pago-vuelto.png'), fullPage: true });
     await page.selectOption('[data-fpago]', { label: 'BILLETERA VIRTUAL' });
     ok(!(await page.isVisible('[data-recibido]')), 'billetera virtual: no hay vuelto');
     await page.selectOption('[data-fpago]', { label: 'EFECTIVO' });
     await page.fill('[data-recibido]', '1.000');
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
-    ok((await page.textContent('body')).includes('entregó menos'), 'si entrega menos del total, no emite y lo dice');
+    ok((await page.textContent('[data-v-etiqueta]')) === 'Faltan' && (await page.textContent('[data-v-resultado]')).includes('210,00'), 'calculadora: si entrega menos, dice cuánto falta');
+    const urlRevisar = page.url();
+    await page.click('button:has-text("Emitir")');
+    await page.waitForTimeout(300);
+    ok(page.url() === urlRevisar && (await page.isVisible('[data-recibido]')), 'si entrega menos del total, no emite');
+    await page.press('[data-recibido]', 'Enter');
+    await page.waitForTimeout(300);
+    ok(page.url() === urlRevisar, 'Enter con plata de menos tampoco emite');
     await page.fill('[data-recibido]', '1.500');
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
     ok(/Factura B 0004-\d{8}/.test(await page.textContent('h1')), 'factura B emitida');
     ok((await page.textContent('body')).includes('DAR VUELTO AL CLIENTE: $ 290,00'), 'al emitir recuerda dar el vuelto');
+    ok(await page.isVisible('[data-vuelto-final]') && (await page.textContent('.vuelto-final-monto')).includes('290,00'), 'al emitir, cartel grande con el vuelto');
+    await page.screenshot({ path: path.join(CAPTURAS, 'vuelto-final.png') });
+    await page.keyboard.press('Enter');
+    ok(!(await page.isVisible('[data-vuelto-final]')), 'el cartel del vuelto se cierra con Enter');
     ok((await page.textContent('body')).includes('Contado'), 'queda como contado');
     // listado
     await page.goto(BASE + '/comprobantes?cliente=E2E');
@@ -368,6 +390,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await Promise.all([page.waitForNavigation(), page.click('[data-hacer]')]);
     const cp = await page.textContent('body');
     ok(/Cambio X 0004-\d{8}/.test(cp) && cp.includes('DAR VUELTO AL CLIENTE: $ 100,00') && cp.includes('DEVUELVE'), 'cambio: se hace, cobra solo la diferencia y recuerda el vuelto');
+    if (await page.isVisible('[data-vuelto-listo]')) await page.click('[data-vuelto-listo]');
     await page.goto(BASE + '/stock?q=e2e-001');
     ok((await page.content()).includes('E2E-001'), 'cambio: el stock refleja el cambio');
 
@@ -417,9 +440,21 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await Promise.all([page.waitForNavigation(), page.click('[data-cobrar]')]);
     const revK = await page.textContent('body');
     ok(revK.includes('Cómo se paga') && revK.includes('Volver al kiosco') && revK.includes('Presupuesto X'), 'kiosco: al cobrar arma un presupuesto y pide cómo se paga');
+    const yaContado = await page.isChecked('input[name=forma_pago][value="1"]');
+    if (yaContado) ok(await page.evaluate(() => document.activeElement && document.activeElement.matches('[data-recibido]')), 'kiosco: el cursor arranca en «Recibido»');
     await page.check('input[name=forma_pago][value="1"]');
+    await page.fill('[data-recibido]', '5.000');
+    ok((await page.textContent('[data-v-resultado]')).includes('1.296,50'), 'kiosco: la calculadora muestra el vuelto (5.000 − 3.703,50)');
+    await page.setViewportSize({ width: 390, height: 844 });
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'calculadora de vuelto: en el celular no se desborda');
+    await page.locator('[data-vuelto-caja]').screenshot({ path: path.join(CAPTURAS, 'vuelto-celular.png') });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.locator('[data-pago]').screenshot({ path: path.join(CAPTURAS, 'vuelto-kiosco.png') });
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
     ok(page.url().includes('/kiosco?hecho='), 'kiosco: al emitir vuelve al kiosco');
+    ok((await page.textContent('.vuelto-final-monto')).includes('1.296,50'), 'kiosco: cartel grande con el vuelto');
+    await page.keyboard.press('Enter');
+    ok(!(await page.isVisible('[data-vuelto-final]')) && await page.evaluate(() => document.activeElement && document.activeElement.matches('[data-buscar]')), 'kiosco: al cerrar el cartel vuelve al buscador');
     ok((await page.textContent('body')).includes('Venta registrada') && (await page.locator('.k-linea').count()) === 0, 'kiosco: avisa la venta hecha y el carrito queda vacío');
     // 0.26.0: el administrador (permiso kiosco.precio) cambia el precio en el carrito; los favoritos se ordenan desde la ficha del artículo
     await page.locator('.k-tarjeta', { hasText: 'E2E-001' }).click();

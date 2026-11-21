@@ -75,6 +75,11 @@ Se enciende en Parámetros (`parametros.kiosco`) y se da por rol con `kiosco.usa
 
 `parametros.impresion` (`a4`|`t80`|`t50`): `ImpresionController::imprimir` elige `views/comprobantes/imprimir.php` (A4) o `imprimir_ticket.php`; `?papel=` lo cambia. El PDF (`pdf()`, mail) sigue en A4; `ComprobanteTicketPdf` (con `?papel=t80|t50`) hace el PDF angosto. El vuelto se lee de `caja` (`ComprobanteImpreso::datos()['pagos']`).
 
+## Vuelto interactivo (0.48.0)
+
+`public/assets/vuelto.js` (`Vuelto.crear(campoRecibido, lugar)`) dibuja la calculadora de vuelto junto a «Recibido» de toda forma que acepta vuelto; la usan `pago.js` (`_pago.php`: factura, kiosco, cambio) y `recibo.js` (los recibos graban `p_recibido`/`p_vuelto`). Con plata de menos no se envía el formulario.
+Después de cobrar, `Session::flash('vuelto', importe)` muestra el cartel grande del layout (`[data-vuelto-final]`, lo cierra `app.js`). D-129.
+
 ## Caja (0.25.0)
 
 `Modules/Caja/CajaService`: turnos con arqueo (`caja_turnos`), ingresos/egresos manuales (`caja_movimientos`, tope `parametros.caja_tope`, se anulan con contra-asiento `anula_id`, nunca se editan) y `caja_auditoria` con hash encadenado (`verificar()`). Todo cobro nuevo en `caja` lleva `usuario_id`, `creado_en` y `turno_id` con `CajaService::contexto()` (hay que sumarlo en cualquier INSERT nuevo en `caja`). Permisos `caja.turno`, `caja.mover`, `caja.auditar`.

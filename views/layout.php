@@ -90,8 +90,17 @@ if ($alDia && Menu::visible('mp_ingresos')) {
         <?php if ($avisoLicencia !== null): ?>
             <div class="alerta alerta-<?= e($avisoLicencia['tipo']) ?>" role="alert"><?= e($avisoLicencia['texto']) ?><?php if ((Auth::esMaster() || Auth::esAdmin()) && empty($avisoLicencia['suscripcion'])): ?> <a href="<?= e(url('/sistema/licencia')) ?>">Ver licencia</a><?php endif; ?></div>
         <?php endif; ?>
-        <?php foreach ($flashes as $f): ?>
+        <?php foreach ($flashes as $f): if ($f['tipo'] === 'vuelto') { continue; } ?>
             <div class="alerta alerta-<?= e($f['tipo']) ?>" role="status"><?= e($f['texto']) ?></div>
+        <?php endforeach; ?>
+        <?php foreach ($flashes as $f): if ($f['tipo'] !== 'vuelto' || (float) $f['texto'] <= 0) { continue; } // vuelto a entregar después de cobrar (D-129) ?>
+            <div class="vuelto-final" data-vuelto-final role="alertdialog" aria-modal="true" aria-labelledby="vuelto-final-t">
+                <div class="vuelto-final-caja">
+                    <p id="vuelto-final-t">Entregá el vuelto al cliente</p>
+                    <b class="vuelto-final-monto"><?= e(plata_dec((float) $f['texto'])) ?></b>
+                    <button type="button" class="btn" data-vuelto-listo autofocus>Listo, ya lo di</button>
+                </div>
+            </div>
         <?php endforeach; ?>
         <?= $content ?>
     </main>

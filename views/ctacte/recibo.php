@@ -39,7 +39,7 @@ $anulado = $c['estado'] === 'A';
 <div class="table-wrap"><table class="table table-cards"><thead><tr><th>Forma</th><th>Detalle</th><th>Cobro</th><th class="num">Importe</th></tr></thead><tbody>
 <?php foreach ($c['pagos'] as $p): ?>
     <tr><td data-label="Forma"><?= e($p['fpago_descripcion'] ?? $p['p_fpago']) ?></td>
-        <td data-label="Detalle"><?= (int) ($p['fpago_tipo'] ?? 0) === 5 ? e('N.º ' . $p['p_nro'] . ' · ' . ($p['banco_descripcion'] ?? '')) : e((string) $p['p_nro']) ?></td>
+        <td data-label="Detalle"><?= (int) ($p['fpago_tipo'] ?? 0) === 5 ? e('N.º ' . $p['p_nro'] . ' · ' . ($p['banco_descripcion'] ?? '')) : e((string) $p['p_nro']) ?><?= (float) ($p['p_vuelto'] ?? 0) > 0 ? e('Recibido ' . plata_dec($p['p_recibido']) . ' · vuelto ' . plata_dec($p['p_vuelto'])) : '' ?></td>
         <td data-label="Cobro"><?= e(fecha($p['p_fecvto'])) ?></td><td data-label="Importe" class="num nw"><?= e(plata_dec($p['p_importe'])) ?></td></tr>
 <?php endforeach; ?></tbody></table></div>
 <?php endif; ?>
