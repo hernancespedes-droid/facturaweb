@@ -55,13 +55,13 @@ if ($alDia && Menu::visible('mp_ingresos')) {
                 <label for="menu-toggle" class="menu-btn" aria-hidden="true"><span></span><span></span><span></span></label>
                 <nav class="menu" aria-label="Menú principal">
                     <?php if ($alDia): ?>
-                        <a href="<?= e(url('/')) ?>" class="<?= $navActual === 'inicio' ? 'activo' : '' ?>">Inicio</a>
+                        <a href="<?= e(url('/')) ?>" class="menu-inicio <?= $navActual === 'inicio' ? 'activo' : '' ?>"><?= Menu::icono('inicio') ?><span>Inicio</span></a>
                         <?php foreach (Menu::grupos() as $grupo => $items): $activo = isset($items[$navActual]) || ($grupo === 'Tablas' && $navActual === 'tablas'); ?>
                             <div class="menu-grupo <?= $activo ? 'activo' : '' ?>" data-grupo="<?= e($grupo) ?>">
-                                <button type="button" class="menu-grupo-btn" aria-expanded="false"><?= e($grupo) ?></button>
+                                <button type="button" class="menu-grupo-btn" aria-expanded="false"><span class="menu-grupo-ico"><?= Menu::iconoGrupo($grupo) ?></span><span class="menu-grupo-txt"><?= e($grupo) ?></span></button>
                                 <div class="menu-sub">
                                     <?php foreach ($items as $clave => $o): ?>
-                                        <a href="<?= e(url($o['ruta'])) ?>" class="<?= $navActual === $clave ? 'activo' : '' ?>"><?= e($o['texto']) ?></a>
+                                        <a href="<?= e(url($o['ruta'])) ?>" class="<?= $navActual === $clave ? 'activo' : '' ?>"><?= Menu::icono($clave, $grupo) ?><span><?= e($o['texto']) ?></span></a>
                                     <?php endforeach; ?>
                                 </div>
                             </div>

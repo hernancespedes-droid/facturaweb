@@ -487,37 +487,58 @@ details.plegable[open] > summary { margin-bottom: 12px; }
   /* Lateral: el menú es una columna fija a la izquierda, debajo del encabezado. */
   body.menu-lateral .topbar { backdrop-filter: none; background: rgb(14, 17, 22); }
   body.menu-lateral .menu {
-    position: fixed; top: var(--alto-topbar, 61px); left: 0; bottom: 0; width: 230px; z-index: 9;
+    position: fixed; top: var(--alto-topbar, 61px); left: 0; bottom: 0; width: 250px; z-index: 9;
     flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 2px; padding: 12px 10px 16px; overflow-y: auto;
     background: var(--panel); border-right: 1px solid var(--line);
   }
-  body.menu-lateral > main, body.menu-lateral > .pie { margin-left: 230px; width: auto; }
-  body.menu-lateral .menu > a, body.menu-lateral .menu-sub a { padding: 9px 10px; }
+  body.menu-lateral > main, body.menu-lateral > .pie { margin-left: 250px; width: auto; }
   body.menu-lateral .menu-sep { flex: 1; min-height: 14px; }
   body.menu-lateral .empresa-switch select, body.menu-lateral .menu .btn { width: 100%; }
-  body.menu-lateral .menu-grupo-btn, body.menu-lateral .menu-grupo.activo > .menu-grupo-btn {
-    cursor: pointer; padding: 14px 10px 4px; font-size: .74rem; letter-spacing: .14em; color: var(--muted); background: none; box-shadow: none; text-align: left; width: 100%;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  body.menu-lateral .menu-grupo.activo > .menu-grupo-btn { color: var(--text); }
-  body.menu-lateral .menu-grupo-btn::after { content: '▾'; font-size: 1rem; }
-  body.menu-lateral .menu-grupo.plegado > .menu-grupo-btn::after { content: '▸'; }
-  body.menu-lateral .menu-grupo-btn:hover { color: var(--text); }
-  body.menu-lateral .menu-sub { display: flex; position: static; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+  /* Horizontal: sin íconos en la barra (ocupa menos); sí en las opciones que despliega. */
+  body:not(.menu-lateral) .menu-grupo-ico, body:not(.menu-lateral) .menu > a.menu-inicio .menu-ico { display: none; }
+  body:not(.menu-lateral) .menu-sub a { display: flex; align-items: center; gap: 10px; }
+  body:not(.menu-lateral) .menu-sub a .menu-ico { flex: none; width: 16px; height: 16px; opacity: .75; }
+  /* Lateral: cada grupo es un título con su ícono en una placa de color; sus opciones van debajo, más chicas, con una guía a la izquierda (D-137). */
+  body.menu-lateral .menu-sub a, body.menu-lateral .menu > a.menu-inicio { display: flex; align-items: center; gap: 10px; }
+  body.menu-lateral .menu-grupo-btn, body.menu-lateral .menu-grupo.activo > .menu-grupo-btn { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 4px; padding: 6px 8px; border: 0; border-radius: 10px; cursor: pointer; text-align: left; background: none; box-shadow: none; color: var(--text); font: 600 .95rem/1.2 var(--f-body); text-transform: none; letter-spacing: 0; }
+  body.menu-lateral .menu-grupo-btn:hover, body.menu-lateral .menu > a.menu-inicio:hover { background: var(--panel-2); color: var(--text); }
+  body.menu-lateral .menu-grupo-ico, body.menu-lateral .menu > a.menu-inicio .menu-ico { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--brand-soft); color: var(--brand-2); }
+  body.menu-lateral .menu > a.menu-inicio .menu-ico { padding: 6px; box-sizing: border-box; }
+  body.menu-lateral .menu-grupo.activo .menu-grupo-ico, body.menu-lateral .menu > a.menu-inicio.activo .menu-ico { background: var(--brand); color: var(--on-brand); }
+  body.menu-lateral .menu-grupo-txt { flex: 1; }
+  body.menu-lateral .menu-grupo-btn::after { content: ''; flex: none; width: 7px; height: 7px; margin-right: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
+  body.menu-lateral .menu-grupo.plegado > .menu-grupo-btn::after { content: ''; transform: rotate(-45deg); }
+  body.menu-lateral .menu > a.menu-inicio, body.menu-lateral .menu > a.menu-inicio.activo { padding: 6px 8px; border-radius: 10px; color: var(--text); background: none; box-shadow: none; font: 600 .95rem/1.2 var(--f-body); text-transform: none; letter-spacing: 0; }
+  body.menu-lateral .menu-sub { display: flex; position: static; min-width: 0; margin: 2px 0 6px 22px; padding: 0 0 0 10px; gap: 1px; border: 0; border-left: 1px solid var(--line-2); border-radius: 0; background: none; box-shadow: none; }
   body.menu-lateral .menu-grupo.plegado > .menu-sub { display: none; }
+  body.menu-lateral .menu-sub a { position: relative; padding: 7px 10px; border-radius: 8px; white-space: normal; color: var(--muted); font: 500 .9rem/1.25 var(--f-body); text-transform: none; letter-spacing: 0; }
+  body.menu-lateral .menu-sub a .menu-ico { flex: none; width: 16px; height: 16px; opacity: .75; }
+  body.menu-lateral .menu-sub a:hover { color: var(--text); background: var(--panel-2); }
+  body.menu-lateral .menu-sub a.activo { color: var(--brand-2); background: var(--brand-soft); font-weight: 600; }
+  body.menu-lateral .menu-sub a.activo .menu-ico { opacity: 1; }
+  body.menu-lateral .menu-sub a.activo::before { content: ''; position: absolute; left: -12px; top: 6px; bottom: 6px; width: 3px; border-radius: 3px; background: var(--brand); }
 }
 @media (max-width: 820px) {
-  /* Celular: con cualquier disposición, el agrupador es un título y sus opciones van debajo. */
-  .menu-grupo-btn, .menu-grupo.activo > .menu-grupo-btn {
-    cursor: pointer; padding: 12px; font-size: .78rem; letter-spacing: .14em; color: var(--muted); background: none; box-shadow: none; text-align: left; width: 100%;
-    display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); border-radius: 0;
-  }
-  .menu-grupo.activo > .menu-grupo-btn { color: var(--text); }
-  .menu-grupo-btn::after { content: '▾'; font-size: 1.1rem; }
-  .menu-grupo.plegado > .menu-grupo-btn::after { content: '▸'; }
-  .menu-sub { display: flex; position: static; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; }
-  .menu-grupo.plegado > .menu-sub { display: none; }
-  .menu-sub a { padding: 12px; }
+  /* Celular: con cualquier disposición, el menú (☰) se ve como el lateral. */
+  body .menu-sub a, body .menu > a.menu-inicio { display: flex; align-items: center; gap: 10px; }
+  body .menu-grupo-btn, body .menu-grupo.activo > .menu-grupo-btn { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 4px; padding: 6px 8px; border: 0; border-radius: 10px; cursor: pointer; text-align: left; background: none; box-shadow: none; color: var(--text); font: 600 .95rem/1.2 var(--f-body); text-transform: none; letter-spacing: 0; }
+  body .menu-grupo-btn:hover, body .menu > a.menu-inicio:hover { background: var(--panel-2); color: var(--text); }
+  body .menu-grupo-ico, body .menu > a.menu-inicio .menu-ico { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--brand-soft); color: var(--brand-2); }
+  body .menu > a.menu-inicio .menu-ico { padding: 6px; box-sizing: border-box; }
+  body .menu-grupo.activo .menu-grupo-ico, body .menu > a.menu-inicio.activo .menu-ico { background: var(--brand); color: var(--on-brand); }
+  body .menu-grupo-txt { flex: 1; }
+  body .menu-grupo-btn::after { content: ''; flex: none; width: 7px; height: 7px; margin-right: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); }
+  body .menu-grupo.plegado > .menu-grupo-btn::after { content: ''; transform: rotate(-45deg); }
+  body .menu > a.menu-inicio, body .menu > a.menu-inicio.activo { padding: 6px 8px; border-radius: 10px; color: var(--text); background: none; box-shadow: none; font: 600 .95rem/1.2 var(--f-body); text-transform: none; letter-spacing: 0; }
+  body .menu-sub { display: flex; position: static; min-width: 0; margin: 2px 0 6px 22px; padding: 0 0 0 10px; gap: 1px; border: 0; border-left: 1px solid var(--line-2); border-radius: 0; background: none; box-shadow: none; }
+  body .menu-grupo.plegado > .menu-sub { display: none; }
+  body .menu-sub a { position: relative; padding: 7px 10px; border-radius: 8px; white-space: normal; color: var(--muted); font: 500 .9rem/1.25 var(--f-body); text-transform: none; letter-spacing: 0; }
+  body .menu-sub a .menu-ico { flex: none; width: 16px; height: 16px; opacity: .75; }
+  body .menu-sub a:hover { color: var(--text); background: var(--panel-2); }
+  body .menu-sub a.activo { color: var(--brand-2); background: var(--brand-soft); font-weight: 600; }
+  body .menu-sub a.activo .menu-ico { opacity: 1; }
+  body .menu-sub a.activo::before { content: ''; position: absolute; left: -12px; top: 6px; bottom: 6px; width: 3px; border-radius: 3px; background: var(--brand); }
+  body .menu-sub a, body .menu > a.menu-inicio { padding-top: 10px; padding-bottom: 10px; }
 }
 
 /* Fotos chicas que se amplían (carrito) y visor */
