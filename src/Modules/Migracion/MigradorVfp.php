@@ -50,6 +50,10 @@ final class MigradorVfp
     private bool $incremental = false;
     /** Modo maestros del agente: clientes y artículos se suman y se actualizan por código (nada se borra). */
     private bool $maestros = false;
+    /** Modo «en negro»: los comprobantes del VFP se cargan como presupuestos (PR / NX, letra X, no fiscales). */
+    private bool $comoPresupuestos = false;
+    /** Tipos del VFP que pasan a interno: FC → PR, NC → NX (lo demás no se carga). */
+    private const A_PRESUPUESTO = ['FC' => 'PR', 'NC' => 'NX'];
     private int $filasAfectadas = 0;
     private string $origen = '';
     /** @var array<string,bool> comprobantes ya cargados (clave tipo|letra|sucursal|número|fecha) */
@@ -72,6 +76,11 @@ final class MigradorVfp
             throw new \RuntimeException("No existe la carpeta {$carpeta}.");
         }
         $dbc = Dbf::buscar($this->carpeta, 'datos.dbc');
+        if ($dbc === null) {
+            // Otras bases del VFP traen su propio contenedor (la de «en negro» de Gogolinas: datosbup.dbc): si hay uno solo, se usa ese.
+            $otros = glob($this->carpeta . '/*.[dD][bB][cC]') ?: [];
+            $dbc = count($otros) === 1 ? $otros[0] : null;
+        }
         if ($dbc !== null) {
             $this->dbc = new Dbc($dbc);
         }
@@ -92,6 +101,22 @@ final class MigradorVfp
         $this->incremental = true;
         $this->origen = $origen;
         return $this->migrar(['subdiario', 'iva', 'estadistica', 'caja', 'ctact'], true);
+    }
+
+    /**
+     * Comprobantes «en negro» del VFP (otra base, sin CAE): se SUMAN como presupuestos —FC → PR, NC → NX, letra X, sin datos de ARCA—, con sus
+     * renglones (estadistica) y cobros (caja). No van al IVA ventas, al Libro IVA Digital ni a ARCA. No borra nada; volver a subir lo mismo no duplica.
+     * El número interno del VFP no se usa (en algunas bases no entra en la columna): lo asigna MySQL y el vínculo es por tipo+sucursal+número+fecha.
+     * Al final, el numerador de presupuestos de cada sucursal sigue desde el último cargado. D-93.
+     *
+     * @return array<string,array{leidas:int,grabadas:int,avisos:string[]}>
+     */
+    public function sumarPresupuestos(string $origen, bool $simular = false): array
+    {
+        $this->incremental = true;
+        $this->comoPresupuestos = true;
+        $this->origen = $origen;
+        return $this->migrar(['subdiario', 'estadistica', 'caja'], true, $simular);
     }
 
     /**
@@ -154,6 +179,13 @@ final class MigradorVfp
             }
             if (array_intersect($tablas, ['caja', 'ctact', 'cobra', 'imputaciones']) !== []) {
                 $this->vincularCuentaCorriente();
+            }
+            if ($this->comoPresupuestos) {
+                // Los presupuestos nuevos de la web siguen la numeración de los que se trajeron.
+                foreach (['PR' => 'ultimo_presupuesto', 'NX' => 'ultima_nc_x'] as $tipo => $col) {
+                    $this->ejecutar("UPDATE sucursales su JOIN (SELECT sucursal, MAX(comprobante) AS ultimo FROM subdiario WHERE tipo = ? GROUP BY sucursal) x
+                                        ON x.sucursal = su.codigo SET su.`{$col}` = GREATEST(su.`{$col}`, x.ultimo)", [$tipo]);
+                }
             }
             if (in_array('clientes', $tablas, true)) {
                 // El próximo cliente sigue la numeración del VFP.
@@ -287,7 +319,7 @@ final class MigradorVfp
         $columnas = $this->columnas($tabla);
         $nombres = $this->nombresLargos(self::TABLAS[$tabla], $dbf, $r, array_keys($columnas));
         $usar = array_values(array_intersect(array_keys($columnas), $nombres));
-        if (in_array($tabla, ['iva', 'estadistica', 'caja', 'ctact'], true)) {
+        if (in_array($tabla, ['iva', 'estadistica', 'caja', 'ctact'], true) || $this->comoPresupuestos) {
             // el número interno de estas tablas se repite en el VFP: acá lo asigna MySQL (el vínculo con el comprobante es subdiario_id)
             $usar = array_values(array_diff($usar, ['fe_clave']));
         }
@@ -317,6 +349,22 @@ final class MigradorVfp
                 $valores[] = $this->convertir($columnas[$col], $porNombre[$col], $tabla, $col, $r);
             }
             $fila = array_combine($usar, $valores);
+            if ($this->comoPresupuestos) {
+                $tipo = self::A_PRESUPUESTO[(string) ($fila['tipo'] ?? '')] ?? null;
+                if ($tipo === null) {
+                    $this->aviso($r, 'No se carga (solo facturas y notas de crédito pasan a presupuesto): ' . $this->describir($tabla, $fila));
+                    continue;
+                }
+                $fila['tipo'] = $tipo;
+                $fila['letra'] = 'X';
+                // Sin nada fiscal: el VFP marca «MANUAL» en el CAE de lo que no se pidió a ARCA.
+                foreach (['fe_ccae' => '', 'fe_nrocbte' => 0, 'electronica' => 0, 'es_prueba' => 0, 'fe_dvtocae' => null] as $col => $v) {
+                    if (array_key_exists($col, $fila)) {
+                        $fila[$col] = $v;
+                    }
+                }
+                $valores = array_values($fila);
+            }
             if ($this->incremental && !$this->esNuevo($tabla, $fila)) {
                 continue; // ya está en la web (o su comprobante ya estaba)
             }

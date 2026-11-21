@@ -228,3 +228,9 @@ cómo te pagaron, avisos para atender y accesos rápidos; abajo, «Todo el menú
 Pedido de Hernán: «informar del ingreso de dinero a la cuenta», independiente de las formas de pago, a todos los que tengan permiso. Hecho: webhook + consulta periódica
 (sin cron obligatorio), campanita con cartel y sonido, grilla Facturación → Ingresos de Mercado Pago, permiso `mercadopago.ingresos`, mail opcional (Hernán: «el mail es opcional»).
 Pendiente: verificar con una cuenta real si las transferencias bancarias al CVU aparecen en la API de pagos (si no, leer el reporte de movimientos de la cuenta). D-85.
+
+## Gogolinas (segundo cliente, 21/11/2026)
+
+- Instalación `gogolinas.orgysis.site` (cliente 3212 del master), misma carpeta que el master por ahora. VFP en `G:\gogolinas` (raíz = facturador; `bup\` = venta en negro con `datosbup.dbc`; `Data\` = sistema de proveedores, no se migra).
+- Migración: maestros desde la raíz (zip de 23 tablas, 5 MB); lo en negro con la casilla «en negro → Presupuestos» (0.45.0, D-93). Los 54 fiscales viejos (hasta abr-2025) no se traen (decisión de Hernán): su `fe_clave` no entra en INT.
+- Stock del VFP no confiable (664 de 1.562 artículos en negativo): se arranca con conteo (`conteo_stock_gogolinas.xlsx` → Sistema → Importar datos → Stock, «dejar en esa cantidad»).

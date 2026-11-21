@@ -152,8 +152,11 @@ final class SistemaController
             }
             $simular = ($req->post['simular'] ?? '') === '1';
             @set_time_limit(600);
-            $resumen = (new \App\Modules\Migracion\MigradorVfp(Db::pdo(), $dir))
-                ->migrar(null, ($req->post['reemplazar'] ?? '') === '1', $simular);
+            $migrador = new \App\Modules\Migracion\MigradorVfp(Db::pdo(), $dir);
+            // «En negro»: los comprobantes del zip se suman como presupuestos (no toca maestros ni lo que ya está). D-93.
+            $resumen = ($req->post['presupuestos'] ?? '') === '1'
+                ? $migrador->sumarPresupuestos('zip en negro: ' . mb_substr((string) ($f['name'] ?? ''), 0, 120), $simular)
+                : $migrador->migrar(null, ($req->post['reemplazar'] ?? '') === '1', $simular);
             $grabadas = array_sum(array_map(static fn ($r) => $r['grabadas'], $resumen));
             $avisos = array_sum(array_map(static fn ($r) => count($r['avisos']), $resumen));
             Session::flash('ok', ($simular ? 'Simulación (no se grabó nada): ' : 'Migración grabada: ')

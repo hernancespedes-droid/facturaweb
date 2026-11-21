@@ -140,6 +140,38 @@ final class MigracionTest extends DbTestCase
         $this->assertSame(2, $r['articulos_precios']['grabadas'], 'la columna "articulos" se toma como "articulo"');
     }
 
+    public function testComprobantesEnNegroSeSumanComoPresupuestosSinDuplicar(): void
+    {
+        $sub = [['FECHA', 'D'], ['TIPO', 'C', 2], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 3], ['PREFIJO', 'N', 4], ['COMPROBANT', 'N', 8], ['CLIENTE', 'N', 6],
+            ['NETO', 'N', 12, 2], ['FE_CCAE', 'C', 14], ['FE_CLAVE', 'N', 15]];
+        DbfFalso::escribir($this->dir . '/subdiario.dbf', $sub, [
+            ['FECHA' => '2026-11-19', 'TIPO' => 'FC', 'LETRA' => 'B', 'SUCURSAL' => 1, 'PREFIJO' => 999, 'COMPROBANT' => 40, 'CLIENTE' => 1, 'NETO' => 1500, 'FE_CCAE' => 'MANUAL', 'FE_CLAVE' => 12265549649976],
+            ['FECHA' => '2026-11-20', 'TIPO' => 'NC', 'LETRA' => 'B', 'SUCURSAL' => 1, 'PREFIJO' => 999, 'COMPROBANT' => 3, 'CLIENTE' => 1, 'NETO' => 200, 'FE_CCAE' => 'MANUAL', 'FE_CLAVE' => 12265549649977],
+            ['FECHA' => '2026-11-20', 'TIPO' => 'RC', 'LETRA' => 'X', 'SUCURSAL' => 1, 'PREFIJO' => 999, 'COMPROBANT' => 9, 'CLIENTE' => 1, 'NETO' => 50, 'FE_CCAE' => '', 'FE_CLAVE' => 5],
+        ]);
+        DbfFalso::escribir($this->dir . '/estadistica.dbf', [['FECHA', 'D'], ['TIPO', 'C', 2], ['LETRA', 'C', 1], ['SUCURSAL', 'N', 3], ['COMPROBANT', 'N', 8],
+            ['ARTICULO', 'C', 15], ['UNIDADES', 'N', 10, 2], ['PRECIO', 'N', 12, 2], ['FE_CLAVE', 'N', 15]], [
+            ['FECHA' => '2026-11-19', 'TIPO' => 'FC', 'LETRA' => 'B', 'SUCURSAL' => 1, 'COMPROBANT' => 40, 'ARTICULO' => 'M-1', 'UNIDADES' => 2, 'PRECIO' => 750, 'FE_CLAVE' => 12265549649978],
+        ]);
+        $pdo = Db::pdo();
+        $antes = $pdo->query('SELECT ultimo_presupuesto FROM sucursales WHERE codigo = 1')->fetchColumn();
+        if ($antes === false) {
+            $pdo->exec("INSERT INTO sucursales (codigo, descripcion) VALUES (1, 'Central')");
+        }
+        $pdo->exec('UPDATE sucursales SET ultimo_presupuesto = 7 WHERE codigo = 1');
+        $r = (new MigradorVfp($pdo, $this->dir))->sumarPresupuestos('prueba');
+        $this->assertSame([2, 1], [$r['subdiario']['grabadas'], $r['estadistica']['grabadas']]);
+        $this->assertStringContainsString('solo facturas y notas de crédito', $r['subdiario']['avisos'][0], 'el recibo no se trae');
+        $filas = $pdo->query("SELECT tipo, letra, comprobante, fe_ccae, es_prueba FROM subdiario ORDER BY comprobante")->fetchAll(\PDO::FETCH_NUM);
+        $this->assertSame([['NX', 'X', '3', '', '0'], ['PR', 'X', '40', '', '0']], array_map(static fn ($f) => array_map('strval', $f), $filas));
+        $this->assertSame(0, (int) $pdo->query('SELECT COUNT(*) FROM estadistica WHERE subdiario_id IS NULL')->fetchColumn(), 'el renglón queda vinculado');
+        $this->assertSame(40, (int) $pdo->query('SELECT ultimo_presupuesto FROM sucursales WHERE codigo = 1')->fetchColumn());
+        $this->assertSame(0, (int) $pdo->query("SELECT COUNT(*) FROM subdiario WHERE " . \App\Modules\Comprobantes\Tipos::sqlSoloFiscales())->fetchColumn(), 'nada fiscal');
+        $r = (new MigradorVfp($pdo, $this->dir))->sumarPresupuestos('prueba');
+        $this->assertSame(0, $r['subdiario']['grabadas'], 'volver a subir no duplica');
+        $antes === false ? $pdo->exec('DELETE FROM sucursales WHERE codigo = 1') : $pdo->prepare('UPDATE sucursales SET ultimo_presupuesto = ? WHERE codigo = 1')->execute([$antes]);
+    }
+
     public function testNoPisaDatosSinReemplazarYSimularNoGrabaNada(): void
     {
         $this->carpetaVfp();
