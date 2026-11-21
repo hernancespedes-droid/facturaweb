@@ -50,7 +50,7 @@ final class MigradorVfp
     private bool $incremental = false;
     /** Modo maestros del agente: clientes y artículos se suman y se actualizan por código (nada se borra). */
     private bool $maestros = false;
-    /** Modo «en negro»: los comprobantes del VFP se cargan como presupuestos (PR / NX, letra X, no fiscales). */
+    /** Modo «no ARCA»: los comprobantes del VFP se cargan como presupuestos (PR / NX, letra X, no fiscales). */
     private bool $comoPresupuestos = false;
     /** Tipos del VFP que pasan a interno: FC → PR, NC → NX (lo demás no se carga). */
     private const A_PRESUPUESTO = ['FC' => 'PR', 'NC' => 'NX'];
@@ -77,7 +77,7 @@ final class MigradorVfp
         }
         $dbc = Dbf::buscar($this->carpeta, 'datos.dbc');
         if ($dbc === null) {
-            // Otras bases del VFP traen su propio contenedor (la de «en negro» de Gogolinas: datosbup.dbc): si hay uno solo, se usa ese.
+            // Otras bases del VFP traen su propio contenedor (la de los comprobantes no ARCA de Gogolinas: datosbup.dbc): si hay uno solo, se usa ese.
             $otros = glob($this->carpeta . '/*.[dD][bB][cC]') ?: [];
             $dbc = count($otros) === 1 ? $otros[0] : null;
         }
@@ -104,7 +104,7 @@ final class MigradorVfp
     }
 
     /**
-     * Comprobantes «en negro» del VFP (otra base, sin CAE): se SUMAN como presupuestos —FC → PR, NC → NX, letra X, sin datos de ARCA—, con sus
+     * Comprobantes «no ARCA» del VFP (otra base, sin CAE): se SUMAN como presupuestos —FC → PR, NC → NX, letra X, sin datos de ARCA—, con sus
      * renglones (estadistica) y cobros (caja). No van al IVA ventas, al Libro IVA Digital ni a ARCA. No borra nada; volver a subir lo mismo no duplica.
      * El número interno del VFP no se usa (en algunas bases no entra en la columna): lo asigna MySQL y el vínculo es por tipo+sucursal+número+fecha.
      * Al final, el numerador de presupuestos de cada sucursal sigue desde el último cargado. D-93.
