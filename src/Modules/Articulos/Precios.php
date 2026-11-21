@@ -30,7 +30,7 @@ final class Precios
     ];
 
     public const ORIGENES = ['FICHA' => 'Ficha del artículo', 'MASIVO' => 'Actualizar precios', 'STOCK' => 'Ingreso de stock', 'COMPRA' => 'Compra',
-        'IMPORTACION' => 'Importación'];
+        'IMPORTACION' => 'Importación', 'AUMENTO' => 'Actualización masiva', 'DESHACER' => 'Deshacer actualización'];
 
     private PDO $pdo;
     /** @var array{margenes:array<string,?float>,redondeo:int,suma_iva:bool}|null */
@@ -94,7 +94,12 @@ final class Precios
     /** Precio con el margen, el IVA (si corresponde) y el redondeo. */
     public static function precio(float $costo, float $margen, float $ivaPct, int $redondeo): float
     {
-        $p = $costo * (1 + $margen / 100) * (1 + $ivaPct / 100);
+        return self::redondear($costo * (1 + $margen / 100) * (1 + $ivaPct / 100), $redondeo);
+    }
+
+    /** Redondeo de Parámetros, siempre hacia arriba (D-132); sin redondeo, a centavos. */
+    public static function redondear(float $p, int $redondeo): float
+    {
         if ($redondeo > 0) {
             return (float) (ceil(round($p / $redondeo, 6)) * $redondeo);
         }
@@ -207,8 +212,11 @@ final class Precios
         return $v;
     }
 
-    /** Anota en el historial si algo cambió (no graba el artículo). @param array<string,float> $antes @param array<string,float> $despues */
-    public function registrar(string $codigo, array $antes, array $despues, string $origen, ?int $usuarioId, string $detalle = ''): bool
+    /**
+     * Anota en el historial si algo cambió (no graba el artículo). $extra: actualizacion_id, automatico_anterior y automatico (actualización masiva, D-145).
+     * @param array<string,float> $antes @param array<string,float> $despues @param array{actualizacion_id?:?int,automatico_anterior?:?int,automatico?:?int} $extra
+     */
+    public function registrar(string $codigo, array $antes, array $despues, string $origen, ?int $usuarioId, string $detalle = '', array $extra = []): bool
     {
         $cambio = false;
         foreach ($antes as $k => $v) {
@@ -220,10 +228,10 @@ final class Precios
             return false;
         }
         $this->pdo->prepare('INSERT INTO articulos_precios_historial (articulo, fecha, usuario_id, origen, detalle, costo_anterior, costo, l1_anterior, l1, l2_anterior, l2,
-                l3_anterior, l3, oferta_anterior, oferta) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                l3_anterior, l3, oferta_anterior, oferta, actualizacion_id, automatico_anterior, automatico) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$codigo, $usuarioId, $origen, mb_substr($detalle, 0, 160), $antes['costo'], $despues['costo'] ?? $antes['costo'],
                 $antes['l1'], $despues['l1'] ?? $antes['l1'], $antes['l2'], $despues['l2'] ?? $antes['l2'], $antes['l3'], $despues['l3'] ?? $antes['l3'],
-                $antes['oferta'], $despues['oferta'] ?? $antes['oferta']]);
+                $antes['oferta'], $despues['oferta'] ?? $antes['oferta'], $extra['actualizacion_id'] ?? null, $extra['automatico_anterior'] ?? null, $extra['automatico'] ?? null]);
         return true;
     }
 
