@@ -128,7 +128,7 @@ final class MercadoPago
 
     /**
      * Un pago por su id, tal como lo ve Mercado Pago (nunca se confía en lo que dice la notificación).
-     * @return array{id:string,estado:string,referencia:string,monto:float}|null
+     * @return array{id:string,estado:string,referencia:string,monto:float,ingreso:?array}|null
      */
     public static function pago(string $id): ?array
     {
@@ -172,7 +172,61 @@ final class MercadoPago
         if (!isset($p['id'])) {
             return null;
         }
-        return ['id' => (string) $p['id'], 'estado' => (string) ($p['status'] ?? ''), 'referencia' => (string) ($p['external_reference'] ?? ''), 'monto' => round((float) ($p['transaction_amount'] ?? 0), 2)];
+        return ['id' => (string) $p['id'], 'estado' => (string) ($p['status'] ?? ''), 'referencia' => (string) ($p['external_reference'] ?? ''), 'monto' => round((float) ($p['transaction_amount'] ?? 0), 2),
+            'ingreso' => self::ingreso($p)];
+    }
+
+    /**
+     * Los datos de un pago que se guardan como ingreso de dinero (Ingresos de Mercado Pago). Null si el pago no es un cobro de esta cuenta (un pago que hizo la cuenta,
+     * cuando se conoce su user_id).
+     *
+     * @param array<string,mixed> $p el pago como lo devuelve /v1/payments
+     * @return array{mp_pago_id:string,estado:string,fecha:string,monto:float,neto:?float,moneda:string,medio:string,medio_detalle:string,pagador:string,pagador_mail:string,pagador_doc:string,descripcion:string,referencia:string}|null
+     */
+    public static function ingreso(array $p): ?array
+    {
+        if (!isset($p['id'])) {
+            return null;
+        }
+        $yo = trim((string) Config::get('mp.user_id', ''));
+        if ($yo !== '' && isset($p['collector_id']) && (string) $p['collector_id'] !== $yo) {
+            return null; // la cuenta no es la que cobra: es un pago que hizo ella
+        }
+        $payer = is_array($p['payer'] ?? null) ? $p['payer'] : [];
+        $nombre = trim((string) ($payer['first_name'] ?? '') . ' ' . (string) ($payer['last_name'] ?? ''));
+        $doc = is_array($payer['identification'] ?? null) ? trim((string) ($payer['identification']['type'] ?? '') . ' ' . (string) ($payer['identification']['number'] ?? '')) : '';
+        $neto = $p['transaction_details']['net_received_amount'] ?? null;
+        $cuando = (string) ($p['date_approved'] ?? $p['date_created'] ?? '');
+        $ts = $cuando !== '' ? strtotime($cuando) : false;
+        return [
+            'mp_pago_id' => (string) $p['id'], 'estado' => mb_substr((string) ($p['status'] ?? ''), 0, 20),
+            'fecha' => date('Y-m-d H:i:s', $ts !== false ? $ts : time()),
+            'monto' => round((float) ($p['transaction_amount'] ?? 0), 2), 'neto' => is_numeric($neto) ? round((float) $neto, 2) : null,
+            'moneda' => mb_substr((string) ($p['currency_id'] ?? 'ARS'), 0, 3), 'medio' => mb_substr((string) ($p['payment_type_id'] ?? ''), 0, 30),
+            'medio_detalle' => mb_substr((string) ($p['payment_method_id'] ?? ''), 0, 40), 'pagador' => mb_substr($nombre, 0, 150),
+            'pagador_mail' => mb_substr((string) ($payer['email'] ?? ''), 0, 150), 'pagador_doc' => mb_substr($doc, 0, 40),
+            'descripcion' => mb_substr((string) ($p['description'] ?? ''), 0, 255), 'referencia' => mb_substr((string) ($p['external_reference'] ?? ''), 0, 64),
+        ];
+    }
+
+    /**
+     * Pagos actualizados desde $desde (para la consulta periódica de ingresos), del más viejo al más nuevo. Trae hasta 500 por consulta.
+     * @return array<int,array<string,mixed>> los pagos crudos de Mercado Pago
+     */
+    public static function pagosDesde(int $desde): array
+    {
+        $out = [];
+        $inicio = date('Y-m-d\TH:i:s.000P', $desde);
+        for ($offset = 0; $offset < 500; $offset += 100) {
+            $r = self::llamar('GET', '/v1/payments/search?sort=date_last_updated&criteria=asc&range=date_last_updated&begin_date=' . rawurlencode($inicio)
+                . '&end_date=NOW&limit=100&offset=' . $offset);
+            $lote = array_values(array_filter((array) ($r['results'] ?? []), 'is_array'));
+            array_push($out, ...$lote);
+            if (count($lote) < 100) {
+                break;
+            }
+        }
+        return $out;
     }
 
     // ---------------------------------------------------------------- notificaciones firmadas
