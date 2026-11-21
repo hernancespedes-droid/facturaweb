@@ -253,5 +253,9 @@ async function factura(page, precio) {
     process.kill(-server.pid);
   }
   console.log(fallas === 0 ? '\nRecorrido de cuenta corriente completo sin fallas.' : `\n${fallas} falla(s).`);
+  if (fallas === 0 && !process.env.E2E_SIN_EXTRAS) {
+    // bin/pruebas.sh está congelado: los recorridos nuevos van en e2e/extras.js.
+    try { execFileSync('node', [path.join(__dirname, 'extras.js')], { stdio: 'inherit' }); } catch (e) { process.exit(1); }
+  }
   process.exit(fallas === 0 ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });

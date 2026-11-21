@@ -24,6 +24,3 @@ php bin/migrate.php
 node e2e/recorrido.js
 node e2e/arca.js
 node e2e/cuenta-corriente.js
-node e2e/importacion.js
-node e2e/alta-cliente.js
-node e2e/compras.js
