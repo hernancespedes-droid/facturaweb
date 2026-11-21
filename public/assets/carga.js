@@ -1,5 +1,5 @@
 /*
- * 0.50.0: cargar datos sin que la página salte (pedido de Hernán).
+ * 0.51.0: cargar datos sin que la página salte (pedido de Hernán).
  *
  * 1) Enter pasa al campo siguiente, como en el sistema de escritorio. En un formulario que graba (method="post") Enter en un campo
  *    ya no envía el formulario: el foco va al campo siguiente y, desde el último, al botón principal (un segundo Enter recién ahí envía).
