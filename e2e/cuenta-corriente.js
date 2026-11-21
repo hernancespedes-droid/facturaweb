@@ -109,6 +109,9 @@ async function factura(page, precio) {
     const fp = page.locator('[data-fpago]').nth(0);
     await fp.selectOption({ label: 'EFECTIVO' });
     await page.locator('[data-pago-importe]').nth(0).fill('1.000');
+    ok(await page.isVisible('[data-recibido]'), 'recibo en efectivo: pide lo que entrega el cliente (D-134)');
+    await page.click('[data-v-sumar="2000"]');
+    ok((await page.textContent('[data-v-resultado]')).includes('1.000,00'), 'recibo: la calculadora muestra el vuelto (2.000 − 1.000)');
     await page.click('[data-agregar-pago]');
     await page.locator('[data-fpago]').nth(1).selectOption({ label: 'CHEQUE E2E' });
     ok(await page.locator('[name="pagos[1][nro]"]').isVisible(), 'al elegir cheque pide número, banco y fecha');
@@ -121,6 +124,9 @@ async function factura(page, precio) {
     await page.screenshot({ path: path.join(CAPTURAS, 'recibo-form.png'), fullPage: true });
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Grabar recibo")')]);
     ok(/\/recibos\/\d+$/.test(page.url()), 'el recibo se graba y se muestra');
+    ok((await page.textContent('.vuelto-final-monto')).includes('1.000,00'), 'recibo: al grabar, cartel grande con el vuelto');
+    await page.click('[data-vuelto-listo]');
+    ok((await page.textContent('body')).includes('vuelto $ 1.000,00'), 'recibo: muestra lo recibido y el vuelto');
     const cuerpo = await page.textContent('body');
     ok(cuerpo.includes('1.315,00') && cuerpo.includes('55501'), 'el recibo muestra lo cobrado y el cheque');
     const reciboUrl = page.url();

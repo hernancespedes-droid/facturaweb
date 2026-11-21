@@ -39,6 +39,7 @@
     d.textContent = dif === 0 ? 'Cuadra' : (dif > 0 ? 'Faltan ' + fmt(dif) : 'Sobran ' + fmt(-dif));
     d.className = dif === 0 ? 'texto-ok' : 'texto-error';
     q('[data-neto]').value = neto;
+    qa('[data-pago]').forEach(vuelto);
   }
   form.addEventListener('input', recalcular);
   form.addEventListener('change', function (ev) {
@@ -54,8 +55,23 @@
     inp.addEventListener('input', function () { var c = inp.closest('tr').querySelector('[data-marca]'); c.checked = num(inp.value) > 0; });
   });
   function cheque(fila) {
-    var tipo = fila.querySelector('[data-fpago] option:checked').getAttribute('data-tipo');
+    var op = fila.querySelector('[data-fpago] option:checked');
+    var tipo = op ? op.getAttribute('data-tipo') : '';
     fila.querySelectorAll('[data-solo-cheque]').forEach(function (e) { e.hidden = tipo !== '5'; });
+    vuelto(fila);
+  }
+  // efectivo (la forma que acepta vuelto): lo que entrega el cliente y la calculadora de vuelto (vuelto.js, D-134)
+  function vuelto(fila) {
+    var op = fila.querySelector('[data-fpago] option:checked');
+    var acepta = !!op && op.getAttribute('data-vuelto') === '1';
+    var lugar = fila.querySelector('[data-recibido-caja]');
+    if (!lugar) return;
+    lugar.hidden = !acepta;
+    if (acepta && !fila._vuelto && window.Vuelto) fila._vuelto = window.Vuelto.crear(lugar.querySelector('[data-recibido]'), lugar);
+    if (fila._vuelto) {
+      fila._vuelto.caja.hidden = !acepta;
+      if (acepta) fila._vuelto.actualizar(num(fila.querySelector('[data-pago-importe]').value));
+    }
   }
   qa('[data-pago]').forEach(cheque);
   var todo = q('[data-cobrar-todo]');
@@ -95,6 +111,8 @@
     if (ev.target.matches('[data-quitar-ret]')) { ev.target.closest('[data-ret-fila]').remove(); recalcular(); }
   });
   form.addEventListener('submit', function (ev) {
+    var corto = Array.prototype.filter.call(qa('[data-recibido]'), function (i) { return !i.closest('[data-recibido-caja]').hidden && i.getAttribute('aria-invalid') === 'true'; })[0];
+    if (corto) { ev.preventDefault(); corto.scrollIntoView({ block: 'center' }); corto.focus({ preventScroll: true }); return; }
     var b = q('[data-confirmar-recibo]');
     if (b && !window.confirm('¿Confirmás el recibo por ' + q('[data-t-neto]').textContent + '?')) ev.preventDefault();
   });

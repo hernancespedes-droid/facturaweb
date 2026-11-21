@@ -189,6 +189,9 @@ final class ComprobantesController
             ? 'Ese comprobante ya se había emitido (no se emitió otro).'
             : Tipos::titulo($r['cbte']['tipo'], $r['cbte']['letra']) . ' ' . numero_cbte($r['cbte']['prefijo'], $e['numero']) . ($r['cbte']['tipo'] === 'PR' ? ' emitido.' : ' emitida.')
                 . (($e['vuelto'] ?? 0) > 0 ? ' DAR VUELTO AL CLIENTE: ' . plata_dec($e['vuelto']) . '.' : ''));
+        if (!$e['repetido'] && ($e['vuelto'] ?? 0) > 0) {
+            Session::flash('vuelto', (string) $e['vuelto']); // cartel grande en la pantalla siguiente (D-134)
+        }
         if (($datos['origen'] ?? '') === 'kiosco') { // vuelve al carrito, con el aviso de la venta hecha
             return Response::redirect(url('/kiosco') . '?hecho=' . $e['id']);
         }

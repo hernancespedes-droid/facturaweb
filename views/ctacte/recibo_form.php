@@ -46,8 +46,9 @@ $filaPago = static function (string $n, array $p) use ($formas, $bancos): string
     <div class="pago-fila form-grid" data-pago>
         <label class="field"><span>Forma de pago</span><select name="pagos[<?= e($n) ?>][fpago]" data-fpago>
             <option value="">Elegí…</option>
-            <?php foreach ($formas as $f): ?><option value="<?= e($f['codigo']) ?>" data-tipo="<?= (int) $f['tipo'] ?>" <?= ($p['fpago'] ?? '') === $f['codigo'] ? 'selected' : '' ?>><?= e($f['descripcion']) ?></option><?php endforeach; ?></select></label>
+            <?php foreach ($formas as $f): ?><option value="<?= e($f['codigo']) ?>" data-tipo="<?= (int) $f['tipo'] ?>" data-vuelto="<?= (int) ($f['acepta_vuelto'] ?? 0) ?>" <?= ($p['fpago'] ?? '') === $f['codigo'] ? 'selected' : '' ?>><?= e($f['descripcion']) ?></option><?php endforeach; ?></select></label>
         <label class="field"><span>Importe</span><input name="pagos[<?= e($n) ?>][importe]" value="<?= e($p['importe'] ?? '') ?>" inputmode="decimal" data-decimales="2" data-pago-importe></label>
+        <label class="field" data-recibido-caja hidden><span>Recibido (lo que entrega el cliente)</span><input name="pagos[<?= e($n) ?>][recibido]" value="<?= e($p['recibido'] ?? '') ?>" inputmode="decimal" data-decimales="2" data-recibido placeholder="Vacío = el importe justo"></label>
         <label class="field" data-solo-cheque hidden><span>N.º de cheque</span><input name="pagos[<?= e($n) ?>][nro]" value="<?= e($p['nro'] ?? '') ?>" maxlength="20"></label>
         <label class="field" data-solo-cheque hidden><span>Banco</span><select name="pagos[<?= e($n) ?>][banco]"><option value="">Elegí…</option>
             <?php foreach ($bancos as $b): ?><option value="<?= (int) $b['codigo'] ?>" <?= (string) ($p['banco'] ?? '') === (string) $b['codigo'] ? 'selected' : '' ?>><?= e($b['descripcion']) ?></option><?php endforeach; ?></select></label>
@@ -147,4 +148,5 @@ $filaPago = static function (string $n, array $p) use ($formas, $bancos): string
     </section>
     <div class="acciones"><button class="btn" type="submit" data-confirmar-recibo>Grabar recibo</button><a class="btn btn-ghost" href="<?= e(url('/recibos')) ?>">Cancelar</a></div>
 </form>
+<script src="<?= e(asset('assets/vuelto.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/recibo.js')) ?>" defer></script>

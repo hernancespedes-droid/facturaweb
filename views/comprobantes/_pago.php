@@ -1,7 +1,7 @@
 <?php
 /**
  * Cómo se paga (una o varias formas de pago). Espera $totalPago, $formaDefecto ('1' contado, '2' cuenta corriente), $errores, $pagoCargado, $formas, $bancos,
- * $puedeCredito y $formId (id del <form> al que pertenecen los campos).
+ * $puedeCredito y $formId (id del <form> al que pertenecen los campos). Opcional $enfocarRecibido: el cursor arranca en «Recibido» (kiosco).
  */
 $pv = static fn (string $k, string $d = ''): string => (string) ($pagoCargado[$k] ?? $d);
 $forma = $pv('forma_pago', $formaDefecto);
@@ -37,7 +37,7 @@ $lineaHtml = static function (string $n, array $p, bool $primera) use ($formas, 
     <?php return (string) ob_get_clean();
 };
 ?>
-<section class="card" data-pago data-total="<?= e((string) $totalPago) ?>" id="como-se-paga">
+<section class="card" data-pago data-total="<?= e((string) $totalPago) ?>" id="como-se-paga"<?= !empty($enfocarRecibido) ? ' data-enfocar-recibido' : '' ?>>
     <h2>Cómo se paga</h2>
     <p class="total-cobrar">Total a cobrar: <b><?= e(plata_dec($totalPago)) ?></b></p>
     <?php foreach ($erroresPago as $m): ?><div class="alerta alerta-error" role="alert"><?= nl2br(e($m)) ?></div><?php endforeach; ?>
@@ -62,4 +62,5 @@ $lineaHtml = static function (string $n, array $p, bool $primera) use ($formas, 
         <label class="check"><input type="checkbox" name="excede_ok" form="<?= e($formId) ?>" value="1" <?= $pv('excede_ok') === '1' ? 'checked' : '' ?>> <b>Autorizo exceder el crédito del cliente</b></label>
     <?php endif; ?>
 </section>
+<script src="<?= e(asset('assets/vuelto.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/pago.js')) ?>" defer></script>

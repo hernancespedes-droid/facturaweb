@@ -1200,3 +1200,22 @@ document.addEventListener('DOMContentLoaded', function () {
   propio.addEventListener('change', pintar);
   pintar();
 });
+
+// Cartel grande del vuelto después de cobrar (D-134): se cierra con el botón, Enter o Escape y devuelve el cursor al campo de la pantalla (el buscador del kiosco)
+document.addEventListener('DOMContentLoaded', function () {
+  var cartel = document.querySelector('[data-vuelto-final]');
+  if (!cartel) return;
+  var listo = cartel.querySelector('[data-vuelto-listo]');
+  function cerrar() {
+    cartel.remove();
+    document.removeEventListener('keydown', teclas, true);
+    var foco = document.querySelector('main [autofocus]');
+    if (foco) foco.focus({ preventScroll: true });
+  }
+  function teclas(ev) {
+    if (ev.key === 'Enter' || ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); cerrar(); }
+  }
+  listo.addEventListener('click', cerrar);
+  document.addEventListener('keydown', teclas, true);
+  setTimeout(function () { listo.focus({ preventScroll: true }); }, 0);
+});

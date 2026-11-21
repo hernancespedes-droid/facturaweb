@@ -177,7 +177,7 @@ final class CuentaCorrienteService
     /** @return array<int,array<string,mixed>> formas de pago que se pueden usar en un recibo (no cta. cte. ni nota de crédito) */
     public function formasDePago(): array
     {
-        return $this->pdo->query('SELECT codigo, descripcion, tipo FROM forma_de_pagos WHERE tipo NOT IN (6, 8) ORDER BY descripcion')->fetchAll();
+        return $this->pdo->query('SELECT codigo, descripcion, tipo, acepta_vuelto FROM forma_de_pagos WHERE tipo NOT IN (6, 8) ORDER BY descripcion')->fetchAll();
     }
 
     // ------------------------------------------------------------------ recibos
@@ -325,6 +325,23 @@ final class CuentaCorrienteService
                 $err['pagos'] = 'El número de un medio de pago es demasiado largo (hasta 20).';
                 continue;
             }
+            // lo que entrega el cliente y el vuelto (D-44, D-134): vacío es el importe justo; de menos no vale; de más solo si la forma acepta vuelto
+            $linea['recibido'] = null;
+            $linea['vuelto'] = 0.0;
+            $recTxt = trim((string) ($p['recibido'] ?? ''));
+            if ($recTxt !== '') {
+                $rec = Valida::decimal($recTxt);
+                if ($rec === null || $rec < $linea['importe'] - 0.004) {
+                    $err['pagos'] = 'Lo recibido en ' . $linea['descripcion'] . ' no alcanza para ' . plata_dec($linea['importe']) . '.';
+                    continue;
+                }
+                if ($rec > $linea['importe'] + 0.004 && (int) ($formas[$fp]['acepta_vuelto'] ?? 0) !== 1) {
+                    $err['pagos'] = $linea['descripcion'] . ' no acepta vuelto: cobrá exactamente ' . plata_dec($linea['importe']) . '.';
+                    continue;
+                }
+                $linea['recibido'] = self::redondear($rec);
+                $linea['vuelto'] = max(0.0, self::redondear($rec - $linea['importe']));
+            }
             $pagos[] = $linea;
             $totalPagos += $linea['importe'];
         }
@@ -429,10 +446,10 @@ final class CuentaCorrienteService
 
             foreach ($r['pagos'] as $p) {
                 $ctx = \App\Modules\Caja\CajaService::contexto();
-                $this->pdo->prepare('INSERT INTO caja (cobra_id, fecha, tipo, letra, canal, terminal, sucursal, prefijo, comprobante, cliente, p_fpago, p_cuotas, p_nro, p_fecvto, p_banco, p_cotiz, p_importe, a_pagar, actualizacion, usuario_id, creado_en, turno_id)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                $this->pdo->prepare('INSERT INTO caja (cobra_id, fecha, tipo, letra, canal, terminal, sucursal, prefijo, comprobante, cliente, p_fpago, p_cuotas, p_nro, p_fecvto, p_banco, p_cotiz, p_importe, p_recibido, p_vuelto, a_pagar, actualizacion, usuario_id, creado_en, turno_id)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
                     ->execute([$cobraId, $r['fecha'], 'RC', self::LETRA_RECIBO, self::CANAL, 1, $r['sucursal'], $r['prefijo'], $numero, $cli['codigo'], $p['codigo'], 0,
-                        $p['nro'] !== '' ? $p['nro'] : null, $p['vencimiento'], $p['banco'], 1, $p['importe'], $p['importe'], $ahora, $ctx['usuario_id'], $ctx['creado_en'], $ctx['turno_id']]);
+                        $p['nro'] !== '' ? $p['nro'] : null, $p['vencimiento'], $p['banco'], 1, $p['importe'], $p['recibido'] ?? $p['importe'], $p['vuelto'] ?? 0, $p['importe'], $ahora, $ctx['usuario_id'], $ctx['creado_en'], $ctx['turno_id']]);
             }
             $this->pdo->commit();
         } catch (\PDOException $e) {

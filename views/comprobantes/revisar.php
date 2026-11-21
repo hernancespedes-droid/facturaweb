@@ -100,6 +100,7 @@ $disc = $c['letra'] === 'A';
     $totalPago = (float) $k['total'];
     $formaDefecto = (int) ($cli['forma_pago'] ?? 2) === 1 ? '1' : '2';
     $formId = 'form-emitir';
+    $enfocarRecibido = !empty($urlVolver); // desde el kiosco
     require __DIR__ . '/_pago.php';
 endif; ?>
 

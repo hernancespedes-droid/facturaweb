@@ -1156,6 +1156,40 @@ input[data-devolver] { width: 6.5rem; min-width: 0; text-align: right; display: 
 .pago-linea .pago-cheque { flex: 1 1 100%; }
 .pago-linea .pago-quitar { flex: 0 0 auto; }
 
+/* Calculadora de vuelto (vuelto.js, D-134) */
+.vuelto-caja { flex: 1 1 100%; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--panel-2); padding: 12px; margin: 4px 0 0; min-width: 0; }
+.pago-fila .vuelto-caja { grid-column: 1 / -1; }
+.vuelto-cifras { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 10px; margin-bottom: 10px; }
+.vuelto-cifras > div { display: flex; flex-direction: column; min-width: 0; padding: 6px 10px; border-radius: 8px; background: var(--panel); }
+.vuelto-cifras span { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.vuelto-cifras b { font-size: 1.3rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vuelto-resultado b { font-size: 1.9rem; line-height: 1.15; }
+.vuelto-resultado.es-vuelto { background: color-mix(in srgb, var(--ok) 18%, var(--panel)); outline: 2px solid var(--ok); }
+.vuelto-resultado.es-vuelto b { color: var(--ok); }
+.vuelto-resultado.es-falta { background: color-mix(in srgb, var(--danger) 16%, var(--panel)); outline: 2px solid var(--danger); }
+.vuelto-resultado.es-falta b { color: var(--danger); }
+.vuelto-resultado.es-justo b { color: var(--ok); }
+.vuelto-botones { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 6px; }
+.vuelto-botones > span:not(.small) { display: contents; }
+.vuelto-btn { font-variant-numeric: tabular-nums; min-height: 38px; white-space: nowrap; }
+.vuelto-justo { border-color: var(--ok); }
+.vuelto-borrar { color: var(--muted); }
+.vuelto-desglose { margin: 4px 0 0; color: var(--muted); }
+.vuelto-caja.sacudir { animation: vuelto-sacudir .35s; }
+@keyframes vuelto-sacudir { 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }
+@media (max-width: 640px) {
+  .vuelto-cifras { grid-template-columns: 1fr 1fr; }
+  .vuelto-resultado { grid-column: 1 / -1; }
+  .vuelto-botones > .small { flex: 1 1 100%; }
+  .vuelto-btn { flex: 1 1 calc(33% - 6px); padding-left: 4px; padding-right: 4px; font-size: .85rem; }
+}
+@media (prefers-reduced-motion: reduce) { .vuelto-caja.sacudir { animation: none; } }
+.vuelto-final { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(0, 0, 0, .55); padding: 16px; }
+.vuelto-final-caja { background: var(--panel); border: 2px solid var(--ok); border-radius: 16px; padding: 24px 28px; text-align: center; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0, 0, 0, .45); }
+.vuelto-final-caja p { margin: 0 0 6px; font-size: 1.1rem; color: var(--muted); }
+.vuelto-final-monto { display: block; font-size: clamp(2.2rem, 9vw, 3.4rem); color: var(--ok); font-variant-numeric: tabular-nums; margin-bottom: 18px; }
+.vuelto-final-caja .btn { width: 100%; min-height: 48px; font-size: 1.05rem; }
+
 /* Modo Kiosco: tarjetas de productos y carrito siempre visible */
 .kiosco { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
 .kiosco-catalogo { min-width: 0; }

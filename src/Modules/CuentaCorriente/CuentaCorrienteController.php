@@ -158,7 +158,12 @@ final class CuentaCorrienteController
         } catch (\InvalidArgumentException $ex) {
             return self::formRecibo($svc, $datos, ['general' => 'Se perdió la clave del envío. Volvé a confirmar el recibo.'], null, 422);
         }
-        Session::flash('ok', $e['repetido'] ? 'Ese recibo ya estaba cargado.' : 'Recibo N.º ' . numero_cbte($r['recibo']['prefijo'], $e['numero']) . ' grabado.');
+        $vuelto = round(array_sum(array_column($r['recibo']['pagos'], 'vuelto')), 2);
+        Session::flash('ok', $e['repetido'] ? 'Ese recibo ya estaba cargado.' : 'Recibo N.º ' . numero_cbte($r['recibo']['prefijo'], $e['numero']) . ' grabado.'
+            . (!$e['repetido'] && $vuelto > 0 ? ' DAR VUELTO AL CLIENTE: ' . plata_dec($vuelto) . '.' : ''));
+        if (!$e['repetido'] && $vuelto > 0) {
+            Session::flash('vuelto', (string) $vuelto); // D-134
+        }
         return Response::redirect(url('/recibos/' . $e['id']));
     }
 
