@@ -48,6 +48,8 @@ final class Menu
         $o['compras_nueva'] = ['texto' => 'Nueva compra o gasto', 'ruta' => '/compras/nueva', 'permiso' => 'compras.cargar', 'grupo' => 'Compras'];
         $o['compras_lista'] = ['texto' => 'Compras cargadas', 'ruta' => '/compras/lista', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
         $o['compras_apagar'] = ['texto' => 'A pagar y vencimientos', 'ruta' => '/compras/a-pagar', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['compras_pagos'] = ['texto' => 'Órdenes de pago', 'ruta' => '/compras/pagos', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
+        $o['compras_cuenta'] = ['texto' => 'Cuenta corriente de proveedores', 'ruta' => '/compras/proveedores/cuenta', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
         $o['compras_analisis'] = ['texto' => 'Análisis de gastos', 'ruta' => '/compras/analisis', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
         $o['compras_presupuesto'] = ['texto' => 'Presupuesto contra real', 'ruta' => '/compras/presupuesto', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];
         $o['compras_iva'] = ['texto' => 'Subdiario IVA compras', 'ruta' => '/compras/iva', 'permiso' => 'compras.ver', 'grupo' => 'Compras'];

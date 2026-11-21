@@ -98,6 +98,7 @@ final class ComprasController
             'conceptoOmision' => $cs->conceptoPorOmision(), 'inscripta' => $svc->empresaInscripta(), 'operacion' => $operacion ?? bin2hex(random_bytes(16)),
             'turno' => \App\Core\Modulos::activo('caja') ? (new \App\Modules\Caja\CajaService())->turnoAbierto(self::uid()) : ['id' => 0],
             'puedeCentros' => Auth::puede('compras.centros'),
+            'depositos' => (new \App\Modules\Stock\StockService())->depositos(), 'stockActivo' => \App\Modules\Stock\StockService::activo(),
         ]), $status);
     }
 
@@ -320,6 +321,41 @@ final class ComprasController
     }
 
     /** Buscador y lupa de proveedores: mismo formato que el de clientes (cliente-picker.js y VentanaLista). */
+    public static function buscarArticulo(Request $req, array $params): Response
+    {
+        $q = trim((string) ($req->query['q'] ?? ''));
+        if (isset($req->query['listar'])) {
+            $r = \App\Modules\Articulos\BuscadorArticulos::listar($q, (int) ($req->query['pagina'] ?? 1));
+            if (isset($r['items']) && is_array($r['items'])) {
+                $r['items'] = self::conCosto($r['items']);
+            }
+            return Response::json($r);
+        }
+        return Response::json(self::conCosto(\App\Modules\Articulos\BuscadorArticulos::buscar($q, isset($req->query['exacto']))));
+    }
+
+    /** Suma el costo actual de cada artículo (en la compra se propone ese costo). @param list<array<string,mixed>> $items @return list<array<string,mixed>> */
+    private static function conCosto(array $items): array
+    {
+        $cods = array_values(array_filter(array_map(static fn ($x) => is_array($x) ? (string) ($x['codigo'] ?? '') : '', $items), static fn ($c) => $c !== ''));
+        if ($cods === []) {
+            return $items;
+        }
+        $st = \App\Core\Db::pdo()->prepare('SELECT codigo, costo FROM articulos WHERE codigo IN (' . implode(',', array_fill(0, count($cods), '?')) . ')');
+        $st->execute($cods);
+        $costos = [];
+        foreach ($st->fetchAll(\PDO::FETCH_ASSOC) as $f) {
+            $costos[(string) $f['codigo']] = round((float) $f['costo'], 2);
+        }
+        foreach ($items as &$x) {
+            if (is_array($x)) {
+                $x['costo'] = $costos[(string) ($x['codigo'] ?? '')] ?? 0;
+            }
+        }
+        unset($x);
+        return $items;
+    }
+
     public static function buscarProveedor(Request $req, array $params): Response
     {
         $svc = new ProveedoresService();

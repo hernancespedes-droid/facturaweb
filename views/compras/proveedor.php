@@ -15,6 +15,7 @@ $ro = $puedeCargar ? '' : ' disabled';
 <div class="page-head">
     <div><p class="eyebrow">Compras · Proveedores</p><h1><?= e($p['razon_social'] ?? 'Nuevo proveedor') ?></h1></div>
     <div class="acciones">
+        <?php if ($p !== null): ?><a class="btn btn-ghost" href="<?= e(url('/compras/proveedores/cuenta?proveedor=' . (int) $p['id'])) ?>">Cuenta corriente</a><?php endif; ?>
         <?php if ($p !== null && $puedeCargar): ?><a class="btn" href="<?= e(url('/compras/nueva?proveedor=' . (int) $p['id'])) ?>">Cargarle una compra</a><?php endif; ?>
         <a class="btn btn-ghost" href="<?= e(url('/compras/proveedores')) ?>">Volver</a>
     </div>

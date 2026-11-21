@@ -117,7 +117,12 @@ que no se desactiva, D-110; presupuesto mensual `centros_presupuesto`; conceptos
 `VentanaLista.proveedores`), `ComprasService` (`armar` valida y calcula: IVA por alícuota, percepciones, costo D-111, controles D-112, reparto entre centros que suma 100 %; `grabar` en una transacción
 con adjuntos en la base; pagos: efectivo = `caja_movimientos` del turno, D-113, que `CajaService::anular` no deja anular) y `ComprasListados` (análisis, presupuesto contra gastado, a pagar por antigüedad,
 subdiario de IVA compras, `tablero()` para `/compras` con gráficos SVG en `compras-graficos.js` y `resumenInicio()` para la tarjeta del inicio). **Los gastos suman `compras_reparto.importe`
-(costo sin IVA computable ni percepciones) y las NC restan.** Entregas B (órdenes de pago con retenciones, compras con artículos y stock) y C quedan para después.
+(costo sin IVA computable ni percepciones) y las NC restan.** 
+**Entrega B (0.46.0):** `OrdenesPagoService` (órdenes de pago: `armar` valida, `emitir` numera con `compras_numeradores` bloqueado, bloquea compras, anticipos y cheques y revalida;
+medios E efectivo del turno, T, Q cheque de la cartera → `caja.cheque_estado = 'E'`, P cheque propio, R retención a mano, O; lo de más queda en `ordenes_pago.anticipo_saldo`, D-115..D-117;
+`anular` devuelve saldos, cheques y efectivo; `cuentaCorriente` con saldo corrido), `OrdenPagoPdf` (PDF y mail), pantallas `/compras/pagos…` y `/compras/proveedores/cuenta`
+(`ordenes-pago.js`). El saldo del proveedor resta `anticipo_saldo`. Compras con artículos (`compras_items`, D-118): mueven stock con origen `COMPRA`/`DEVCOMPRA`/`ANUCOMPRA` y actualizan
+`articulos.costo`. Una compra en una orden vigente no se anula. Entrega C (QR, Mis Comprobantes, Libro IVA compras, resultado del mes) queda para después.
 
 ## Libro IVA Digital (ventas)
 

@@ -280,12 +280,80 @@ final class ComprasService
         }
         $c['a_revisar'] = ($d['a_revisar'] ?? '') === '1' ? 1 : 0;
 
+        // ------- artículos (DECISIÓN D-118)
+        $c['items'] = [];
+        $c['deposito_id'] = null;
+        $c['actualizar_costo'] = ($d['actualizar_costo'] ?? '') === '1';
+        if (($d['con_articulos'] ?? '') === '1') {
+            $r = $this->armarItems($d, $c);
+            if (isset($r['error'])) {
+                $e['items'] = $r['error'];
+            } else {
+                $c['items'] = $r['items'];
+                $c['deposito_id'] = $r['deposito'];
+            }
+        }
+
         // ------- repetido (se vuelve a controlar al grabar, con el proveedor bloqueado)
         if ($e === [] && !$gs && $this->repetida($c) !== null) {
             $e['numero'] = 'Ese comprobante de este proveedor ya está cargado (' . self::titulo($c) . ').';
         }
         $c['proveedor'] = $prov;
         return ['ok' => $e === [], 'errores' => $e, 'compra' => $c];
+    }
+
+    /**
+     * Renglones con artículo: cantidad y costo unitario (sin IVA si el comprobante discrimina, con IVA si no). No tienen que sumar todo el comprobante
+     * (puede haber flete u otros gastos), pero no pueden pasarse de lo que se compró.
+     * @return array{items?:array<int,array<string,mixed>>,deposito?:?int,error?:string}
+     */
+    private function armarItems(array $d, array $c): array
+    {
+        $items = [];
+        $buscar = $this->pdo->prepare("SELECT codigo, descripcion, costo, moneda, controla_stock FROM articulos WHERE codigo = ? AND estado = 'AC'");
+        foreach ((is_array($d['items'] ?? null) ? $d['items'] : []) as $it) {
+            if (!is_array($it)) {
+                continue;
+            }
+            $cod = mb_strtoupper(trim((string) ($it['articulo'] ?? '')));
+            $cantTxt = trim((string) ($it['cantidad'] ?? ''));
+            $costoTxt = trim((string) ($it['costo'] ?? ''));
+            if ($cod === '' && $cantTxt === '' && $costoTxt === '') {
+                continue;
+            }
+            $buscar->execute([$cod]);
+            $a = $buscar->fetch();
+            if (!$a) {
+                return ['error' => 'El artículo «' . $cod . '» no existe o está dado de baja: elegilo de la lista.'];
+            }
+            $cant = Valida::decimal($cantTxt);
+            $costo = Valida::decimal($costoTxt);
+            if ($cant === null || $cant <= 0 || $cant > 9999999) {
+                return ['error' => 'La cantidad de ' . $a['codigo'] . ' tiene que ser mayor que cero.'];
+            }
+            if ($costo === null || $costo < 0) {
+                return ['error' => 'El costo unitario de ' . $a['codigo'] . ' no es válido.'];
+            }
+            $items[] = ['articulo' => (string) $a['codigo'], 'descripcion' => mb_substr((string) $a['descripcion'], 0, 120), 'cantidad' => round($cant, 3),
+                'costo_unitario' => round($costo, 4), 'total' => Calculadora::r2($cant * $costo), 'moneda' => (string) $a['moneda'],
+                'controla_stock' => (int) $a['controla_stock'], 'costo_actual' => (float) $a['costo']];
+        }
+        if ($items === []) {
+            return ['error' => 'Cargá al menos un artículo (o destildá «Con artículos»).'];
+        }
+        $base = Calculadora::r2($c['gravado'] + $c['no_gravado'] + $c['exento']);
+        $suma = Calculadora::r2(array_sum(array_column($items, 'total')));
+        if ($suma - $base > 1.0) {
+            return ['error' => 'Los artículos suman ' . plata_dec($suma) . ' y el comprobante es de ' . plata_dec($base) . ($c['computa_iva'] || self::discrimina($c['tipo'], $c['letra']) ? ' sin IVA' : '')
+                . '. Revisá cantidades y costos (el costo unitario va ' . (self::discrimina($c['tipo'], $c['letra']) ? 'sin IVA' : 'con IVA') . ').'];
+        }
+        $stock = new \App\Modules\Stock\StockService($this->pdo);
+        $dep = (int) ($d['deposito'] ?? 0);
+        $deps = array_column($stock->depositos(), null, 'id');
+        if (!isset($deps[$dep])) {
+            $dep = $stock->depositoPrincipal();
+        }
+        return ['items' => $items, 'deposito' => $dep ?: null];
     }
 
     private static function pct(float $a): string
@@ -378,6 +446,9 @@ final class ComprasService
                 $ins->bindValue(5, $a['contenido'], PDO::PARAM_LOB);
                 $ins->execute();
             }
+            if (($c['items'] ?? []) !== []) {
+                $this->grabarItems($id, $c, $usuarioId);
+            }
             if ($c['forma'] !== 'C') {
                 $this->registrarPago($id, $c, $c['forma'] === 'E' ? 'E' : 'O', $c['total'], $c['detalle_pago'], $usuarioId, $turno, $c['fecha']);
             }
@@ -386,6 +457,37 @@ final class ComprasService
         } catch (\Throwable $e) {
             $this->pdo->rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * Dentro de la transacción: renglones, stock (la nota de crédito devuelve) y costo del artículo.
+     * DECISIÓN D-118: el costo del artículo se reemplaza por el costo unitario de la compra (sin IVA si se computa el crédito; con IVA si no) solo si el
+     * artículo está en pesos, la compra no es una nota de crédito y se tildó «Actualizar el costo». No cambia los precios de venta. El stock se mueve
+     * solo con el control de stock encendido y en los artículos que lo controlan.
+     */
+    private function grabarItems(int $compraId, array $c, int $usuarioId): void
+    {
+        $stock = new \App\Modules\Stock\StockService($this->pdo);
+        $mueve = \App\Modules\Stock\StockService::activo() && $c['deposito_id'] !== null;
+        $nc = $c['tipo'] === 'NC';
+        $titulo = self::titulo($c) . ' · ' . ($c['proveedor']['razon_social'] ?? '');
+        $ins = $this->pdo->prepare('INSERT INTO compras_items (compra_id, articulo, descripcion, cantidad, costo_unitario, total, deposito_id, costo_anterior, stock_mov_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $items = $c['items'];
+        usort($items, static fn ($a, $b) => strcmp($a['articulo'], $b['articulo'])); // mismo orden de bloqueo que las ventas
+        foreach ($items as $it) {
+            $mov = null;
+            if ($mueve && $it['controla_stock'] === 1) {
+                $mov = $stock->mover($it['articulo'], (int) $c['deposito_id'], ($nc ? -1 : 1) * $it['cantidad'], $nc ? 'DEVCOMPRA' : 'COMPRA', null, $usuarioId ?: null, mb_substr($titulo, 0, 255), 'compra:' . $compraId);
+            }
+            $anterior = null;
+            if ($c['actualizar_costo'] && !$nc && $it['moneda'] === '$') {
+                $q = $this->pdo->prepare('SELECT costo FROM articulos WHERE codigo = ? FOR UPDATE');
+                $q->execute([$it['articulo']]);
+                $anterior = (float) $q->fetchColumn();
+                $this->pdo->prepare('UPDATE articulos SET costo = ? WHERE codigo = ?')->execute([$it['costo_unitario'], $it['articulo']]);
+            }
+            $ins->execute([$compraId, $it['articulo'], $it['descripcion'], $it['cantidad'], $it['costo_unitario'], $it['total'], $c['deposito_id'], $anterior, $mov]);
         }
     }
 
@@ -487,6 +589,8 @@ final class ComprasService
             LEFT JOIN centros_costo pc ON pc.id = cc.padre_id JOIN conceptos_gasto cg ON cg.id = r.concepto_id WHERE r.compra_id = ? ORDER BY r.id');
         $c['adjuntos'] = $q('SELECT id, nombre, mime, tamano, creado_en FROM compras_adjuntos WHERE compra_id = ? ORDER BY id');
         $c['pagos'] = $q('SELECT pg.*, u.nombre AS usuario FROM compras_pagos pg LEFT JOIN usuarios u ON u.id = pg.usuario_id WHERE pg.compra_id = ? ORDER BY pg.id');
+        $c['items'] = $q('SELECT i.*, d.nombre AS deposito FROM compras_items i LEFT JOIN depositos d ON d.id = i.deposito_id WHERE i.compra_id = ? ORDER BY i.id');
+        $c['ordenes'] = (new OrdenesPagoService($this->pdo))->deCompra($id);
         return $c;
     }
 
@@ -648,6 +752,12 @@ final class ComprasService
                 $this->pdo->rollBack();
                 return ['ok' => false, 'error' => $c ? 'La compra ya está anulada.' : 'No existe esa compra.'];
             }
+            $op = $this->pdo->prepare("SELECT o.numero FROM ordenes_pago_imputaciones i JOIN ordenes_pago o ON o.id = i.orden_id WHERE i.compra_id = ? AND o.estado = 'V' LIMIT 1");
+            $op->execute([$compraId]);
+            if (($nOp = $op->fetchColumn()) !== false) {
+                $this->pdo->rollBack();
+                return ['ok' => false, 'error' => 'La compra está en la ' . OrdenesPagoService::numeroVisible((int) $nOp) . ': anulá primero la orden de pago.'];
+            }
             $pg = $this->pdo->prepare('SELECT * FROM compras_pagos WHERE compra_id = ? AND anulado = 0 AND caja_movimiento_id IS NOT NULL');
             $pg->execute([$compraId]);
             $enCaja = $pg->fetchAll();
@@ -672,6 +782,14 @@ final class ComprasService
                 $caja->auditar('anulacion', 'movimiento', (int) $mov['id'], 'Anulación de compra ' . $compraId . ' · ' . $motivo, $usuarioId);
             }
             $this->pdo->prepare('UPDATE compras_pagos SET anulado = 1 WHERE compra_id = ?')->execute([$compraId]);
+            // el stock que movió vuelve (el costo del artículo no se toca: puede haber cambiado después)
+            $it = $this->pdo->prepare('SELECT i.articulo, i.cantidad, i.deposito_id FROM compras_items i WHERE i.compra_id = ? AND i.stock_mov_id IS NOT NULL ORDER BY i.articulo');
+            $it->execute([$compraId]);
+            $stock = new \App\Modules\Stock\StockService($this->pdo);
+            foreach ($it->fetchAll() as $i) {
+                $stock->mover((string) $i['articulo'], (int) $i['deposito_id'], ($c['tipo'] === 'NC' ? 1 : -1) * (float) $i['cantidad'], 'ANUCOMPRA', null, $usuarioId ?: null,
+                    mb_substr('Anulación de ' . self::titulo($c) . ': ' . $motivo, 0, 255), 'compra:' . $compraId);
+            }
             $this->pdo->prepare("UPDATE compras SET estado = 'A', saldo = 0, anulada_en = NOW(), anulada_por = ?, motivo_anulacion = ? WHERE id = ?")
                 ->execute([$usuarioId ?: null, $motivo, $compraId]);
             $this->pdo->commit();
