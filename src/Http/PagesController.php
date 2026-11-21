@@ -16,7 +16,7 @@ final class PagesController
      */
     public static function home(Request $req, array $params): Response
     {
-        return Response::html(View::render('home', ['title' => 'Inicio', 'nav' => 'inicio']));
+        return Response::html(View::render('home', ['title' => 'Inicio', 'nav' => 'inicio', 'tb' => \App\Modules\Tablero\Tablero::datos($req->query)]));
     }
 
     /**

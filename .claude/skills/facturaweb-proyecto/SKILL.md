@@ -210,3 +210,9 @@ El mail de cada factura agrega la dirección del portal cuando está activo.
 Hernán aprobó la propuesta (estadística con ranking, rentabilidad, costos y márgenes, movimientos de stock con trazabilidad, existencias a una fecha) y las decisiones D-62 a D-65:
 el costo se graba al vender (`estadistica.costo`), permiso nuevo `listados.costos` (Administrador y Master), presupuestos incluidos con filtro «Solo fiscales».
 Quedan para después: historial de cambios de costo (tabla nueva) y comparativo contra el año anterior.
+
+## Tablero de inicio con gráficos (0.40.0, 21/11/2026)
+Hernán aprobó la maqueta (https://claude.ai/artifact/6Qdh1shkrW2owbXnS47vcn) y pidió fusionar al terminar. El inicio muestra la venta del período (hoy, mes, mes pasado, 12 meses; por sucursal)
+contra el período anterior, tarjetas (hoy, ticket promedio, margen, cobrado, deuda, turno), venta acumulada del mes contra el anterior, venta por mes, lo más vendido, mejores clientes,
+cómo te pagaron, avisos para atender y accesos rápidos; abajo, «Todo el menú». Decisiones D-90 a D-92 a confirmar. Compras suma su propia tarjeta con `Tablero::EXTRAS`.
+
