@@ -214,7 +214,7 @@ Quedan para después: historial de cambios de costo (tabla nueva) y comparativo 
 ## Tablero de inicio con gráficos (0.40.0, 21/11/2026)
 Hernán aprobó la maqueta (https://claude.ai/artifact/6Qdh1shkrW2owbXnS47vcn) y pidió fusionar al terminar. El inicio muestra la venta del período (hoy, mes, mes pasado, 12 meses; por sucursal)
 contra el período anterior, tarjetas (hoy, ticket promedio, margen, cobrado, deuda, turno), venta acumulada del mes contra el anterior, venta por mes, lo más vendido, mejores clientes,
-cómo te pagaron, avisos para atender y accesos rápidos; abajo, «Todo el menú». Decisiones D-90 a D-92 a confirmar. Compras suma su propia tarjeta con `Tablero::EXTRAS`.
+cómo te pagaron, avisos para atender y accesos rápidos; abajo, «Todo el menú». Decisiones D-90 a D-92 aprobadas por Hernán el 21/11/2026. Compras suma su propia tarjeta con `Tablero::EXTRAS`.
 
 
 ## Ingresos de Mercado Pago (0.41.0, 21/11/2026)
