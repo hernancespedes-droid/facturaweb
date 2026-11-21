@@ -170,7 +170,11 @@ final class MercadoPagoController
             return new Response(404);
         }
         $svc = new MercadoPagoService();
-        $svc->confirmar((string) $c['token'], ['id' => (string) random_int(100000000, 999999999), 'estado' => 'approved', 'referencia' => (string) $c['token'], 'monto' => (float) $c['importe']]);
+        $pagoId = (string) random_int(100000000, 999999999);
+        $svc->confirmar((string) $c['token'], ['id' => $pagoId, 'estado' => 'approved', 'referencia' => (string) $c['token'], 'monto' => (float) $c['importe']]);
+        (new IngresosService())->registrar(['mp_pago_id' => 'SIM-' . $pagoId, 'estado' => 'approved', 'fecha' => date('Y-m-d H:i:s'), 'monto' => (float) $c['importe'],
+            'neto' => round((float) $c['importe'] * 0.95, 2), 'moneda' => 'ARS', 'medio' => 'account_money', 'medio_detalle' => 'account_money', 'pagador' => 'Cliente de prueba',
+            'pagador_mail' => '', 'pagador_doc' => '', 'descripcion' => mb_substr((string) $c['descripcion'], 0, 255), 'referencia' => (string) $c['token']], 'simulado', 'S');
         Session::flash('ok', 'Pago simulado aprobado.');
         return Response::redirect(url('/mercadopago/cobro/' . $c['token']));
     }
@@ -200,6 +204,9 @@ final class MercadoPagoController
                 'merchant_order' => MercadoPago::pagoDeOrden($id),
                 default => null,
             };
+            if ($pago !== null) {
+                (new IngresosService())->registrar($pago['ingreso'] ?? null, 'webhook', 'P'); // todo pago que entra a la cuenta, sea o no de una venta de acá
+            }
             if ($pago !== null && $pago['referencia'] !== '') {
                 (new MercadoPagoService())->confirmar($pago['referencia'], $pago);
             }
