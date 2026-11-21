@@ -5,6 +5,15 @@ const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// Emitir: al contado se abre «Cobrar venta» (D-137) y se confirma con el total justo.
+async function emitirCobro(page) {
+  await page.click('button:has-text("Emitir")');
+  let abierta = false;
+  try { abierta = await page.isVisible('dialog[data-cobro][open]'); } catch (e) { abierta = false; }
+  if (abierta) await page.click('[data-confirmar-cobro]');
+}
+
+
 const PORT = process.env.E2E_ARCA_PORT || '8081';
 const BASE = 'http://127.0.0.1:' + PORT;
 const ROOT = path.resolve(__dirname, '..');
@@ -82,7 +91,7 @@ async function emitir(page, tipoCliente, precio) {
     await enviar(page);
     await emitir(page, 'E2E ARCA', '100');
     ok((await page.textContent('body')).includes('ARCA SIMULADO'), 'la revisión avisa que es ARCA simulado');
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), emitirCobro(page)]);
     const url = page.url();
     const cuerpo = await page.textContent('body');
     ok(/CAE/.test(cuerpo) && /prueba|simulado/i.test(cuerpo), 'la factura queda con CAE y marcada como de prueba');
@@ -96,7 +105,7 @@ async function emitir(page, tipoCliente, precio) {
 
     // Rechazo: total que termina en ,13 (0,11 + IVA 21 % = 0,13).
     await emitir(page, 'E2E ARCA', '0,11');
-    await Promise.all([page.waitForNavigation(), page.click('button:has-text("Emitir")')]);
+    await Promise.all([page.waitForNavigation(), emitirCobro(page)]);
     ok((await page.textContent('body')).includes('rechaz'), 'ARCA rechaza el total ,13 y se muestra el motivo');
     await page.goto(BASE + '/comprobantes?cliente=E2E');
     ok((await page.locator('tbody tr').count()) === 1, 'el rechazado no quedó grabado (queda solo la factura aprobada)');

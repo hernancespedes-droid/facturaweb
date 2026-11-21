@@ -76,7 +76,7 @@ async function recorrer(page, nombre) {
     ok(page.url().includes('/comprobantes/nuevo'), nombre + ': Enter en la cantidad de un renglón no envía la factura');
     ok((await foco(page)).includes('[precio]'), nombre + ': y pasa al precio');
   } else ok(false, nombre + ': la factura tiene renglones');
-  // ---- «Cómo se paga»: Enter en lo recibido no emite la factura
+  // ---- «Cobrar venta»: Enter con plata de menos no emite la factura
   if (nombre === 'escritorio') {
     await page.goto(BASE + '/clientes/nuevo');
     await page.fill('#f-razon_social', 'CLIENTE E2E CARGA');
@@ -93,12 +93,12 @@ async function recorrer(page, nombre) {
     await Promise.all([page.waitForNavigation(), page.click('button:has-text("Revisar")')]);
     await page.check('input[name=forma_pago][value="1"]');
     const urlRev = page.url();
-    await page.fill('[data-recibido]', '1.500');
-    await page.press('[data-recibido]', 'Enter');
+    await page.click('[data-abrir-cobro]');
+    await page.fill('[data-cobro] [data-importe-pago]', '1.000');
+    await page.press('[data-cobro] [data-importe-pago]', 'Enter');
     await page.waitForTimeout(400);
-    ok(page.url() === urlRev && (await page.locator('#form-emitir').count()) === 1, nombre + ': Enter en «Recibido» no emite: sigue en «Cómo se paga»');
-    ok((await page.textContent('[data-vuelto-aviso]')).includes('290,00'), nombre + ': y el vuelto queda a la vista');
-    ok(await page.evaluate(() => /Emitir/.test(document.activeElement.textContent || '')), nombre + ': el foco queda en «Emitir» (otro Enter recién emite)');
+    ok(page.url() === urlRev && (await page.locator('#form-emitir').count()) === 1, nombre + ': Enter en el importe con plata de menos no emite: sigue en «Cobrar venta»');
+    ok((await page.textContent('[data-r-vuelto]')).includes('210,00'), nombre + ': y lo que falta queda a la vista');
     sql("DELETE FROM clientes WHERE razon_social = 'CLIENTE E2E CARGA'");
   }
   ok(errores.length === 0, nombre + ': sin errores de JavaScript' + (errores.length ? ' (' + errores.join('; ') + ')' : ''));

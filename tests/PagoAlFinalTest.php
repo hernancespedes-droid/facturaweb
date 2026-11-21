@@ -72,20 +72,41 @@ final class PagoAlFinalTest extends ComprobantesTestCase
         $this->assertNull($this->fila('SELECT p_recibido FROM caja WHERE subdiario_id = ?', [$e3['id']])['p_recibido']);
     }
 
-    public function testRecibidoMenorOFormaQueNoAceptaVuelto(): void
+    public function testRecibidoDeMenosFaltaYDeMasEsVueltoInformativo(): void
     {
         $menos = $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'EF', 'recibido' => '200']));
-        $this->assertStringContainsString('entregó menos', $menos['errores']['recibido']);
+        $this->assertStringContainsString('Faltan $ 42,00', $menos['errores']['recibido']);
         $basura = $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'EF', 'recibido' => 'abc']));
         $this->assertTrue(isset($basura['errores']['recibido']));
+        // D-137: de más con una forma que no acepta vuelto (p. ej. el recargo de la tarjeta) no frena: la diferencia queda como vuelto informativo
         $tj = $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'TJ', 'recibido' => '300']));
-        $this->assertStringContainsString('no acepta vuelto', $tj['errores']['recibido']);
+        $this->assertSame([], $tj['errores']);
+        $this->assertSame([242.0, 300.0, 58.0], [$tj['cbte']['pagos'][0]['importe'], $tj['cbte']['pagos'][0]['recibido'], $tj['cbte']['pagos'][0]['vuelto']]);
         $this->assertSame([], $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'TJ', 'recibido' => '242']))['errores'], 'justo sí');
-        // el ABM: si se tilda «acepta vuelto» en la forma de pago, se da vuelto
-        Db::pdo()->exec("UPDATE forma_de_pagos SET acepta_vuelto = 1 WHERE codigo = 'TJ'");
-        $this->assertSame(58.0, $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'TJ', 'recibido' => '300']))['cbte']['pagos'][0]['vuelto']);
-        Db::pdo()->exec("UPDATE forma_de_pagos SET acepta_vuelto = 0 WHERE codigo = 'EF'");
-        $this->assertStringContainsString('no acepta vuelto', $this->svc->armar($this->conPago(['forma_pago' => '1', 'fpago' => 'EF', 'recibido' => '300']))['errores']['recibido']);
+    }
+
+    public function testMediosMezcladosElVueltoSaleDelEfectivo(): void
+    {
+        // venta de 242: efectivo 200 + tarjeta 100 = 300 → vuelto 58, que sale del efectivo (en caja queda 142 + 100)
+        $r = $this->svc->armar($this->conPago(['pagos' => [['fpago' => 'TJ', 'importe' => '100'], ['fpago' => 'EF', 'importe' => '200']]]));
+        $this->assertSame([], $r['errores']);
+        $this->assertSame(58.0, $r['cbte']['vuelto']);
+        $l = array_column($r['cbte']['pagos'], null, 'codigo');
+        $this->assertSame([100.0, 0.0], [$l['TJ']['importe'], $l['TJ']['vuelto']]);
+        $this->assertSame([142.0, 200.0, 58.0], [$l['EF']['importe'], $l['EF']['recibido'], $l['EF']['vuelto']]);
+        $this->assertSame(242.0, $r['cbte']['pago_contado'], 'en caja queda el total de la venta');
+        // sin efectivo, la diferencia queda en la última forma (informativa: puede ser un recargo)
+        $r2 = $this->svc->armar($this->conPago(['pagos' => [['fpago' => 'BV', 'importe' => '100'], ['fpago' => 'TJ', 'importe' => '160']]]));
+        $this->assertSame([], $r2['errores']);
+        $this->assertSame([18.0, 142.0], [$r2['cbte']['vuelto'], array_column($r2['cbte']['pagos'], null, 'codigo')['TJ']['importe']]);
+        // con una parte a cuenta corriente, lo de más achica primero la deuda (no es plata)
+        $r3 = $this->svc->armar($this->conPago(['pagos' => [['fpago' => 'EF', 'importe' => '200'], ['fpago' => 'CC', 'importe' => '100']]]));
+        $this->assertSame([], $r3['errores']);
+        $this->assertSame([200.0, 42.0, 0.0], [$r3['cbte']['pago_contado'], $r3['cbte']['pago_cuenta'], $r3['cbte']['vuelto']]);
+        // todo lo que da en efectivo es vuelto: esa forma no va a la caja
+        $r4 = $this->svc->armar($this->conPago(['pagos' => [['fpago' => 'TJ', 'importe' => '242'], ['fpago' => 'EF', 'importe' => '50']]]));
+        $this->assertSame([], $r4['errores']);
+        $this->assertSame([['TJ'], 50.0], [array_column($r4['cbte']['pagos'], 'codigo'), $r4['cbte']['vuelto']]);
     }
 
     public function testBilleteraVirtualEsUnMedioDeCobro(): void
@@ -141,10 +162,8 @@ final class PagoAlFinalTest extends ComprobantesTestCase
     {
         $e = fn (array $pagos, array $extra = []) => $this->svc->armar($this->conPago(['pagos' => $pagos] + $extra))['errores'];
         $this->assertStringContainsString('Faltan $ 42,00', $e([['fpago' => 'EF', 'importe' => '100'], ['fpago' => 'TJ', 'importe' => '100']])['pagos']);
-        $this->assertStringContainsString('Se pasan', $e([['fpago' => 'EF', 'importe' => '200'], ['fpago' => 'TJ', 'importe' => '100']])['pagos']);
+        $this->assertSame([], $e([['fpago' => 'EF', 'importe' => '200'], ['fpago' => 'TJ', 'importe' => '100']]), 'de más no es error (D-137)');
         $this->assertStringContainsString('Cargá el importe de cada forma de pago', $e([['fpago' => 'EF', 'importe' => ''], ['fpago' => 'TJ', 'importe' => '100']])['pagos']);
-        $this->assertStringContainsString('Forma de pago 2: El cliente entregó menos', $e([['fpago' => 'TJ', 'importe' => '142'], ['fpago' => 'EF', 'importe' => '100', 'recibido' => '50']])['pagos']);
-        $this->assertStringContainsString('no acepta vuelto', $e([['fpago' => 'TJ', 'importe' => '142', 'recibido' => '200'], ['fpago' => 'EF', 'importe' => '100']])['pagos']);
         $this->assertStringContainsString('número del cheque', $e([['fpago' => 'CH', 'importe' => '142'], ['fpago' => 'EF', 'importe' => '100']])['pagos']);
         $this->assertStringContainsString('Elegí cómo se paga', $e([['fpago' => 'ZZ', 'importe' => '242'], ['fpago' => 'EF', 'importe' => '0']])['pagos']);
         $nueve = array_fill(0, 9, ['fpago' => 'EF', 'importe' => '10']);
@@ -163,7 +182,7 @@ final class PagoAlFinalTest extends ComprobantesTestCase
         $p = $this->pedido();
         unset($p['forma_pago']);
         $rev = $this->post('/comprobantes/revisar', $p);
-        $this->assertStringContainsString('Agregar otra forma de pago', $rev->body);
+        $this->assertStringContainsString('Agregar otro medio', $rev->body);
         $this->assertStringContainsString('name="pagos[0][fpago]"', $rev->body);
         preg_match('/name="datos" value="([^"]*)"/', $rev->body, $m);
         $datos = html_entity_decode($m[1], ENT_QUOTES);
@@ -203,7 +222,7 @@ final class PagoAlFinalTest extends ComprobantesTestCase
         // se entrega menos: vuelve a la revisión con el motivo y lo ya elegido
         $mal = $this->post('/comprobantes', ['datos' => $datos, 'operacion' => $op, 'forma_pago' => '1', 'fpago' => 'EF', 'recibido' => '100']);
         $this->assertSame(422, $mal->status);
-        $this->assertStringContainsString('entregó menos', $mal->body);
+        $this->assertStringContainsString('Faltan', $mal->body);
         $this->assertStringContainsString('Cómo se paga', $mal->body);
         $this->assertSame(0, (int) Db::pdo()->query('SELECT COUNT(*) FROM subdiario')->fetchColumn());
         // se entrega de más en efectivo: se emite y avisa el vuelto

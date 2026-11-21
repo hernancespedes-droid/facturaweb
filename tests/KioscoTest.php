@@ -79,7 +79,7 @@ final class KioscoTest extends ComprobantesTestCase
         $this->loginComo($this->crearUsuario('t_op_k2', 'operador'));
         $rev = $this->post('/kiosco/cobrar', $this->carrito());
         $this->assertSame(200, $rev->status);
-        foreach (['Cómo se paga', 'Total a cobrar', 'action="' . url('/kiosco/emitir') . '"', 'Volver al kiosco', 'Presupuesto X', 'Agregar otra forma de pago'] as $txt) {
+        foreach (['Cómo se paga', 'Total a cobrar', 'action="' . url('/kiosco/emitir') . '"', 'Volver al kiosco', 'Presupuesto X', 'Cobrar venta', 'Agregar otro medio'] as $txt) {
             $this->assertStringContainsString($txt, $rev->body, $txt);
         }
         $this->assertSame(0, (int) Db::pdo()->query('SELECT COUNT(*) FROM subdiario')->fetchColumn(), 'cobrar no graba: falta elegir cómo se paga');
