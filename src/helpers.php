@@ -310,3 +310,16 @@ if (!function_exists('icono_lista')) {
     }
 }
 
+if (!function_exists('icono_nuevo_cliente')) {
+    /** Botón «+» junto al buscador de clientes: abre la ventana «Nuevo cliente» (alta-cliente.js). Solo si el usuario puede dar de alta. */
+    function icono_nuevo_cliente(): string
+    {
+        if (!puede('clientes.alta') && !puede('clientes.editar')) {
+            return '';
+        }
+        $t = e('Nuevo cliente (con el CUIT trae los datos de ARCA)');
+        return '<button type="button" class="btn-icono" data-nuevo-cliente title="' . $t . '" aria-label="' . $t . '">'
+            . '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            . '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M19 8v6M16 11h6"/></svg></button>';
+    }
+}

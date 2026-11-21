@@ -8,7 +8,7 @@ use App\Core\Config;
 use App\Core\Db;
 use PDO;
 
-/** Actualización automática de la base (0.32.1): el primer pedido después de actualizar el código aplica los cambios pendientes. */
+/** Actualización automática de la base (0.37.1): el primer pedido después de actualizar el código aplica los cambios pendientes. */
 final class AutoMigracionTest extends DbTestCase
 {
     private string $tmp;
