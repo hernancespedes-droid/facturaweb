@@ -132,6 +132,14 @@ final class MigracionTest extends DbTestCase
         }
     }
 
+    public function testPreciosPorListaConLaColumnaEnPluralComoEnGogolinas(): void
+    {
+        DbfFalso::escribir($this->dir . '/articulos_precios.dbf', [['ARTICULOS', 'C', 15], ['NUM_LISTA', 'N', 2], ['VALOR', 'N', 12, 2]],
+            [['ARTICULOS' => 'M-1', 'NUM_LISTA' => 1, 'VALOR' => 150.5], ['ARTICULOS' => 'M-1', 'NUM_LISTA' => 2, 'VALOR' => 140]]);
+        $r = (new MigradorVfp(Db::pdo(), $this->dir))->migrar(['articulos_precios'], true, true);
+        $this->assertSame(2, $r['articulos_precios']['grabadas'], 'la columna "articulos" se toma como "articulo"');
+    }
+
     public function testNoPisaDatosSinReemplazarYSimularNoGrabaNada(): void
     {
         $this->carpetaVfp();

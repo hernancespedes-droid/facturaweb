@@ -68,6 +68,7 @@ $hoyIso = date('Y-m-d');
         <div class="campo-con-boton">
             <input id="cliente-q" type="search" autocomplete="off" placeholder="Escribí para buscar…" value="<?= e($cliente['razon_social'] ?? '') ?>" data-cliente-q>
             <?= icono_lista('data-lista-clientes', 'clientes') ?>
+            <?= in_array($tipo, ['FC', 'PR'], true) ? icono_nuevo_cliente() : '' ?>
             <ul class="picker-lista" data-cliente-lista hidden></ul>
         </div>
         <input type="hidden" name="cliente" value="<?= e($cliente['codigo'] ?? '') ?>" data-cliente>
@@ -211,4 +212,5 @@ $hoyIso = date('Y-m-d');
 <script src="<?= e(asset('assets/stock-articulo.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/ventana-lista.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/reservas.js')) ?>" defer></script>
+<?php if (in_array($tipo, ['FC', 'PR'], true)) { require __DIR__ . '/../clientes/_alta_rapida.php'; } ?>
 <script src="<?= e(asset('assets/comprobante.js')) ?>" defer></script>

@@ -64,7 +64,7 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await Promise.all([page.waitForNavigation(), page.click('button[type=submit]')]);
     ok((await page.textContent('.alerta-error')).includes('incorrectos'), 'contraseña mala: avisa');
     await login(page, 'e2e_admin');
-    ok((await page.textContent('h1')).includes('Facturación'), 'entra al inicio');
+    ok((await page.textContent('h1')).length > 0 && page.url().replace(/\/$/, '') === BASE, 'entra al inicio');
     await page.screenshot({ path: path.join(CAPTURAS, 'inicio.png'), fullPage: true });
 
     // Tablas: alta de un vendedor, edición y borrado.
@@ -637,6 +637,27 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     await pc.goto(BASE + '/portal/acceso/' + token);
     ok((await pc.textContent('body')).includes('ya se usó'), 'portal: el link no sirve dos veces');
     await cli.close();
+
+    // ---- Tablero de inicio (0.40.0): números, gráficos con valores al pasar el mouse, claro/oscuro y celular.
+    await page.goto(BASE + '/?periodo=mes');
+    ok((await page.textContent('h1')).includes('Cómo viene el negocio'), 'tablero: el administrador ve cómo viene el negocio');
+    ok(await page.locator('.tb-hero-n').count() === 1, 'tablero: número principal de ventas');
+    ok(await page.locator('[data-tb-grafico] svg.g-svg').count() === 2, 'tablero: los dos gráficos');
+    await page.locator('[data-tb-grafico="columnas"] .g-zona').last().hover();
+    ok(await page.locator('[data-tb-grafico="columnas"] .tb-tip').isVisible(), 'tablero: al pasar el mouse por una columna muestra el valor');
+    await page.locator('[data-tb-grafico="lineas"] .g-zona').nth(2).hover();
+    ok((await page.textContent('[data-tb-grafico="lineas"] .tb-tip')).includes('Día 3'), 'tablero: la línea muestra el día y los dos meses');
+    ok(await page.locator('[data-tb-grafico="lineas"] .g-guia:not([hidden])').count() === 1, 'tablero: aparece la línea guía');
+    await page.screenshot({ path: path.join(CAPTURAS, 'tablero.png'), fullPage: true });
+    await page.click('.tb-periodos a:has-text("12 meses")');
+    ok((await page.textContent('.tb-hero .tb-label')).includes('12 meses'), 'tablero: cambia el período');
+    await page.evaluate(() => document.documentElement.setAttribute('data-tema', 'claro'));
+    await page.screenshot({ path: path.join(CAPTURAS, 'tablero-claro.png'), fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(BASE + '/');
+    ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'tablero: en el celular no se desborda');
+    await page.screenshot({ path: path.join(CAPTURAS, 'tablero-celular.png'), fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 860 });
     ok(errores.length === 0, 'sin errores de JavaScript' + (errores.length ? ': ' + errores.join(' | ') : ''));
     await ctx.close();
 
@@ -647,6 +668,8 @@ async function enviar(page, selector = 'form.card button[type=submit]') {
     const menu = await p2.content();
     ok(!menu.includes('/usuarios"') && !menu.includes('/tablas/sucursales"'), 'operador: el menú no muestra Usuarios ni Sucursales');
     ok(menu.includes('/comprobantes/nuevo?tipo=FC'), 'operador: el menú muestra Nueva factura');
+    ok(!menu.includes('Cómo viene el negocio') && !menu.includes('Ticket promedio'), 'operador: el inicio no muestra importes de ventas');
+    ok(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: el inicio del operador no se desborda');
     await p2.goto(BASE + '/comprobantes/nuevo?tipo=FC');
     ok(await p2.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'celular: el formulario de factura no se desborda');
     await p2.screenshot({ path: path.join(CAPTURAS, 'celular-factura.png'), fullPage: true });

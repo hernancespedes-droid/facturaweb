@@ -16,7 +16,7 @@ final class PagesController
      */
     public static function home(Request $req, array $params): Response
     {
-        return Response::html(View::render('home', ['title' => 'Inicio', 'nav' => 'inicio']));
+        return Response::html(View::render('home', ['title' => 'Inicio', 'nav' => 'inicio', 'tb' => \App\Modules\Tablero\Tablero::datos($req->query)]));
     }
 
     /**
@@ -44,6 +44,7 @@ final class PagesController
             'db'      => $db,
             'version' => $version,
             'cambios_de_base_pendientes' => $pendientes,
+            'migracion_error' => \App\Core\AutoMigracion::ultimoError() !== null, // la actualización automática de la base falló (detalle en Sistema)
             'php'     => PHP_VERSION,
             'hora'    => date('c'),
         ], $db ? 200 : 503);

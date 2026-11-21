@@ -125,7 +125,7 @@
     timerCli = setTimeout(function () {
       fetch(raiz.getAttribute('data-url-cliente') + '?q=' + encodeURIComponent(t), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (arr) {
         listaCli.innerHTML = '';
-        if (!arr.length) { var v = el('li', 'muted', 'Sin coincidencias'); listaCli.appendChild(v); }
+        if (!arr.length) { var v = el('li', 'muted', 'No hay clientes con «' + t + '».'); listaCli.appendChild(v); }
         arr.forEach(function (c) {
           var li = el('li'); li.appendChild(el('b', '', c.razon_social)); li.appendChild(el('small', 'muted', ' ' + c.codigo + (c.cuit ? ' · CUIT ' + c.cuit : '')));
           li.addEventListener('mousedown', function (ev) {
@@ -135,10 +135,16 @@
           });
           listaCli.appendChild(li);
         });
+        if (window.AltaCliente && window.AltaCliente.disponible()) listaCli.appendChild(window.AltaCliente.itemLista(t, usarCliente));
         listaCli.hidden = false;
       });
     }, 250);
   });
+
+  // Nuevo cliente sin salir del kiosco (con el CUIT trae los datos de ARCA): queda elegido
+  function usarCliente(c) { estado.cliente = { codigo: String(c.codigo), nombre: c.razon_social }; cajaCli.hidden = true; inpCli.value = ''; listaCli.hidden = true; cambio(); }
+  var btnNuevo = q('[data-nuevo-cliente]');
+  if (btnNuevo) btnNuevo.addEventListener('click', function () { if (window.AltaCliente) window.AltaCliente.abrir({ texto: inpCli.value }, usarCliente); });
 
   // ---- cobrar: el servidor arma el presupuesto y pasa a «Cómo se paga»
   q('[data-cobrar]').addEventListener('click', function () {

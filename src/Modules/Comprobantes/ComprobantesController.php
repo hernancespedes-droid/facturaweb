@@ -235,7 +235,7 @@ final class ComprobantesController
     }
 
     /** @param array<int,array<string,mixed>> $filas @return array<int,array<string,mixed>> */
-    private static function clientesParaElegir(array $filas): array
+    public static function clientesParaElegir(array $filas): array
     {
         $svc = new ComprobantesService();
         $emisor = $svc->emisor();

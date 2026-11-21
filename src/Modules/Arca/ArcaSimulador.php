@@ -66,6 +66,9 @@ final class ArcaSimulador
             $l = $d->getElementsByTagName($n);
             return $l->length > 0 ? (string) $l->item(0)->textContent : '';
         };
+        if (str_contains($url, 'sr-padron')) {
+            return self::padron($v('idPersona'));
+        }
         if (str_contains($url, 'wsaa')) {
             $ta = '<?xml version="1.0" encoding="UTF-8"?><loginTicketResponse version="1.0"><header><expirationTime>' . date('c', time() + 43200)
                 . '</expirationTime></header><credentials><token>SIMULADO</token><sign>SIMULADO</sign></credentials></loginTicketResponse>';
@@ -114,6 +117,56 @@ final class ArcaSimulador
                     . "<CbteFch>{$fch}</CbteFch><Resultado>A</Resultado><CAE>{$cae}</CAE><CAEFchVto>" . date('Ymd', strtotime('+10 days')) . '</CAEFchVto></FECAEDetResponse></FeDetResp></FECAESolicitarResult></FECAESolicitarResponse>');
         }
         throw new \RuntimeException('El simulador de ARCA no conoce ' . $m);
+    }
+
+    /**
+     * Padrón simulado (constancia de inscripción). Contesta siempre lo mismo para el mismo CUIT:
+     *   30-, 33-, 34-…            sociedad Responsable Inscripta en Morón (Buenos Aires)
+     *   20/23/24/27-… según la suma de las cifras: resto 0 → monotributista categoría D en CABA, resto 1 → persona Responsable Inscripta
+     *                              en Córdoba, resto 2 → sin IVA ni monotributo (consumidor final)
+     *   las 8 cifras del medio en cero (p. ej. 20-00000000-1): «No existe persona con ese Id».
+     */
+    public static function padron(string $cuit): string
+    {
+        $cuit = preg_replace('/\D/', '', $cuit) ?? '';
+        $ns = 'xmlns:ns2="http://a5.soap.ws.server.puc.sr/"';
+        if (substr($cuit, 2, 8) === '00000000') {
+            return '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><soap:Fault>'
+                . '<faultcode>soap:Server</faultcode><faultstring>No existe persona con ese Id</faultstring></soap:Fault></soap:Body></soap:Envelope>';
+        }
+        $fin = substr($cuit, 6, 4);
+        $meta = '<metadata><fechaHora>' . date('c') . '</fechaHora><servidor>simulado</servidor></metadata>';
+        $imp = static fn (int $id, string $d): string => "<impuesto><descripcionImpuesto>{$d}</descripcionImpuesto><estadoImpuesto>AC</estadoImpuesto><idImpuesto>{$id}</idImpuesto><motivo>simulado</motivo><periodo>201901</periodo></impuesto>";
+        $act = static fn (string $id, string $d, int $o): string => "<actividad><descripcionActividad>{$d}</descripcionActividad><idActividad>{$id}</idActividad><nomenclador>883</nomenclador><orden>{$o}</orden><periodo>201901</periodo></actividad>";
+        $dom = static fn (string $dir, string $loc, string $cp, int $idp, string $prov): string => "<domicilioFiscal><codPostal>{$cp}</codPostal><descripcionProvincia>{$prov}</descripcionProvincia>"
+            . "<direccion>{$dir}</direccion><idProvincia>{$idp}</idProvincia>" . ($loc !== '' ? "<localidad>{$loc}</localidad>" : '') . '<tipoDomicilio>FISCAL</tipoDomicilio></domicilioFiscal>';
+        if (in_array(substr($cuit, 0, 2), ['30', '33', '34'], true)) {
+            $gen = "<datosGenerales>{$dom('AV RIVADAVIA 18500', 'MORON', '1708', 1, 'BUENOS AIRES')}<esSucesion>NO</esSucesion><estadoClave>ACTIVO</estadoClave>"
+                . "<idPersona>{$cuit}</idPersona><mesCierre>12</mesCierre><razonSocial>EMPRESA SIMULADA {$fin} SA</razonSocial><tipoClave>CUIT</tipoClave><tipoPersona>JURIDICA</tipoPersona></datosGenerales>";
+            $resto = "<datosRegimenGeneral>{$act('461011', 'VENTA AL POR MAYOR EN COMISIÓN O CONSIGNACIÓN DE CEREALES', 1)}{$act('620100', 'SERVICIOS DE CONSULTORES EN INFORMÁTICA', 2)}"
+                . "{$imp(10, 'GANANCIAS SOCIEDADES')}{$imp(30, 'IVA')}{$imp(301, 'EMPLEADOR-APORTES SEG. SOCIAL')}</datosRegimenGeneral>";
+        } else {
+            $caso = array_sum(array_map('intval', str_split($cuit))) % 3;
+            $persona = static fn (string $d): string => "<datosGenerales>{$d}<estadoClave>ACTIVO</estadoClave><idPersona>{$cuit}</idPersona>"
+                . "<apellido>SIMULADO {$fin}</apellido><nombre>" . ['MARIA', 'JUAN', 'ANA'][$caso] . '</nombre><tipoClave>CUIT</tipoClave><tipoPersona>FISICA</tipoPersona></datosGenerales>';
+            if ($caso === 0) {
+                $resto = $persona($dom('AV CORRIENTES 1234 PISO 3 DTO B', '', '1043', 0, 'CIUDAD AUTONOMA BUENOS AIRES'))
+                    . "<datosMonotributo><actividadMonotributista><descripcionActividad>VENTA AL POR MENOR DE PRENDAS DE VESTIR</descripcionActividad><idActividad>477150</idActividad>"
+                    . "<nomenclador>883</nomenclador><orden>1</orden><periodo>201901</periodo></actividadMonotributista><categoriaMonotributo><descripcionCategoria>D LOCACIONES DE SERVICIO</descripcionCategoria>"
+                    . "<idCategoria>34</idCategoria><idImpuesto>20</idImpuesto><periodo>202401</periodo></categoriaMonotributo>{$imp(20, 'MONOTRIBUTO')}</datosMonotributo>";
+                $gen = '';
+            } elseif ($caso === 1) {
+                $resto = $persona($dom('BV SAN JUAN 450', 'CORDOBA', '5000', 3, 'CORDOBA'))
+                    . "<datosRegimenGeneral>{$act('471110', 'VENTA AL POR MENOR EN HIPERMERCADOS', 1)}{$imp(11, 'GANANCIAS PERSONAS FISICAS')}{$imp(30, 'IVA')}</datosRegimenGeneral>";
+                $gen = '';
+            } else {
+                $resto = $persona($dom('CALLE 7 N 1020', 'LA PLATA', '1900', 1, 'BUENOS AIRES'))
+                    . '<errorConstancia><error>El contribuyente no registra impuestos activos (simulado)</error></errorConstancia>';
+                $gen = '';
+            }
+        }
+        return '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>'
+            . "<ns2:getPersona_v2Response {$ns}><personaReturn>{$gen}{$resto}{$meta}</personaReturn></ns2:getPersona_v2Response></soap:Body></soap:Envelope>";
     }
 
     private static function ultimo(PDO $pdo, int $pv, int $tipo): int
