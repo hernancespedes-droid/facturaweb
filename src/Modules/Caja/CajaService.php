@@ -105,8 +105,61 @@ final class CajaService
             $this->pdo->prepare("INSERT INTO caja_turnos (usuario_id, abierto_en, fondo_inicial, estado) VALUES (?, NOW(), ?, 'A')")->execute([$usuarioId, $fondo]);
             $id = (int) $this->pdo->lastInsertId();
             $this->auditar('apertura', 'turno', $id, 'Fondo inicial ' . plata_dec($fondo), $usuarioId);
+            $this->adoptarSinTurno($id, $usuarioId, date('Y-m-d'));
             $this->pdo->commit();
             return ['ok' => true, 'id' => $id];
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Cobros del cajero en un día que quedaron sin turno (se cobró antes de abrir la caja): cantidad, efectivo y total.
+     *
+     * @return array{cantidad:int,efectivo:float,total:float}
+     */
+    public function sinTurno(int $usuarioId, string $dia): array
+    {
+        $st = $this->pdo->prepare('SELECT COUNT(*), COALESCE(SUM(IF(t.tipo = 1, c.p_importe, 0)), 0), COALESCE(SUM(c.p_importe), 0)
+            FROM caja c JOIN forma_de_pagos t ON t.codigo = c.p_fpago WHERE c.usuario_id = ? AND c.turno_id IS NULL AND c.fecha = ? AND t.tipo <> 6');
+        $st->execute([$usuarioId, $dia]);
+        [$n, $ef, $tot] = $st->fetch(PDO::FETCH_NUM);
+        return ['cantidad' => (int) $n, 'efectivo' => Calculadora::r2((float) $ef), 'total' => Calculadora::r2((float) $tot)];
+    }
+
+    /**
+     * DECISIÓN D-147: lo que el cajero cobró en el día sin tener la caja abierta se suma a su turno al abrirlo (y, si ya lo abrió, con «Sumar a mi turno»).
+     * Solo cobros del mismo cajero y del mismo día del turno; queda en la auditoría. Hay que llamarlo dentro de una transacción.
+     */
+    private function adoptarSinTurno(int $turnoId, int $usuarioId, string $dia): int
+    {
+        $r = $this->sinTurno($usuarioId, $dia);
+        if ($r['cantidad'] === 0) {
+            return 0;
+        }
+        $st = $this->pdo->prepare('UPDATE caja c JOIN forma_de_pagos t ON t.codigo = c.p_fpago SET c.turno_id = ? WHERE c.usuario_id = ? AND c.turno_id IS NULL AND c.fecha = ? AND t.tipo <> 6');
+        $st->execute([$turnoId, $usuarioId, $dia]);
+        $n = $st->rowCount();
+        $this->auditar('asignacion', 'turno', $turnoId, $n . ' cobro(s) del ' . date('d/m/Y', strtotime($dia)) . ' hechos sin caja abierta sumados al turno: efectivo '
+            . plata_dec($r['efectivo']) . ', total ' . plata_dec($r['total']), $usuarioId);
+        return $n;
+    }
+
+    /** Suma al turno abierto los cobros del cajero del día del turno que quedaron sin turno. @return array{ok:bool,error?:string,cantidad?:int} */
+    public function sumarSinTurno(int $usuarioId): array
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $this->pdo->prepare('SELECT id FROM usuarios WHERE id = ? FOR UPDATE')->execute([$usuarioId]);
+            $t = $this->turnoAbierto($usuarioId);
+            if ($t === null) {
+                $this->pdo->rollBack();
+                return ['ok' => false, 'error' => 'Abrí tu turno de caja: al abrirlo se suman solos los cobros de hoy.'];
+            }
+            $n = $this->adoptarSinTurno((int) $t['id'], $usuarioId, substr((string) $t['abierto_en'], 0, 10));
+            $this->pdo->commit();
+            return ['ok' => true, 'cantidad' => $n];
         } catch (\Throwable $e) {
             $this->pdo->rollBack();
             throw $e;

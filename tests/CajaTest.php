@@ -5,6 +5,7 @@ namespace Tests;
 
 use App\Core\Db;
 use App\Modules\Caja\CajaService;
+use App\Modules\Comprobantes\Calculadora as Calc;
 
 /** Caja: turnos con arqueo, ingresos y egresos manuales con tope y anulación por contra-asiento, auditoría encadenada, hora y usuario en cada cobro y permisos. */
 final class CajaTest extends ComprobantesTestCase
@@ -59,6 +60,33 @@ final class CajaTest extends ComprobantesTestCase
         $this->loginComo($this->beto);
         $e2 = $this->emitir($this->pedido(['forma_pago' => '1', 'fpago' => 'EF']));
         $this->assertSame((int) $this->caja->turnoAbierto($this->beto)['id'], (int) $this->fila('SELECT turno_id FROM caja WHERE subdiario_id = ?', [$e2['id']])['turno_id']);
+    }
+
+    public function testLoCobradoAntesDeAbrirLaCajaSeSumaAlTurno(): void
+    {
+        // Ana cobra dos presupuestos en efectivo sin la caja abierta: quedan sin turno
+        $this->loginComo($this->ana);
+        $pr = ['tipo' => 'PR', 'items' => [['descripcion' => 'x', 'cantidad' => '1', 'precio' => '100', 'alicuota' => '21']]];
+        $a = $this->emitir($this->pedido(['forma_pago' => '1', 'fpago' => 'EF'] + $pr));
+        $b = $this->emitir($this->pedido(['forma_pago' => '1', 'fpago' => 'EF'] + $pr));
+        $this->assertNull($this->fila('SELECT turno_id FROM caja WHERE subdiario_id = ?', [$a['id']])['turno_id']);
+        $sin = $this->caja->sinTurno($this->ana, date('Y-m-d'));
+        $this->assertSame(2, $sin['cantidad']);
+        $this->assertSame(0, $this->caja->sinTurno($this->beto, date('Y-m-d'))['cantidad'], 'los de otro cajero no se cuentan');
+        // al abrir, se suman al turno y el arqueo los espera
+        $t = $this->caja->abrir($this->ana, '10.000')['id'];
+        $this->assertSame([$t, $t], [(int) $this->fila('SELECT turno_id FROM caja WHERE subdiario_id = ?', [$a['id']])['turno_id'], (int) $this->fila('SELECT turno_id FROM caja WHERE subdiario_id = ?', [$b['id']])['turno_id']]);
+        $res = $this->caja->resumenTurno($t);
+        $this->assertSame([10000.0, $sin['efectivo'], Calc::r2(10000 + $sin['efectivo'])], [$res['fondo'], $res['efectivo'], $res['esperado']]);
+        $this->assertSame(0, $this->caja->sinTurno($this->ana, date('Y-m-d'))['cantidad']);
+        $this->assertStringContainsString('2 cobro(s)', $this->fila("SELECT detalle FROM caja_auditoria WHERE accion = 'asignacion' ORDER BY id DESC LIMIT 1")['detalle']);
+        // un cobro que haya quedado sin turno con la caja ya abierta (datos de antes del arreglo) se suma con «Sumar a mi turno»
+        $c = $this->emitir($this->pedido(['forma_pago' => '1', 'fpago' => 'EF'] + $pr));
+        Db::pdo()->prepare('UPDATE caja SET turno_id = NULL WHERE subdiario_id = ?')->execute([$c['id']]);
+        $r = $this->caja->sumarSinTurno($this->ana);
+        $this->assertSame([true, 1], [$r['ok'], $r['cantidad']]);
+        $this->assertSame($t, (int) $this->fila('SELECT turno_id FROM caja WHERE subdiario_id = ?', [$c['id']])['turno_id']);
+        $this->assertFalse($this->caja->sumarSinTurno($this->beto)['ok'], 'sin turno abierto no hay a dónde sumar');
     }
 
     public function testSoloElCajeroOQuienAuditaCierraUnTurno(): void
@@ -149,7 +177,7 @@ final class CajaTest extends ComprobantesTestCase
     public function testLosIngresosYEgresosNoSeMezclanConLasVentas(): void
     {
         $this->loginComo($this->beto);
-        $this->caja->abrir($this->beto, '0');
+        $this->caja->abrir($this->beto, '500');                                     // apertura: fondo de 500 en el cajón
         $this->emitir($this->pedido(['forma_pago' => '1', 'fpago' => 'EF']));      // venta en efectivo: 242
         $this->caja->mover($this->beto, 'I', '1000', 'Cambio para el cajón');      // no es una venta
         $this->caja->mover($this->beto, 'E', '300', 'Pago de flete');              // no es una venta
@@ -157,7 +185,7 @@ final class CajaTest extends ComprobantesTestCase
         $r = \App\Modules\Listados\CajaDiaria::resumen(['desde' => $hoy, 'hasta' => $hoy]);
         $this->assertSame(242.0, $r['total_cobrado'], 'lo cobrado son solo ventas y cobranzas');
         $this->assertSame(242.0, $r['ventas']['ventas_netas'], 'lo vendido no cambia con ingresos ni egresos');
-        $this->assertSame([242.0, 1000.0, 300.0, 942.0], [$r['efectivo']['neto'], $r['efectivo']['ingresos'], $r['efectivo']['egresos'], $r['efectivo']['en_caja']]);
+        $this->assertSame([500.0, 242.0, 1000.0, 300.0, 1442.0], [$r['efectivo']['fondo'], $r['efectivo']['neto'], $r['efectivo']['ingresos'], $r['efectivo']['egresos'], $r['efectivo']['en_caja']], 'el efectivo en caja incluye el fondo de apertura');
         $cobros = \App\Modules\Listados\CajaDiaria::movimientos(['desde' => $hoy, 'hasta' => $hoy], 1, 50);
         $this->assertSame(1, $cobros['total'], 'el listado de cobros no trae ingresos ni egresos');
         $pag = $this->get('/listados/caja-diaria', ['desde' => $hoy, 'hasta' => $hoy])->body;
@@ -165,6 +193,8 @@ final class CajaTest extends ComprobantesTestCase
         $this->assertStringContainsString('no son ventas', $pag);
         $this->assertStringContainsString('Cambio para el cajón', $pag);
         $this->assertStringContainsString('Pago de flete', $pag);
+        $this->assertStringContainsString('Apertura de caja', $pag, 'la apertura aparece en el listado');
+        $this->assertStringContainsString('Fondo de apertura de caja', $pag);
         // en la pantalla de caja cada cosa tiene su concepto y va en Entra o en Sale
         $aud = $this->get('/caja/auditoria', ['desde' => $hoy, 'hasta' => $hoy])->body;
         $this->assertStringContainsString('Venta', $aud);

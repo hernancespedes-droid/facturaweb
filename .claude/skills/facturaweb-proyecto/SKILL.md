@@ -248,3 +248,7 @@ Pendiente: verificar con una cuenta real si las transferencias bancarias al CVU 
 Pedido de Hernán: aumentar por inflación aunque el costo no cambie, como «Actualización de Precios» del VFP. Maestros → Actualización de precios: filtros desde/hasta (código, proveedor, rubro, subrubro),
 una lista / todas / costo / todas y costo, coeficiente / porcentaje / monto fijo, vista previa, confirmar y deshacer la última. Los automáticos (D-133) recalculan si cambia el costo y pasan a manual si se tocan solo listas (D-144…D-146, a confirmar por Hernán).
 La pantalla de márgenes se renombró «Precios por margen». Nota `docs/entregas/0.60.0-actualizacion-precios.md`.
+
+## Caja: cobros sin turno y fondo de apertura (0.61.0, 24/11/2026)
+Hernán cobró 4 presupuestos y después abrió la caja: los cobros quedaban con `turno_id` NULL y no aparecían en Mi caja ni en Turnos y arqueos (solo en la auditoría/listado por fecha).
+Ahora al abrir el turno se suman los cobros del día de ese cajero sin turno (D-147; con el turno abierto, botón «Sumar a mi turno»). La caja diaria suma el fondo de apertura y lo lista como «Apertura de caja» (D-148). Nota `docs/entregas/0.61.0-caja-cobros-sin-turno.md`.

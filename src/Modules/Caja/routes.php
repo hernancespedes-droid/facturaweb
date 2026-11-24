@@ -9,6 +9,7 @@ use App\Modules\Caja\CajaController as C;
 return function (Router $r): void {
     $r->get('/caja', Guard::permiso('caja.turno', [C::class, 'index']));
     $r->post('/caja/abrir', Guard::permiso('caja.turno', [C::class, 'abrir']));
+    $r->post('/caja/sumar', Guard::permiso('caja.turno', [C::class, 'sumar']));
     $r->post('/caja/cerrar', Guard::permiso('caja.turno', [C::class, 'cerrar']));
     $r->post('/caja/mover', Guard::permiso('caja.mover', [C::class, 'mover']));
     $r->post('/caja/anular', Guard::permiso('caja.mover', [C::class, 'anular']));
