@@ -1237,3 +1237,11 @@ document.addEventListener('DOMContentLoaded', function () {
   document.addEventListener('keydown', teclas, true);
   setTimeout(function () { listo.focus({ preventScroll: true }); }, 0);
 });
+// Instalar como app (0.62.0): con el service worker registrado, Edge/Chrome ofrecen «Instalar» en la barra de direcciones.
+(function () {
+  var s = document.currentScript, url = s && s.getAttribute('data-sw');
+  if (!url || !('serviceWorker' in navigator) || !window.isSecureContext) return;
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register(url).catch(function () { /* sin service worker la web funciona igual */ });
+  });
+})();
