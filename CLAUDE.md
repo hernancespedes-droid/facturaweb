@@ -87,6 +87,7 @@ En e2e, emitir al contado = clic en «Emitir» + `[data-confirmar-cobro]` (helpe
 ## Caja (0.25.0)
 
 `Modules/Caja/CajaService`: turnos con arqueo (`caja_turnos`), ingresos/egresos manuales (`caja_movimientos`, tope `parametros.caja_tope`, se anulan con contra-asiento `anula_id`, nunca se editan) y `caja_auditoria` con hash encadenado (`verificar()`). Todo cobro nuevo en `caja` lleva `usuario_id`, `creado_en` y `turno_id` con `CajaService::contexto()` (hay que sumarlo en cualquier INSERT nuevo en `caja`). Permisos `caja.turno`, `caja.mover`, `caja.auditar`.
+Lo cobrado sin turno abierto (`caja.turno_id` NULL) se suma al turno del cajero al abrirlo o con «Sumar a mi turno» (`CajaService::sinTurno`/`sumarSinTurno`, 0.61.0, D-147). La caja diaria suma el fondo de apertura de los turnos del período (D-148).
 
 ## Kiosco: orden, precio y venta sin stock (0.26.0)
 

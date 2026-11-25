@@ -9,6 +9,7 @@ use App\Modules\Caja\CajaService;
 /** @var float $tope */
 /** @var ?string $error */
 /** @var array<string,string> $f */
+/** @var array{cantidad:int,efectivo:float,total:float} $sinTurno */
 $u = url('/caja');
 $p = static fn ($v) => '$ ' . number_format((float) $v, 2, ',', '.');
 $m = static fn ($v) => number_format((float) $v, 2, ',', '.');
@@ -20,7 +21,11 @@ $hora = static fn (?string $t) => $t === null ? '—' : date('d/m/Y H:i', strtot
 <?php if ($turno === null): ?>
     <section class="card">
         <h2>Abrir mi turno</h2>
-        <p class="muted small">Sin turno abierto, lo que cobres no queda en ningún arqueo y no podés mover dinero. Contá el efectivo que hay en el cajón y anotalo como fondo inicial.</p>
+        <p class="muted small">Sin turno abierto no podés mover dinero. Contá el efectivo que hay en el cajón y anotalo como fondo inicial.</p>
+        <?php if ($sinTurno['cantidad'] > 0): ?>
+            <div class="alerta alerta-warn" data-sin-turno>Hoy cobraste <?= (int) $sinTurno['cantidad'] ?> comprobante(s) sin la caja abierta (efectivo <?= e($p($sinTurno['efectivo'])) ?>, total <?= e($p($sinTurno['total'])) ?>).
+                Al abrir el turno se suman a tu caja: el fondo inicial es lo que había en el cajón <b>antes</b> de esos cobros.</div>
+        <?php endif; ?>
         <form method="post" action="<?= e(url('/caja/abrir')) ?>" class="toolbar"><?= csrf_field() ?>
             <label class="field"><span>Fondo inicial en efectivo ($)</span><input name="fondo" inputmode="decimal" data-decimales="2" value="<?= e($m($fondoSugerido)) ?>" required></label>
             <button class="btn" type="submit">Abrir turno</button>
@@ -36,6 +41,10 @@ $hora = static fn (?string $t) => $t === null ? '—' : date('d/m/Y H:i', strtot
         <div><span class="muted small">Egresos de dinero (no son ventas)</span><b>− <?= e($p($resumen['egresos'])) ?></b></div>
         <div><span class="muted small">Efectivo que debería haber</span><b data-esperado><?= e($p($resumen['esperado'])) ?></b></div>
     </section>
+    <?php if ($sinTurno['cantidad'] > 0): ?>
+        <div><div class="alerta alerta-warn" data-sin-turno>Hay <?= (int) $sinTurno['cantidad'] ?> cobro(s) tuyos de ese día hechos sin la caja abierta (efectivo <?= e($p($sinTurno['efectivo'])) ?>, total <?= e($p($sinTurno['total'])) ?>) que no están en este turno.
+            <form method="post" action="<?= e(url('/caja/sumar')) ?>" style="display:inline"><?= csrf_field() ?><button class="btn btn-sm" type="submit" data-sumar-sin-turno>Sumar a mi turno</button></form></div></div>
+    <?php endif; ?>
     <?php if ($resumen['otras'] !== []): ?>
         <p class="small muted">Cobrado en el turno por otras formas (no entran al arqueo de efectivo):
             <?= e(implode(' · ', array_map(static fn ($o) => $o['descripcion'] . ' ' . '$ ' . number_format((float) $o['total'], 2, ',', '.'), $resumen['otras']))) ?></p>

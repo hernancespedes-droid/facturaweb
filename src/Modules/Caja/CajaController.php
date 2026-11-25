@@ -33,7 +33,7 @@ final class CajaController
         return Response::html(View::render('caja/index', [
             'title' => 'Caja', 'nav' => 'caja', 'turno' => $turno, 'resumen' => $turno !== null ? $svc->resumenTurno((int) $turno['id']) : null,
             'fondoSugerido' => $svc->fondoSugerido(), 'filas' => $mov['filas'], 'puedeMover' => Auth::puede('caja.mover'), 'tope' => CajaService::tope(), 'error' => $error,
-            'f' => $f,
+            'f' => $f, 'sinTurno' => $svc->sinTurno(self::uid(), $turno !== null ? substr((string) $turno['abierto_en'], 0, 10) : date('Y-m-d')),
         ]), $status);
     }
 
@@ -44,6 +44,16 @@ final class CajaController
             return self::index($req, $params, $r['error'], 422);
         }
         Session::flash('ok', 'Turno abierto.');
+        return Response::redirect(url('/caja'));
+    }
+
+    public static function sumar(Request $req, array $params): Response
+    {
+        $r = (new CajaService())->sumarSinTurno(self::uid());
+        if (!$r['ok']) {
+            return self::index($req, $params, $r['error'], 422);
+        }
+        Session::flash('ok', $r['cantidad'] > 0 ? 'Se sumaron ' . $r['cantidad'] . ' cobro(s) a tu turno.' : 'No había cobros sin turno.');
         return Response::redirect(url('/caja'));
     }
 

@@ -8,6 +8,7 @@ use App\Modules\Listados\CajaDiaria;
 /** @var int $total */
 /** @var int $pagina */
 /** @var int $porPagina */
+/** @var array<int,array<string,mixed>> $aperturas */
 $u = url('/listados/caja-diaria');
 $link = static fn (int $p) => $u . '?' . http_build_query(['pagina' => $p] + $f);
 $paginas = (int) ceil($total / max(1, $porPagina));
@@ -41,11 +42,13 @@ $otros = $r['total_cobrado'] - $tipoMonto(1) - $tipoMonto(3) - $tipoMonto(10) - 
 
 <h2>Efectivo en caja</h2>
 <section class="card resumen-fila" aria-label="Efectivo en caja">
-    <div><span class="muted small">Cobrado en efectivo (ventas y cobranzas, neto de vuelto)</span><b><?= e($p($ef['neto'])) ?></b></div>
+    <div><span class="muted small">Fondo de apertura de caja</span><b><?= e($p($ef['fondo'])) ?></b></div>
+    <div><span class="muted small">+ Cobrado en efectivo (ventas y cobranzas, neto de vuelto)</span><b><?= e($p($ef['neto'])) ?></b></div>
     <div><span class="muted small">+ Ingresos de dinero</span><b><?= e($p($ef['ingresos'])) ?></b></div>
     <div><span class="muted small">− Egresos de dinero</span><b><?= e($p($ef['egresos'])) ?></b></div>
     <div><span class="muted small">= Efectivo total en caja</span><b><?= e($p($ef['en_caja'])) ?></b></div>
 </section>
+<?php if (count($aperturas) > 1): ?><p class="small muted">El fondo de apertura suma el de cada turno abierto en el período (<?= count($aperturas) ?> aperturas).</p><?php endif; ?>
 <p class="small muted">Los ingresos y egresos de dinero (cambio para el cajón, pagos a proveedores, retiros…) <b>no son ventas</b>: no suman a lo vendido ni a lo cobrado, solo al efectivo que hay en la caja.</p>
 
 <h2>Lo vendido</h2>
@@ -102,13 +105,23 @@ $otros = $r['total_cobrado'] - $tipoMonto(1) - $tipoMonto(3) - $tipoMonto(10) - 
     </table></div>
 <?php endif; ?>
 
-<h2>Ingresos y egresos de dinero <span class="muted small">(no son ventas)</span></h2>
-<?php if ($manuales === []): ?>
+<h2>Apertura, ingresos y egresos de dinero <span class="muted small">(no son ventas)</span></h2>
+<?php if ($manuales === [] && $aperturas === []): ?>
     <p class="muted vacio">No hubo ingresos ni egresos de dinero en ese período.</p>
 <?php else: ?>
     <div class="table-wrap"><table class="table table-cards">
         <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Concepto</th><th>Motivo</th><th class="num">Entra</th><th class="num">Sale</th></tr></thead>
         <tbody>
+        <?php foreach ($aperturas as $x): ?>
+            <tr class="fila-manual" data-apertura>
+                <td data-label="Fecha y hora" class="nw"><?= e(date('d/m/Y H:i', (int) strtotime($x['abierto_en']))) ?></td>
+                <td data-label="Usuario"><?= e((string) $x['usuario']) ?></td>
+                <td data-label="Concepto"><b>Apertura de caja</b></td>
+                <td data-label="Motivo">Fondo inicial del turno</td>
+                <td data-label="Entra" class="num"><?= e($m($x['fondo_inicial'])) ?></td>
+                <td data-label="Sale" class="num"></td>
+            </tr>
+        <?php endforeach; ?>
         <?php foreach ($manuales as $x): $ing = $x['tipo'] === 'I'; ?>
             <tr class="fila-manual">
                 <td data-label="Fecha y hora" class="nw"><?= e(date('d/m/Y H:i', (int) strtotime($x['creado_en']))) ?></td>

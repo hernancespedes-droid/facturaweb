@@ -17,7 +17,7 @@ use App\Modules\Tablas\Definiciones;
  *
  * DECISIÓN D-45 (Claude, a confirmar por Hernán): la caja suma lo que quedó anotado en `caja` (ventas de contado y recibos); la cuenta corriente
  * no es dinero (va aparte); las notas de crédito no devuelven dinero en caja (como el VFP); las facturas que salen de un presupuesto no suman
- * (no tienen caja: ya la sumó el presupuesto); no hay apertura/cierre de turnos: es el total por fecha (desde/hasta).
+ * (no tienen caja: ya la sumó el presupuesto); es el total por fecha (desde/hasta), con el fondo de apertura de los turnos del período (D-148).
  */
 final class CajaDiaria
 {
@@ -87,7 +87,11 @@ final class CajaDiaria
         [$ing, $egr] = $st->fetch(\PDO::FETCH_NUM);
         $ef['ingresos'] = (float) $ing;
         $ef['egresos'] = (float) $egr;
-        $ef['en_caja'] = $ef['neto'] + (float) $ing - (float) $egr;
+        // DECISIÓN D-148: el fondo con que se abrió cada turno del período también está en el cajón (con varios días, se suma el de cada apertura)
+        $st = $pdo->prepare('SELECT COALESCE(SUM(fondo_inicial), 0) FROM caja_turnos WHERE DATE(abierto_en) BETWEEN ? AND ?');
+        $st->execute([$d, $h]);
+        $ef['fondo'] = (float) $st->fetchColumn();
+        $ef['en_caja'] = $ef['fondo'] + $ef['neto'] + (float) $ing - (float) $egr;
         return ['ventas' => $v, 'cobrado' => $cobrado, 'por_tipo' => $porTipo, 'total_cobrado' => Calculadora::r2($total),
             'efectivo' => array_map([Calculadora::class, 'r2'], $ef)];
     }
@@ -124,6 +128,16 @@ final class CajaDiaria
         $st = Db::pdo()->prepare('SELECT m.id, m.creado_en, m.tipo, m.importe, m.motivo, m.anula_id, u.nombre AS usuario,
                 (SELECT COUNT(*) FROM caja_movimientos a WHERE a.anula_id = m.id) AS anulado
             FROM caja_movimientos m LEFT JOIN usuarios u ON u.id = m.usuario_id WHERE DATE(m.creado_en) BETWEEN ? AND ? ORDER BY m.creado_en, m.id');
+        $st->execute([$d, $h]);
+        return $st->fetchAll();
+    }
+
+    /** Aperturas de caja del período (fondo inicial de cada turno). @param array<string,string> $f @return array<int,array<string,mixed>> */
+    public static function aperturas(array $f): array
+    {
+        [$d, $h] = self::fechas($f);
+        $st = Db::pdo()->prepare('SELECT t.id, t.abierto_en, t.fondo_inicial, u.nombre AS usuario FROM caja_turnos t LEFT JOIN usuarios u ON u.id = t.usuario_id
+            WHERE DATE(t.abierto_en) BETWEEN ? AND ? ORDER BY t.abierto_en, t.id');
         $st->execute([$d, $h]);
         return $st->fetchAll();
     }
