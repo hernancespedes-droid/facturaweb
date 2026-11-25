@@ -181,6 +181,10 @@ registro en `instancias_resets` (base del master) y nota interna en el ticket el
 Menú horizontal o lateral (`apariencia.menu`, `Apariencia::menu()` → `<body class="menu-…">`, 0.52.0, D-136; estilos `body.menu-lateral` en `app.css`, plegado en `app.js`). Íconos del menú en `Core\Menu` (`SVG`, `ICONO`, `ICONO_GRUPO`; 0.54.0, D-138): **opción nueva del menú → sumarle ícono en `Menu::ICONO`** (si no, usa el de su grupo). Contraer/expandir el lateral: cookie `menu_contraido` → `body.menu-contraido` (0.56.0, D-139).
 Colores nuevos en `app.css`: siempre con `var(--brand)` / `color-mix(...)` y `var(--on-brand)` para el texto sobre el color, nunca el azul fijo. La marca del cliente va arriba y O&S firma al pie.
 
+## Instalar como app (0.62.0)
+
+`Modules/Pwa`: `/manifest.webmanifest` (nombre y color de `Apariencia`), `/app/icono-{192|512|maskable|apple}.png` (`Pwa\Iconos`, GD desde el logo; `?v=Iconos::version()`), `/sw.js` (solo cachea `/app/sin-conexion`; las pantallas van siempre a la red) y `/app/sin-conexion`, todo sin sesión. `layout.php` enlaza manifiesto e ícono de Apple; `app.js` registra el service worker (`data-sw`). En e2e, que no quede otro servidor ocupando el 8080.
+
 ## Importar desde Excel, CSV y TXT (0.38.0)
 
 `Modules/Importacion` (Sistema → Importar datos, permiso `importar.datos` + el de cada destino en `Destinos::PERMISO`): `Lector` (xlsx con ZipArchive/XMLReader, CSV/TXT con separador y

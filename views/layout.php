@@ -39,9 +39,15 @@ if ($alDia && Menu::visible('mp_ingresos')) {
     <title><?= e(($title ?? '') !== '' ? $title . ' - ' : '') ?><?= e($nombreSistema) ?></title>
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
     <?php if ($estiloMarca !== ''): ?><style><?= $estiloMarca /* solo #rrggbb validados */ ?></style><?php endif; ?>
-    <?php if ($colorMarca !== null): ?><meta name="theme-color" content="<?= e($colorMarca) ?>"><?php endif; ?>
+    <meta name="theme-color" content="<?= e($colorMarca ?? \App\Modules\Pwa\Iconos::COLOR_BASE) ?>">
+    <?php /* Instalar como app (0.62.0): manifiesto e íconos de esta instalación; app.js registra el service worker. */ ?>
+    <link rel="manifest" href="<?= e(url('/manifest.webmanifest')) ?>">
+    <link rel="apple-touch-icon" href="<?= e(url('/app/icono-apple.png') . '?v=' . \App\Modules\Pwa\Iconos::version()) ?>">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="<?= e($nombreSistema) ?>">
     <?php if ($iconoUrl !== null): ?><link rel="icon" type="image/png" href="<?= e($iconoUrl) ?>"><?php endif; ?>
-    <script src="<?= e(asset('assets/app.js')) ?>" defer></script>
+    <script src="<?= e(asset('assets/app.js')) ?>" defer data-sw="<?= e(url('/sw.js')) ?>"></script>
     <script src="<?= e(asset('assets/grilla.js')) ?>" defer></script>
     <script src="<?= e(asset('assets/carga.js')) ?>" defer></script>
 </head>

@@ -252,3 +252,6 @@ La pantalla de márgenes se renombró «Precios por margen». Nota `docs/entrega
 ## Caja: cobros sin turno y fondo de apertura (0.61.0, 24/11/2026)
 Hernán cobró 4 presupuestos y después abrió la caja: los cobros quedaban con `turno_id` NULL y no aparecían en Mi caja ni en Turnos y arqueos (solo en la auditoría/listado por fecha).
 Ahora al abrir el turno se suman los cobros del día de ese cajero sin turno (D-147; con el turno abierto, botón «Sumar a mi turno»). La caja diaria suma el fondo de apertura y lo lista como «Apertura de caja» (D-148). Nota `docs/entregas/0.61.0-caja-cobros-sin-turno.md`.
+
+## Instalar como app (0.62.0, 25/11/2026)
+Pedido de Hernán: que al entrar a la URL se pueda instalar como app (como el ícono «Instalar» de Edge en oesteparts.site). `Modules/Pwa`: manifiesto, íconos y service worker por instalación (nombre, color y logo de la apariencia). Android/PC: el navegador ofrece instalar; iPhone: Safari → Compartir → «Agregar a inicio». Requiere https. Nota `docs/entregas/0.62.0-instalar-como-app.md`.
