@@ -259,4 +259,4 @@ Pedido de Hernán: que al entrar a la URL se pueda instalar como app (como el í
 ## Reporte de caja para imprimir (0.65.0, 26/11/2026)
 
 Pedido de Hernán: el listado de caja tiene que dar un reporte a impresora detallado y fácil para alguien sin conocimientos (ingresos, salidas, ventas y a dónde fue cada peso).
-Listados → Caja diaria → «Imprimir reporte detallado» abre una hoja A4 (`Listados/ReporteCaja`, D-151) con los mismos números de la pantalla. Nota `docs/entregas/0.65.0-reporte-caja.md`.
+Listados → Caja diaria → «Imprimir reporte detallado» abre una hoja A4 (`Listados/ReporteCaja`, D-152) con los mismos números de la pantalla. Nota `docs/entregas/0.65.0-reporte-caja.md`.
