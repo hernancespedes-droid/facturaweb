@@ -22,8 +22,8 @@ $tipos = ['FC' => 'Facturas', 'ND' => 'Notas de débito', 'NC' => 'Notas de cré
     <?= $costos ? 'El margen es la venta neta menos el costo grabado al vender; si una venta no tiene costo grabado, se usa el de hoy y se marca «estimado».' : '' ?></p>
 
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros no-imprimir">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <label class="field"><span>Agrupar por</span><select name="agrupar">
         <?php foreach (Estadistica::AGRUPAR as $k => $a): ?><option value="<?= e($k) ?>" <?= $r['agrupar'] === $k ? 'selected' : '' ?>><?= e($a[0]) ?></option><?php endforeach; ?></select></label>
     <label class="field"><span>Comprobantes</span><select name="tipo"><option value="">Todos</option>

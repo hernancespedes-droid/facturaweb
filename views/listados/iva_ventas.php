@@ -27,8 +27,8 @@ $nombreAlic = static fn (float $a) => rtrim(rtrim(number_format($a, 2, ',', ''),
 </div>
 
 <form method="get" action="<?= e(url('/listados/iva-ventas')) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <select name="pv" aria-label="Punto de venta"><option value="">Todos los puntos de venta</option>
         <?php foreach ($pvs as $pv): ?><option value="<?= $pv ?>" <?= (string) ($f['pv'] ?? '') === (string) $pv ? 'selected' : '' ?>><?= e(sprintf('%04d', $pv)) ?></option><?php endforeach; ?></select>
     <select name="tipo" aria-label="Tipo"><option value="">Todos los tipos</option>

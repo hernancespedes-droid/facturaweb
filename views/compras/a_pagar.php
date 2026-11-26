@@ -13,7 +13,7 @@ $tramos = ['por_vencer' => 'Por vencer', 'd30' => 'Vencido 1 a 30 días', 'd60' 
 </div>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
     <?php $nombre = 'proveedor'; $titulo = 'Proveedor'; include __DIR__ . '/_proveedor.php'; ?>
-    <label class="field"><span>Que venzan hasta</span><input name="vence_hasta" value="<?= e($f['vence_hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Que venzan hasta</span><input name="vence_hasta" value="<?= e($f['vence_hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <button class="btn" type="submit">Ver</button>
 </form>
 

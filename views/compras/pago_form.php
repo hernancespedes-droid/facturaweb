@@ -35,7 +35,7 @@ if ($medios === []) {
         <h2><?= e($prov['razon_social']) ?></h2>
         <p class="small">C.U.I.T. <?= e(cuit_texto((string) $prov['cuit'])) ?><?= $prov['cbu_alias'] !== '' ? ' · CBU / alias: <b>' . e($prov['cbu_alias']) . '</b>' : '' ?>
             · <a href="<?= e(url('/compras/pagos/nueva')) ?>">Otro proveedor</a> · <a href="<?= e(url('/compras/proveedores/cuenta?proveedor=' . (int) $prov['id'])) ?>">Cuenta corriente</a></p>
-        <label class="field"><span>Fecha</span><input name="fecha" value="<?= e((string) ($d['fecha'] ?? date('d/m/Y'))) ?>" inputmode="numeric" placeholder="dd/mm/aaaa"><?= $err('fecha') ?></label>
+        <label class="field"><span>Fecha</span><input name="fecha" value="<?= e((string) ($d['fecha'] ?? date('d/m/Y'))) ?>" inputmode="numeric" placeholder="dd/mm/aaaa" data-fecha><?= $err('fecha') ?></label>
         <label class="field"><span>Observaciones</span><input name="observaciones" value="<?= e((string) ($d['observaciones'] ?? '')) ?>" maxlength="255"></label>
     </section>
 
@@ -95,7 +95,7 @@ if ($medios === []) {
                         <select name="medios[<?= $i ?>][retencion]" data-solo="R" aria-label="Retención"><option value="">¿Qué retención?</option>
                             <?php foreach (O::RETENCIONES as $k => $t): ?><option value="<?= e($k) ?>" <?= ($x['retencion'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select>
                         <input name="medios[<?= $i ?>][numero]" value="<?= e((string) ($x['numero'] ?? '')) ?>" maxlength="30" data-solo="P R" placeholder="N° de cheque o certificado" aria-label="Número">
-                        <input name="medios[<?= $i ?>][vence]" value="<?= e((string) ($x['vence'] ?? '')) ?>" data-solo="P" placeholder="Paga el dd/mm/aaaa" inputmode="numeric" aria-label="Fecha de pago del cheque">
+                        <input name="medios[<?= $i ?>][vence]" value="<?= e((string) ($x['vence'] ?? '')) ?>" data-solo="P" placeholder="Paga el dd/mm/aaaa" data-fecha inputmode="numeric" aria-label="Fecha de pago del cheque">
                         <input name="medios[<?= $i ?>][detalle]" value="<?= e((string) ($x['detalle'] ?? '')) ?>" maxlength="120" data-solo="E T P O" placeholder="Banco, cuenta, número de operación…" aria-label="Detalle">
                     </div></td>
                     <td class="num"><input name="medios[<?= $i ?>][importe]" value="<?= e((string) ($x['importe'] ?? '')) ?>" inputmode="decimal" data-decimales="2" data-medio-imp aria-label="Importe"></td>

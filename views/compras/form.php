@@ -60,7 +60,7 @@ $opcConceptos = static function (int $sel) use ($conceptos): string {
             <div class="campo-con-boton"><input name="punto_venta" value="<?= $v('punto_venta') ?>" inputmode="numeric" maxlength="5" size="6" placeholder="00003" aria-label="Punto de venta">
                 <input name="numero" value="<?= $v('numero') ?>" inputmode="numeric" maxlength="8" placeholder="00014587" aria-label="Número"></div>
             <?= $err('punto_venta') ?><?= $err('numero') ?></div>
-        <label class="field"><span>Fecha *</span><input name="fecha" value="<?= $v('fecha', date('d/m/Y')) ?>" placeholder="dd/mm/aaaa" inputmode="numeric" required><?= $err('fecha') ?></label>
+        <label class="field"><span>Fecha *</span><input name="fecha" value="<?= $v('fecha', date('d/m/Y')) ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric" required><?= $err('fecha') ?></label>
         <label class="field" data-con-numero><span>Período de IVA</span><input name="periodo_iva" value="<?= $v('periodo_iva') ?>" placeholder="El mes de la fecha" inputmode="numeric" data-periodo><?= $err('periodo_iva') ?></label>
         <label class="field" data-con-numero><span>CAE (optativo)</span><input name="cae" value="<?= $v('cae') ?>" inputmode="numeric" maxlength="14"><?= $err('cae') ?></label>
     </section>
@@ -190,7 +190,7 @@ $opcConceptos = static function (int $sel) use ($conceptos): string {
                 <?php endforeach; ?>
             </div></fieldset>
         <?= $err('forma') ?>
-        <label class="field" data-si-forma="C"><span>Vence</span><input name="vence" value="<?= $v('vence') ?>" placeholder="Fecha + plazo del proveedor" inputmode="numeric" data-vence><?= $err('vence') ?></label>
+        <label class="field" data-si-forma="C"><span>Vence</span><input name="vence" value="<?= $v('vence') ?>" placeholder="Fecha + plazo del proveedor" inputmode="numeric" data-vence data-fecha><?= $err('vence') ?></label>
         <label class="field" data-si-forma="O"><span>Medio y detalle</span><input name="detalle_pago" value="<?= $v('detalle_pago') ?>" maxlength="120" placeholder="Transferencia Banco Nación, tarjeta…"></label>
         <?php if ($turno === null): ?><p class="small" data-si-forma="E"><span class="pill pill-warn">Sin turno de caja</span> Para pagar en efectivo abrí tu turno en <a href="<?= e(url('/caja')) ?>">Mi caja</a>.</p><?php endif; ?>
     </section>

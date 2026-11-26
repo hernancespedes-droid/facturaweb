@@ -52,7 +52,7 @@ $filaPago = static function (string $n, array $p) use ($formas, $bancos): string
         <label class="field" data-solo-cheque hidden><span>N.º de cheque</span><input name="pagos[<?= e($n) ?>][nro]" value="<?= e($p['nro'] ?? '') ?>" maxlength="20"></label>
         <label class="field" data-solo-cheque hidden><span>Banco</span><select name="pagos[<?= e($n) ?>][banco]"><option value="">Elegí…</option>
             <?php foreach ($bancos as $b): ?><option value="<?= (int) $b['codigo'] ?>" <?= (string) ($p['banco'] ?? '') === (string) $b['codigo'] ? 'selected' : '' ?>><?= e($b['descripcion']) ?></option><?php endforeach; ?></select></label>
-        <label class="field" data-solo-cheque hidden><span>Fecha de cobro</span><input name="pagos[<?= e($n) ?>][vto]" value="<?= e($p['vto'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+        <label class="field" data-solo-cheque hidden><span>Fecha de cobro</span><input name="pagos[<?= e($n) ?>][vto]" value="<?= e($p['vto'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     </div>
     <?php return (string) ob_get_clean();
 };
@@ -74,7 +74,7 @@ $filaPago = static function (string $n, array $p) use ($formas, $bancos): string
     <input type="hidden" name="operacion" value="<?= e($operacion) ?>">
     <input type="hidden" data-neto value="0">
     <section class="card form-grid">
-        <label class="field<?= isset($errores['fecha']) ? ' has-error' : '' ?>"><span>Fecha *</span><input name="fecha" value="<?= e($v('fecha', date('d/m/Y'))) ?>" inputmode="numeric" required><?= $err('fecha') ?></label>
+        <label class="field<?= isset($errores['fecha']) ? ' has-error' : '' ?>"><span>Fecha *</span><input name="fecha" value="<?= e($v('fecha', date('d/m/Y'))) ?>" inputmode="numeric" required data-fecha><?= $err('fecha') ?></label>
         <?php if ($sucursales === []): ?>
             <div class="alerta alerta-error">No hay sucursales con punto de venta. Se cargan en Tablas → Sucursales.</div>
         <?php elseif (count($sucursales) > 1): ?>

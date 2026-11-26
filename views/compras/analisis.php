@@ -13,8 +13,8 @@ $pct = static fn ($v) => $v === null ? '—' : number_format((float) $v, 1, ',',
 </div>
 <p class="small muted">Cuánto se gastó, agrupado como elijas. Se suma el costo de cada compra repartido entre los centros (sin IVA computable ni percepciones); las notas de crédito restan y las anuladas no cuentan.</p>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <label class="field"><span>Agrupar por</span><select name="agrupar">
         <?php foreach (L::AGRUPAR as $k => $a): ?><option value="<?= e($k) ?>" <?= $r['agrupar'] === $k ? 'selected' : '' ?>><?= e($a[0]) ?></option><?php endforeach; ?></select></label>
     <?php $nombre = 'proveedor'; $titulo2 = $titulo; $titulo = 'Proveedor'; include __DIR__ . '/_proveedor.php'; $titulo = $titulo2; ?>
