@@ -20,6 +20,7 @@ const RECORRIDOS = [
   'actualizacion-precios.js',
   'fecha-factura.js',
   'calendario.js',
+  'reporte-caja.js',
 ];
 
 for (const archivo of RECORRIDOS) {

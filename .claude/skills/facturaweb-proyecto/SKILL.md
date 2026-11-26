@@ -262,3 +262,9 @@ fechas en orden por tipo y punto de venta, nota no anterior a lo que corrige; la
 ## Calendario en las consultas con fecha (0.64.0, 26/11/2026)
 Pedido de Hernán: «todas las consultas que tengan fechas deben tener la posibilidad de buscar en un calendario». Calendario propio común (`calendario.js`, `data-fecha`) en todos los filtros y cargas con fecha dd/mm/aaaa,
 con períodos rápidos en desde/hasta y hoja desde abajo en el celular (D-152). Los campos de la factura (servicio, vencimiento) quedan con el del navegador porque los toca el pedido de facturar con otra fecha. Nota `docs/entregas/0.64.0-calendario-fechas.md`.
+
+
+## Reporte de caja para imprimir (0.65.0, 26/11/2026)
+
+Pedido de Hernán: el listado de caja tiene que dar un reporte a impresora detallado y fácil para alguien sin conocimientos (ingresos, salidas, ventas y a dónde fue cada peso).
+Listados → Caja diaria → «Imprimir reporte detallado» abre una hoja A4 (`Listados/ReporteCaja`, D-153) con los mismos números de la pantalla. Nota `docs/entregas/0.65.0-reporte-caja.md`.
