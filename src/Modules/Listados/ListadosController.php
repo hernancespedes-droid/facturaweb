@@ -39,7 +39,7 @@ final class ListadosController
         ]));
     }
 
-    /** Reporte de caja para imprimir (A4): lo vendido, cómo se cobró, a dónde fue cada peso y el detalle (D-152). Mismo período que la caja diaria. */
+    /** Reporte de caja para imprimir (A4): lo vendido, cómo se cobró, a dónde fue cada peso y el detalle (D-153). Mismo período que la caja diaria. */
     public static function cajaImprimir(Request $req, array $params): Response
     {
         $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta'])));
