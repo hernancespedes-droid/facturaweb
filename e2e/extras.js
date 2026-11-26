@@ -18,6 +18,7 @@ const RECORRIDOS = [
   'menu.js',
   'usuarios-clientes.js',
   'actualizacion-precios.js',
+  'fecha-factura.js',
   'reporte-caja.js',
 ];
 

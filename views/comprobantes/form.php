@@ -158,14 +158,20 @@ $hoyIso = date('Y-m-d');
                     <option value="<?= $k ?>" <?= $concepto === (string) $k ? 'selected' : '' ?>><?= e($t) ?></option>
                 <?php endforeach; ?>
             </select><?= $err('concepto') ?></label>
+        <?php $diasF = \App\Modules\Comprobantes\ComprobantesService::diasFecha((int) $concepto); ?>
+        <label class="field<?= isset($errores['fecha']) ? ' has-error' : '' ?>"><span>Fecha</span>
+            <input type="date" name="fecha" value="<?= e($v('fecha', $hoyIso)) ?>" data-fecha-cbte data-hoy="<?= e($hoyIso) ?>"
+                   min="<?= e(date('Y-m-d', strtotime("-{$diasF} days"))) ?>" max="<?= e(date('Y-m-d', strtotime("+{$diasF} days"))) ?>">
+            <small class="muted" data-fecha-ayuda>ARCA acepta hasta <b data-fecha-dias><?= $diasF ?></b> días antes o después de hoy. Las fechas tienen que ir en orden: después de una factura con fecha adelantada, no se puede hacer otra del mismo tipo y punto de venta con fecha anterior.</small>
+            <?= $err('fecha') ?></label>
     </div>
     <div class="grid-2" data-servicios <?= (int) $concepto > 1 ? '' : 'hidden' ?>>
         <label class="field<?= isset($errores['serv_desde']) ? ' has-error' : '' ?>"><span>Servicio desde</span>
-            <input type="date" name="serv_desde" value="<?= e($v('serv_desde', $hoyIso)) ?>"><?= $err('serv_desde') ?></label>
+            <input type="date" name="serv_desde" value="<?= e($v('serv_desde', $v('fecha', $hoyIso))) ?>"><?= $err('serv_desde') ?></label>
         <label class="field<?= isset($errores['serv_hasta']) ? ' has-error' : '' ?>"><span>Servicio hasta</span>
-            <input type="date" name="serv_hasta" value="<?= e($v('serv_hasta', $hoyIso)) ?>"><?= $err('serv_hasta') ?></label>
+            <input type="date" name="serv_hasta" value="<?= e($v('serv_hasta', $v('fecha', $hoyIso))) ?>"><?= $err('serv_hasta') ?></label>
         <label class="field<?= isset($errores['vto_pago']) ? ' has-error' : '' ?>"><span>Vencimiento del pago</span>
-            <input type="date" name="vto_pago" value="<?= e($v('vto_pago', $hoyIso)) ?>"><?= $err('vto_pago') ?></label>
+            <input type="date" name="vto_pago" value="<?= e($v('vto_pago', $v('fecha', $hoyIso))) ?>"><?= $err('vto_pago') ?></label>
     </div>
     <?php endif; ?>
     <div class="grid-2">
