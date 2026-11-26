@@ -1,4 +1,4 @@
-// Recorrido de navegador: reporte de caja para imprimir (Listados → Caja diaria → «Imprimir reporte detallado», D-149).
+// Recorrido de navegador: reporte de caja para imprimir (Listados → Caja diaria → «Imprimir reporte detallado», D-151).
 //   node e2e/reporte-caja.js   levanta su propio servidor en el puerto 8087
 //   E2E_CAPTURAS=<carpeta> guarda capturas (escritorio y celular).
 // El botón abre la hoja aparte con el mismo período; el efectivo que tiene que haber en el cajón es el mismo que muestra la caja diaria;

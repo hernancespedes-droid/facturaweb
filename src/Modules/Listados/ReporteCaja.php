@@ -13,7 +13,7 @@ use App\Modules\CuentaCorriente\CuentaCorrienteService;
  * (cajón, banco por la tarjeta, Mercado Pago, cartera de cheques, cuenta corriente), lo que salió de la caja y el detalle de cada cobro.
  * Usa los mismos números que la caja diaria (`CajaDiaria::resumen`, D-45, D-148): el reporte no calcula distinto, solo explica y detalla.
  *
- * DECISIÓN D-149 (Claude, a confirmar por Hernán): el reporte es una hoja A4 aparte (`/listados/caja-diaria/imprimir`) con frases simples y
+ * DECISIÓN D-151 (Claude, a confirmar por Hernán): el reporte es una hoja A4 aparte (`/listados/caja-diaria/imprimir`) con frases simples y
  * «a dónde fue» por tipo de forma de pago; los cheques se muestran con su estado de hoy (en cartera, depositado, entregado, rechazado); los pagos
  * a proveedores y lo que entró a Mercado Pago aparecen solo si hubo en el período. La cuenta corriente se muestra como «lo que quedó debiendo»,
  * nunca como dinero cobrado.

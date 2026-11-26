@@ -89,7 +89,7 @@ En e2e, emitir al contado = clic en «Emitir» + `[data-confirmar-cobro]` (helpe
 `Modules/Caja/CajaService`: turnos con arqueo (`caja_turnos`), ingresos/egresos manuales (`caja_movimientos`, tope `parametros.caja_tope`, se anulan con contra-asiento `anula_id`, nunca se editan) y `caja_auditoria` con hash encadenado (`verificar()`). Todo cobro nuevo en `caja` lleva `usuario_id`, `creado_en` y `turno_id` con `CajaService::contexto()` (hay que sumarlo en cualquier INSERT nuevo en `caja`). Permisos `caja.turno`, `caja.mover`, `caja.auditar`.
 Lo cobrado sin turno abierto (`caja.turno_id` NULL) se suma al turno del cajero al abrirlo o con «Sumar a mi turno» (`CajaService::sinTurno`/`sumarSinTurno`, 0.61.0, D-147). La caja diaria suma el fondo de apertura de los turnos del período (D-148).
 
-**Reporte de caja para imprimir (0.63.0, D-149):** `Listados/ReporteCaja::datos()` (sobre `CajaDiaria::resumen`, mismos números) + `views/listados/caja_imprimir.php` (hoja A4 suelta, `/listados/caja-diaria/imprimir`, botón en la caja diaria):
+**Reporte de caja para imprimir (0.65.0, D-151):** `Listados/ReporteCaja::datos()` (sobre `CajaDiaria::resumen`, mismos números) + `views/listados/caja_imprimir.php` (hoja A4 suelta, `/listados/caja-diaria/imprimir`, botón en la caja diaria):
 qué se vendió, cómo se cobró y a dónde fue cada peso (`ReporteCaja::DESTINO` por tipo de forma de pago), efectivo paso a paso con arqueos, salidas, proveedores, cuenta corriente, cheques, Mercado Pago y detalle. e2e: `e2e/reporte-caja.js`.
 
 ## Kiosco: orden, precio y venta sin stock (0.26.0)
