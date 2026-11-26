@@ -14,8 +14,8 @@ $est = (string) ($f['estado'] ?? '');
 <form method="get" action="<?= e(url('/cheques')) ?>" class="toolbar filtros">
     <select name="estado" aria-label="Estado"><option value="">En cartera</option><option value="todos" <?= $est === 'todos' ? 'selected' : '' ?>>Todos</option>
         <?php foreach (['D', 'E', 'R'] as $k): ?><option value="<?= $k ?>" <?= $est === $k ? 'selected' : '' ?>><?= e(CuentaCorrienteService::ESTADOS_CHEQUE[$k]) ?></option><?php endforeach; ?></select>
-    <label class="field"><span>Cobro desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Cobro desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <input name="q" value="<?= e($f['q'] ?? '') ?>" placeholder="N.º de cheque o cliente" type="search" aria-label="Buscar">
     <label class="check"><input type="checkbox" name="diferidos" value="1" <?= !empty($f['diferidos']) ? 'checked' : '' ?>> Solo diferidos (a cobrar después de hoy)</label>
     <button class="btn btn-ghost" type="submit">Buscar</button>

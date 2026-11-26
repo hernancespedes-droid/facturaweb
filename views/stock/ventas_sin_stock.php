@@ -16,8 +16,8 @@ $n = static fn ($v) => rtrim(rtrim(number_format((float) $v, 3, ',', '.'), '0'),
 <div class="page-head"><div><p class="eyebrow">Stock</p><h1>Ventas sin stock</h1></div></div>
 <p class="muted small">Lo que se vendió cuando no alcanzaba el stock disponible: quién lo vendió y cómo se autorizó. Las ventas de roles que pueden vender sin stock figuran como «por permiso».</p>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa (por omisión, 30 días)" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa (por omisión, 30 días)" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <label class="field"><span>Cómo se autorizó</span><select name="modo"><option value="">Todas</option>
         <?php foreach (VentasSinStock::MODOS as $k => $t): ?><option value="<?= e($k) ?>" <?= ($f['modo'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select></label>
     <button class="btn btn-ghost" type="submit">Ver</button>

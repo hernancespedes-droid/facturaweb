@@ -13,7 +13,7 @@ $paginas = (int) ceil($total / max(1, $porPagina));
 <?php $cli = null; $accion = '/cuenta-corriente/cliente'; $boton = 'Ver la cuenta del cliente'; require __DIR__ . '/_picker.php'; ?>
 <form method="get" action="<?= e(url('/cuenta-corriente')) ?>" class="toolbar filtros">
     <input name="q" value="<?= e($f['q'] ?? '') ?>" placeholder="Filtrar por nombre o código" type="search" aria-label="Filtrar">
-    <label class="field"><span>Vencido al</span><input name="al" value="<?= e($f['al'] ?? '') ?>" placeholder="hoy" inputmode="numeric"></label>
+    <label class="field"><span>Vencido al</span><input name="al" value="<?= e($f['al'] ?? '') ?>" placeholder="hoy" inputmode="numeric" data-fecha></label>
     <label class="check"><input type="checkbox" name="solo_deudores" value="1" <?= ($f['solo_deudores'] ?? '') === '1' ? 'checked' : '' ?>> Solo los que deben</label>
     <button class="btn btn-ghost" type="submit">Buscar</button>
 </form>

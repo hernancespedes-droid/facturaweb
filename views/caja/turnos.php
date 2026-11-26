@@ -9,8 +9,8 @@ $hora = static fn (?string $t) => $t === null ? '—' : date('d/m/Y H:i', strtot
 ?>
 <div class="page-head"><div><p class="eyebrow">Caja</p><h1>Turnos y arqueos</h1></div></div>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa (por omisión, 30 días)" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa (por omisión, 30 días)" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <?php if ($audita): ?>
         <label class="field"><span>Cajero</span><select name="usuario"><option value="">Todos</option>
             <?php foreach ($usuarios as $id => $n): ?><option value="<?= (int) $id ?>" <?= ($f['usuario'] ?? '') === (string) $id ? 'selected' : '' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>

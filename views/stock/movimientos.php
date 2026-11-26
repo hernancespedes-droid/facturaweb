@@ -19,8 +19,8 @@ $m = static fn ($v) => number_format((float) $v, 2, ',', '.');
 </div>
 <p class="small muted no-imprimir">Cada entrada y salida de stock con su comprobante o motivo, quién la hizo y, si se vendió sin stock, quién lo autorizó. Elegí un artículo para ver el saldo renglón por renglón.</p>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros no-imprimir">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <?php $urlArticulo = url('/stock/buscar-articulo'); $urlCliente = $resumido ? null : url('/stock/buscar-cliente'); include __DIR__ . '/../listados/_buscadores.php'; ?>
     <label class="field"><span>Depósito</span><select name="deposito"><option value="">Todos</option>
         <?php foreach ($depositos as $d): ?><option value="<?= (int) $d['id'] ?>" <?= ($f['deposito'] ?? '') === (string) $d['id'] ? 'selected' : '' ?>><?= e($d['nombre']) ?></option><?php endforeach; ?></select></label>

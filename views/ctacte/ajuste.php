@@ -15,7 +15,7 @@ $v = static fn (string $k, string $d = ''): string => e($datos[$k] ?? $d);
     <form method="post" action="<?= e(url('/cuenta-corriente/ajuste')) ?>" class="card form-grid" data-confirmar="¿Grabás el ajuste? Cambia el saldo del cliente."><?= csrf_field() ?>
         <input type="hidden" name="cliente" value="<?= (int) $cli['codigo'] ?>">
         <label class="field"><span>Tipo *</span><select name="tipo"><?php foreach (CuentaCorrienteService::AJUSTES as $k => $a): ?><option value="<?= $k ?>" <?= ($datos['tipo'] ?? '') === $k ? 'selected' : '' ?>><?= e($a[0]) ?></option><?php endforeach; ?></select></label>
-        <label class="field"><span>Fecha *</span><input name="fecha" value="<?= $v('fecha', date('d/m/Y')) ?>" inputmode="numeric" required></label>
+        <label class="field"><span>Fecha *</span><input name="fecha" value="<?= $v('fecha', date('d/m/Y')) ?>" inputmode="numeric" required data-fecha></label>
         <?php if (count($sucursales) > 1): ?>
             <label class="field"><span>Sucursal *</span><select name="sucursal"><?php foreach ($sucursales as $s): ?><option value="<?= (int) $s['codigo'] ?>" <?= ($datos['sucursal'] ?? '') === (string) $s['codigo'] ? 'selected' : '' ?>><?= e($s['descripcion']) ?></option><?php endforeach; ?></select></label>
         <?php elseif (count($sucursales) === 1): ?><input type="hidden" name="sucursal" value="<?= (int) array_key_first($sucursales) ?>"><?php endif; ?>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Modules\MercadoPago;
 
 use App\Core\Session;
+use App\Core\Valida;
 use App\Core\View;
 use App\Http\Request;
 use App\Http\Response;
@@ -23,6 +24,11 @@ final class IngresosController
         $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta', 'medio', 'texto', 'orden'])));
         if (!isset($req->query['desde']) && !isset($req->query['hasta'])) {
             $f['desde'] = $f['hasta'] = date('Y-m-d'); // por omisión, lo de hoy
+        }
+        foreach (['desde', 'hasta'] as $k) { // el calendario escribe dd/mm/aaaa; los enlaces de página llevan AAAA-MM-DD
+            if (($f[$k] ?? '') !== '') {
+                $f[$k] = Valida::fecha($f[$k]) ?? '';
+            }
         }
         $pagina = max(1, (int) ($req->query['pagina'] ?? 1));
         $por = Configuracion::porPagina();
