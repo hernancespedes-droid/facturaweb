@@ -1,4 +1,4 @@
-/* Calendario para los campos de fecha (0.64.0, D-151).
+/* Calendario para los campos de fecha (0.64.0, D-152).
  *
  * Todo <input data-fecha> (texto dd/mm/aaaa) suma a su derecha un botón con un calendario: se elige el día con el mouse,
  * el dedo o el teclado y queda escrito como dd/mm/aaaa (lo que leen Valida::fecha y los filtros). Se puede seguir escribiendo a mano.

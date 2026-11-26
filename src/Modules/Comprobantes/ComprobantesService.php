@@ -84,6 +84,44 @@ final class ComprobantesService
         return $out;
     }
 
+    // ------------------------------------------------------------------ fecha del comprobante (D-149)
+
+    /** Días que ARCA acepta antes o después de hoy: 5 con productos, 10 con servicios (o productos y servicios). */
+    public static function diasFecha(int $concepto): int
+    {
+        return $concepto > 1 ? 10 : 5;
+    }
+
+    /** null si ARCA acepta la fecha para ese concepto; si no, el motivo para mostrar. */
+    public static function problemaFecha(string $fecha, int $concepto, ?string $hoy = null): ?string
+    {
+        $hoy ??= date('Y-m-d');
+        $dias = self::diasFecha($concepto);
+        $que = $concepto > 1 ? 'servicios' : 'productos';
+        $desde = date('Y-m-d', (int) strtotime($hoy . ' -' . $dias . ' days'));
+        $hasta = date('Y-m-d', (int) strtotime($hoy . ' +' . $dias . ' days'));
+        if ($fecha < $desde) {
+            return "ARCA acepta {$que} con fecha de hasta {$dias} días antes de hoy: la más vieja posible es el " . fecha($desde) . '.';
+        }
+        if ($fecha > $hasta) {
+            return "ARCA acepta {$que} con fecha de hasta {$dias} días después de hoy: la más adelante posible es el " . fecha($hasta) . '.';
+        }
+        return null;
+    }
+
+    /**
+     * Fecha del último comprobante del mismo tipo, letra y punto de venta (ARCA exige que las fechas vayan en orden: no se puede emitir uno con fecha
+     * anterior al último). $entorno: el de ARCA (P/H/S) o '' para los internos. null si no hay ninguno.
+     */
+    public function fechaUltimoComprobante(string $tipo, string $letra, int $prefijo, string $entorno): ?string
+    {
+        $st = $this->pdo->prepare('SELECT MAX(fecha) FROM subdiario WHERE tipo = ? AND letra = ? AND prefijo = ? AND fe_entorno = ?'
+            . ($entorno !== '' ? ' AND fe_nrocbte > 0' : ''));
+        $st->execute([$tipo, $letra, $prefijo, $entorno]);
+        $v = $st->fetchColumn();
+        return $v === false || $v === null ? null : substr((string) $v, 0, 10);
+    }
+
     // ------------------------------------------------------------------ armar (validar y calcular)
 
     /**
@@ -192,11 +230,37 @@ final class ComprobantesService
             $err['concepto'] = 'Elegí productos, servicios o ambos.';
             $concepto = 1;
         }
+        // Fecha del comprobante (D-149): las facturas y notas pueden llevar otra fecha que la de hoy, dentro de lo que acepta ARCA; los comprobantes internos
+        // (presupuesto, su contrapartida, el kiosco, el cambio) siempre llevan la de hoy.
+        $hoy = date('Y-m-d');
+        $fecha = $hoy;
+        if (!$interno && trim((string) ($in['fecha'] ?? '')) !== '') {
+            $f = Valida::fecha((string) $in['fecha']);
+            if ($f === null) {
+                $err['fecha'] = 'La fecha no es válida.';
+            } else {
+                $fecha = $f;
+            }
+        }
+        if (!$interno && !isset($err['fecha']) && ($problema = self::problemaFecha($fecha, $concepto, $hoy)) !== null) {
+            $err['fecha'] = $problema;
+        }
+        if (!$interno && !isset($err['fecha']) && is_array($asoc) && $fecha < (string) $asoc['fecha']) {
+            $err['fecha'] = 'La nota no puede tener fecha anterior al comprobante que corrige (' . fecha((string) $asoc['fecha']) . ').';
+        }
+        if (!$interno && !isset($err['fecha']) && $suc !== null && $letra !== '') {
+            $ultima = $this->fechaUltimoComprobante($tipo, $letra, (int) $suc['prefijo'], $electronica ? Arca::entorno() : '');
+            if ($ultima !== null && $fecha < $ultima) {
+                $err['fecha'] = 'Ya hay una ' . Tipos::titulo($tipo, $letra) . ' del punto de venta '
+                    . sprintf('%04d', (int) $suc['prefijo']) . ' con fecha ' . fecha($ultima) . '. ARCA no acepta un comprobante con fecha anterior al último del mismo tipo '
+                    . 'y punto de venta: usá el ' . fecha($ultima) . ' o una fecha posterior, o emitilo en otro punto de venta.';
+            }
+        }
+
         $servDesde = $servHasta = $vtoPago = null;
         if ($concepto > 1) {
-            $hoy = date('Y-m-d');
             foreach (['serv_desde' => &$servDesde, 'serv_hasta' => &$servHasta, 'vto_pago' => &$vtoPago] as $campo => &$ref) {
-                $ref = trim((string) ($in[$campo] ?? '')) === '' ? $hoy : Valida::fecha((string) $in[$campo]);
+                $ref = trim((string) ($in[$campo] ?? '')) === '' ? $fecha : Valida::fecha((string) $in[$campo]);
                 if ($ref === null) {
                     $err[$campo] = 'La fecha no es válida.';
                 }
@@ -204,6 +268,9 @@ final class ComprobantesService
             unset($ref);
             if ($servDesde !== null && $servHasta !== null && $servHasta < $servDesde) {
                 $err['serv_hasta'] = 'El fin del período no puede ser anterior al inicio.';
+            }
+            if ($vtoPago !== null && $vtoPago < $fecha) { // ARCA: el vencimiento del pago no puede ser anterior a la fecha del comprobante
+                $err['vto_pago'] = 'El vencimiento del pago no puede ser anterior a la fecha de la factura (' . fecha($fecha) . ').';
             }
         }
 
@@ -221,11 +288,6 @@ final class ComprobantesService
             $err['forma_pago'] = 'Elegí contado o cuenta corriente.';
         }
         $pagos = null;
-
-        // DECISIÓN D-06 (Claude, a confirmar por Hernán): la fecha es siempre la de hoy, como el VFP (ARCA aceptaría hasta 5 días
-        // atrás en productos y 10 en servicios, nunca antes del último comprobante aprobado). Para permitir otra fecha habría que
-        // agregar el campo al formulario y validar contra el último comprobante de ese punto de venta y tipo.
-        $fecha = date('Y-m-d');
 
         // Descuento, vendedor, condición de pago
         $desc = 0.0;
@@ -1019,7 +1081,8 @@ final class ComprobantesService
                     $esCuenta = (int) $pago['tipo'] === 6;
                     $cuenta += $esCuenta ? (float) $pago['importe'] : 0.0;
                     $this->insertar('caja', [
-                        'subdiario_id' => $id, 'fecha' => $cbte['fecha'], 'tipo' => $tipo, 'letra' => $letra, 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $cbte['sucursal'],
+                        // DECISIÓN D-150: la plata entra a la caja el día que se cobra, aunque la factura lleve otra fecha (D-149); la parte a cuenta corriente sigue la fecha de la factura
+                        'subdiario_id' => $id, 'fecha' => $esCuenta ? $cbte['fecha'] : date('Y-m-d'), 'tipo' => $tipo, 'letra' => $letra, 'canal' => self::CANAL, 'terminal' => 1, 'sucursal' => $cbte['sucursal'],
                         'prefijo' => $cbte['prefijo'], 'comprobante' => $numero, 'cliente' => $cli['codigo'],
                         'p_fpago' => $esCuenta ? $ccCodigo : $pago['codigo'], 'p_nro' => $pago['nro'] ?? null,
                         'p_fecvto' => $esCuenta ? $cbte['fecha'] : ($pago['vencimiento'] ?? null), 'p_banco' => (int) ($pago['banco'] ?? 0),

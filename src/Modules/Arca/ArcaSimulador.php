@@ -107,6 +107,23 @@ final class ArcaSimulador
             case 'FECAESolicitar':
                 $nro = self::ultimo($pdo, (int) $v('PtoVta'), (int) $v('CbteTipo')) + 1;
                 $fch = $v('CbteFch');
+                $rechazo = function (string $msg) use ($ns, $nro, $fch): string {
+                    return self::sobre("<FECAESolicitarResponse {$ns}><FECAESolicitarResult><FeCabResp><Resultado>R</Resultado></FeCabResp><FeDetResp><FECAEDetResponse><CbteDesde>{$nro}</CbteDesde><CbteHasta>{$nro}</CbteHasta>"
+                        . "<CbteFch>{$fch}</CbteFch><Resultado>R</Resultado><CAE></CAE><CAEFchVto></CAEFchVto><Observaciones><Obs><Code>10016</Code><Msg>" . htmlspecialchars($msg) . '</Msg></Obs></Observaciones>'
+                        . '</FECAEDetResponse></FeDetResp></FECAESolicitarResult></FECAESolicitarResponse>');
+                };
+                // Como ARCA: la fecha puede ir hasta 5 días antes o después de hoy con productos y 10 con servicios, y no antes del último comprobante del PV y tipo
+                $dias = (int) $v('Concepto') > 1 ? 10 : 5;
+                $iso = preg_match('/^(\d{4})(\d{2})(\d{2})$/', $fch, $mm) === 1 ? "{$mm[1]}-{$mm[2]}-{$mm[3]}" : '';
+                if ($iso === '' || $iso < date('Y-m-d', strtotime("-{$dias} days")) || $iso > date('Y-m-d', strtotime("+{$dias} days"))) {
+                    return $rechazo("Simulado: CbteFch fuera del rango de {$dias} días antes o después de hoy");
+                }
+                $st = $pdo->prepare("SELECT MAX(fecha) FROM subdiario WHERE fe_entorno = 'S' AND prefijo = ? AND fe_ntipoafip = ? AND fe_nrocbte > 0");
+                $st->execute([(int) $v('PtoVta'), (int) $v('CbteTipo')]);
+                $ult = (string) $st->fetchColumn();
+                if ($ult !== '' && $iso < substr($ult, 0, 10)) {
+                    return $rechazo('Simulado: la fecha del comprobante no puede ser anterior a la del último comprobante autorizado (' . substr($ult, 0, 10) . ')');
+                }
                 if (self::rechazaPorTotal((float) $v('ImpTotal'))) {
                     return self::sobre("<FECAESolicitarResponse {$ns}><FECAESolicitarResult><FeCabResp><Resultado>R</Resultado></FeCabResp><FeDetResp><FECAEDetResponse><CbteDesde>{$nro}</CbteDesde><CbteHasta>{$nro}</CbteHasta>"
                         . "<CbteFch>{$fch}</CbteFch><Resultado>R</Resultado><CAE></CAE><CAEFchVto></CAEFchVto><Observaciones><Obs><Code>10016</Code><Msg>Simulado: el total termina en ,13 y el simulador lo rechaza para probar el rechazo</Msg></Obs></Observaciones>"

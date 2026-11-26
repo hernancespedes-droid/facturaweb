@@ -45,6 +45,10 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
   están en `docs/decisiones-pendientes.md`: al decidir algo de negocio sin consultar, marcarla así y sumarla ahí.
 - Los campos de importe usan `data-decimales` (la máscara de `app.js` pone puntos de miles: `Valida::decimal` y `comprobante.js` los leen igual).
 
+## Fecha de la factura (0.63.0)
+
+FC/NC/ND llevan `fecha` (no los internos, siempre hoy): `ComprobantesService::problemaFecha` (5 días productos, 10 servicios) y `fechaUltimoComprobante` (orden por tipo + letra + PV + entorno), nota no anterior a lo que corrige; va a ARCA como `CbteFch`. La caja usa la fecha del cobro (D-149, D-150).
+
 ## Cuenta corriente y recibos (etapa 4)
 
 - `Modules/CuentaCorriente/CuentaCorrienteService`: recibos (`armarRecibo` valida y calcula; `emitirRecibo` numera con `sucursales.ultimo_recibo` bloqueada, bloquea las filas de `ctact` y revalida el saldo adentro), `imputarManual`, `ajuste` (AD/AC), `anularRecibo`, cheques y deuda.
@@ -183,7 +187,7 @@ Colores nuevos en `app.css`: siempre con `var(--brand)` / `color-mix(...)` y `va
 
 ## Calendario en los campos de fecha (0.64.0)
 
-`public/assets/calendario.js` (en `layout.php`): todo `<input data-fecha>` (texto dd/mm/aaaa) lleva botón de calendario; con `name` desde/hasta (o `data-fecha="desde|hasta"`) suma períodos rápidos que completan los dos (D-151).
+`public/assets/calendario.js` (en `layout.php`): todo `<input data-fecha>` (texto dd/mm/aaaa) lleva botón de calendario; con `name` desde/hasta (o `data-fecha="desde|hasta"`) suma períodos rápidos que completan los dos (D-152).
 Todo delegado y con `MutationObserver`: los renglones copiados o agregados después funcionan solos. **Campo de fecha nuevo → `data-fecha`** (lo controla `tests/CalendarioTest.php`); el servidor sigue leyendo con `Valida::fecha`. e2e: `e2e/calendario.js`.
 
 ## Instalar como app (0.62.0)

@@ -1648,7 +1648,7 @@ tr.mp-no-visto td { background: color-mix(in srgb, var(--ok) 10%, transparent); 
   .actualizacion-opciones .field-inline { flex-wrap: wrap; }
 }
 
-/* ---------- Calendario de los campos de fecha (calendario.js, 0.64.0, D-151) ---------- */
+/* ---------- Calendario de los campos de fecha (calendario.js, 0.64.0, D-152) ---------- */
 .cal-caja { display: flex; gap: 6px; align-items: stretch; min-width: 0; }
 .cal-caja > input { flex: 1 1 auto; min-width: 0; }
 .cal-btn[aria-expanded="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }

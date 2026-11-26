@@ -1,4 +1,4 @@
-// Recorrido de navegador: calendario en los campos de fecha (0.64.0, D-151; public/assets/calendario.js).
+// Recorrido de navegador: calendario en los campos de fecha (0.64.0, D-152; public/assets/calendario.js).
 //   node e2e/calendario.js   levanta su propio servidor en el puerto 8087
 //   E2E_CAPTURAS=<carpeta> guarda capturas (escritorio claro y oscuro, celular).
 // Todo input[data-fecha] lleva un botón que abre un calendario: el día elegido queda como dd/mm/aaaa, en los filtros con

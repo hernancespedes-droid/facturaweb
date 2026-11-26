@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Tests;
 
 /**
- * Calendario en los campos de fecha (0.64.0, D-151): todo campo de texto que pide una fecha (dd/mm/aaaa) lleva data-fecha,
+ * Calendario en los campos de fecha (0.64.0, D-152): todo campo de texto que pide una fecha (dd/mm/aaaa) lleva data-fecha,
  * así public/assets/calendario.js le pone el botón del calendario. Si esta prueba falla en una pantalla nueva, sumarle data-fecha al input.
  */
 final class CalendarioTest extends TestCase
