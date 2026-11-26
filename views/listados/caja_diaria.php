@@ -21,6 +21,7 @@ $otros = $r['total_cobrado'] - $tipoMonto(1) - $tipoMonto(3) - $tipoMonto(10) - 
 ?>
 <div class="page-head">
     <div><p class="eyebrow">Listados</p><h1>Caja diaria</h1></div>
+    <div class="acciones"><a class="btn" href="<?= e(url('/listados/caja-diaria/imprimir') . '?' . http_build_query(['desde' => $f['desde'] ?? '', 'hasta' => $f['hasta'] ?? ''])) ?>" target="_blank" rel="noopener" data-reporte-imprimir>Imprimir reporte detallado</a></div>
 </div>
 
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">

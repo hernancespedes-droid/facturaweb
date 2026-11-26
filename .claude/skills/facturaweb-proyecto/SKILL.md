@@ -255,3 +255,8 @@ Ahora al abrir el turno se suman los cobros del día de ese cajero sin turno (D-
 
 ## Instalar como app (0.62.0, 25/11/2026)
 Pedido de Hernán: que al entrar a la URL se pueda instalar como app (como el ícono «Instalar» de Edge en oesteparts.site). `Modules/Pwa`: manifiesto, íconos y service worker por instalación (nombre, color y logo de la apariencia). Android/PC: el navegador ofrece instalar; iPhone: Safari → Compartir → «Agregar a inicio». Requiere https. Nota `docs/entregas/0.62.0-instalar-como-app.md`.
+
+## Reporte de caja para imprimir (0.63.0, 26/11/2026)
+
+Pedido de Hernán: el listado de caja tiene que dar un reporte a impresora detallado y fácil para alguien sin conocimientos (ingresos, salidas, ventas y a dónde fue cada peso).
+Listados → Caja diaria → «Imprimir reporte detallado» abre una hoja A4 (`Listados/ReporteCaja`, D-149) con los mismos números de la pantalla. Nota `docs/entregas/0.63.0-reporte-caja.md`.

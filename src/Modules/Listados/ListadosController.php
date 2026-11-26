@@ -39,6 +39,16 @@ final class ListadosController
         ]));
     }
 
+    /** Reporte de caja para imprimir (A4): lo vendido, cómo se cobró, a dónde fue cada peso y el detalle (D-149). Mismo período que la caja diaria. */
+    public static function cajaImprimir(Request $req, array $params): Response
+    {
+        $f = array_map(static fn ($x) => is_string($x) ? $x : '', array_intersect_key($req->query, array_flip(['desde', 'hasta'])));
+        if (!array_key_exists('desde', $req->query)) {
+            $f['desde'] = $f['hasta'] = date('d/m/Y');
+        }
+        return Response::html(View::render('listados/caja_imprimir', ['d' => ReporteCaja::datos($f), 'f' => $f], null));
+    }
+
     /** Ventas diarias: presupuestos y facturas cobrados o a cuenta corriente, mezclados (por omisión, lo de hoy). Excel: el genérico de las grillas. */
     public static function ventasDiarias(Request $req, array $params): Response
     {
