@@ -40,11 +40,18 @@ $disc = $c['letra'] === 'A';
 <?php if (!empty($c['advertencias'])): ?>
 <div class="alerta alerta-info" role="status"><b>Stock:</b> <?= e(implode(' · ', $c['advertencias'])) ?></div>
 <?php endif; ?>
+<?php if (!\App\Modules\Comprobantes\Tipos::interno($c['tipo']) && $c['fecha'] > date('Y-m-d')): ?>
+<div class="alerta alerta-warn" role="status"><b>Fecha adelantada:</b> este comprobante sale con fecha <?= e(fecha($c['fecha'])) ?>. Hasta ese día no vas a poder emitir otra
+    <?= e(\App\Modules\Comprobantes\Tipos::titulo($c['tipo'], $c['letra'])) ?> del punto de venta <?= e(sprintf('%04d', $c['prefijo'])) ?> con fecha anterior, tampoco con la de hoy (ARCA exige que las fechas vayan en orden).
+    Si vas a seguir facturando hoy, conviene emitirlo en otro punto de venta.</div>
+<?php elseif (!\App\Modules\Comprobantes\Tipos::interno($c['tipo']) && $c['fecha'] < date('Y-m-d')): ?>
+<div class="alerta alerta-info" role="status"><b>Fecha anterior a hoy:</b> este comprobante sale con fecha <?= e(fecha($c['fecha'])) ?>.</div>
+<?php endif; ?>
 <section class="card">
     <dl class="datos datos-col">
         <div><dt>Cliente</dt><dd><?= e($cli['razon_social']) ?> <span class="muted">(<?= e($cli['codigo']) ?>)</span></dd></div>
         <div><dt>CUIT</dt><dd><?= e(cuit_texto($cli['cuit']) ?: 'sin CUIT') ?></dd></div>
-        <div><dt>Fecha</dt><dd><?= e(fecha($c['fecha'])) ?> <span class="muted small">(siempre la de hoy)</span></dd></div>
+        <div><dt>Fecha</dt><dd><?= e(fecha($c['fecha'])) ?><?= $c['fecha'] !== date('Y-m-d') ? ' <b>(no es la de hoy)</b>' : '' ?></dd></div>
         <div><dt>Punto de venta</dt><dd><?= e(sprintf('%04d', $c['prefijo'])) ?></dd></div>
         <?php if ($c['forma_pago'] !== null && empty($pagar)): ?><div><dt>Forma de pago</dt><dd><?= $c['forma_pago'] === 2 ? 'Cuenta corriente' : 'Contado' . ($c['pago'] ? ' · ' . e($c['pago']['descripcion']) : '') ?></dd></div><?php endif; ?>
         <?php if ($c['asociado']): ?><div><dt>Corrige</dt><dd><?= e(Tipos::titulo($c['asociado']['tipo'], $c['asociado']['letra']) . ' ' . numero_cbte($c['prefijo'], $c['asociado']['comprobante']) . ' del ' . fecha($c['asociado']['fecha'])) ?></dd></div><?php endif; ?>

@@ -349,7 +349,19 @@
 
   // concepto: con servicios se pide el período y el vencimiento del pago
   var concepto = form.querySelector('[data-concepto]');
-  if (concepto) concepto.addEventListener('change', function () { form.querySelector('[data-servicios]').hidden = concepto.value === '1'; });
+  // fecha (D-149): ARCA acepta 5 días antes o después con productos y 10 con servicios; el calendario no deja elegir fuera de eso
+  var fechaCbte = form.querySelector('[data-fecha-cbte]');
+  function limitesFecha() {
+    if (!fechaCbte || !concepto) return;
+    var dias = concepto.value === '1' ? 5 : 10;
+    var hoy = new Date(fechaCbte.getAttribute('data-hoy') + 'T12:00:00');
+    var corrida = function (n) { var d = new Date(hoy.getTime() + n * 86400000); return d.toISOString().slice(0, 10); };
+    fechaCbte.min = corrida(-dias);
+    fechaCbte.max = corrida(dias);
+    var b = form.querySelector('[data-fecha-dias]');
+    if (b) b.textContent = String(dias);
+  }
+  if (concepto) concepto.addEventListener('change', function () { form.querySelector('[data-servicios]').hidden = concepto.value === '1'; limitesFecha(); });
 
   // un solo envío
   form.addEventListener('submit', function () {

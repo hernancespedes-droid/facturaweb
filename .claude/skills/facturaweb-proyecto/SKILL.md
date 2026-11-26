@@ -255,3 +255,7 @@ Ahora al abrir el turno se suman los cobros del día de ese cajero sin turno (D-
 
 ## Instalar como app (0.62.0, 25/11/2026)
 Pedido de Hernán: que al entrar a la URL se pueda instalar como app (como el ícono «Instalar» de Edge en oesteparts.site). `Modules/Pwa`: manifiesto, íconos y service worker por instalación (nombre, color y logo de la apariencia). Android/PC: el navegador ofrece instalar; iPhone: Safari → Compartir → «Agregar a inicio». Requiere https. Nota `docs/entregas/0.62.0-instalar-como-app.md`.
+
+## Facturar con fecha distinta a hoy (0.63.0, 26/11/2026)
+Pedido de Hernán: facturas con otra fecha aprobadas por ARCA con esa fecha (no presupuestos ni kiosco). Campo «Fecha» en FC/NC/ND con calendario; límites de ARCA (5 días productos, 10 servicios),
+fechas en orden por tipo y punto de venta, nota no anterior a lo que corrige; la caja va con el día del cobro. D-149, D-150. Nota `docs/entregas/0.63.0-fecha-factura.md`.
