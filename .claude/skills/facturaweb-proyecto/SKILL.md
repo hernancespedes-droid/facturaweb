@@ -256,6 +256,6 @@ Ahora al abrir el turno se suman los cobros del día de ese cajero sin turno (D-
 ## Instalar como app (0.62.0, 25/11/2026)
 Pedido de Hernán: que al entrar a la URL se pueda instalar como app (como el ícono «Instalar» de Edge en oesteparts.site). `Modules/Pwa`: manifiesto, íconos y service worker por instalación (nombre, color y logo de la apariencia). Android/PC: el navegador ofrece instalar; iPhone: Safari → Compartir → «Agregar a inicio». Requiere https. Nota `docs/entregas/0.62.0-instalar-como-app.md`.
 
-## Calendario en las consultas con fecha (0.63.0, 26/11/2026)
+## Calendario en las consultas con fecha (0.64.0, 26/11/2026)
 Pedido de Hernán: «todas las consultas que tengan fechas deben tener la posibilidad de buscar en un calendario». Calendario propio común (`calendario.js`, `data-fecha`) en todos los filtros y cargas con fecha dd/mm/aaaa,
-con períodos rápidos en desde/hasta y hoja desde abajo en el celular (D-149). Los campos de la factura (servicio, vencimiento) quedan con el del navegador porque los toca el pedido de facturar con otra fecha. Nota `docs/entregas/0.63.0-calendario-fechas.md`.
+con períodos rápidos en desde/hasta y hoja desde abajo en el celular (D-151). Los campos de la factura (servicio, vencimiento) quedan con el del navegador porque los toca el pedido de facturar con otra fecha. Nota `docs/entregas/0.64.0-calendario-fechas.md`.

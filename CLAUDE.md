@@ -181,9 +181,9 @@ registro en `instancias_resets` (base del master) y nota interna en el ticket el
 Menú horizontal o lateral (`apariencia.menu`, `Apariencia::menu()` → `<body class="menu-…">`, 0.52.0, D-136; estilos `body.menu-lateral` en `app.css`, plegado en `app.js`). Íconos del menú en `Core\Menu` (`SVG`, `ICONO`, `ICONO_GRUPO`; 0.54.0, D-138): **opción nueva del menú → sumarle ícono en `Menu::ICONO`** (si no, usa el de su grupo). Contraer/expandir el lateral: cookie `menu_contraido` → `body.menu-contraido` (0.56.0, D-139).
 Colores nuevos en `app.css`: siempre con `var(--brand)` / `color-mix(...)` y `var(--on-brand)` para el texto sobre el color, nunca el azul fijo. La marca del cliente va arriba y O&S firma al pie.
 
-## Calendario en los campos de fecha (0.63.0)
+## Calendario en los campos de fecha (0.64.0)
 
-`public/assets/calendario.js` (en `layout.php`): todo `<input data-fecha>` (texto dd/mm/aaaa) lleva botón de calendario; con `name` desde/hasta (o `data-fecha="desde|hasta"`) suma períodos rápidos que completan los dos (D-149).
+`public/assets/calendario.js` (en `layout.php`): todo `<input data-fecha>` (texto dd/mm/aaaa) lleva botón de calendario; con `name` desde/hasta (o `data-fecha="desde|hasta"`) suma períodos rápidos que completan los dos (D-151).
 Todo delegado y con `MutationObserver`: los renglones copiados o agregados después funcionan solos. **Campo de fecha nuevo → `data-fecha`** (lo controla `tests/CalendarioTest.php`); el servidor sigue leyendo con `Valida::fecha`. e2e: `e2e/calendario.js`.
 
 ## Instalar como app (0.62.0)
