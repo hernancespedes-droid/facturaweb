@@ -29,8 +29,8 @@ $pill = ['falta' => 'pill-mal', 'diferencia' => 'pill-warn', 'ok' => 'pill-ok'];
 <?php endif; ?>
 
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e(fecha($desde)) ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e(fecha($hasta)) ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e(fecha($desde)) ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e(fecha($hasta)) ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <label class="field"><span>Mostrar</span><select name="estado"><option value="">Todos</option>
         <?php foreach (MC::ESTADOS as $k => $t): ?><option value="<?= e($k) ?>" <?= $estado === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select></label>
     <button class="btn" type="submit">Ver</button>

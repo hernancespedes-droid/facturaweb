@@ -16,7 +16,7 @@ $cols = ($f['deposito'] ?? '') === '' ? $depositos : array_values(array_filter($
 </div>
 <p class="small muted no-imprimir">Stock de cada artículo por depósito, hoy o a una fecha pasada (se suman los movimientos hasta ese día inclusive). Solo artículos que controlan stock.</p>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros no-imprimir">
-    <label class="field"><span>A la fecha</span><input name="fecha" value="<?= e($f['fecha'] ?? '') ?>" placeholder="hoy" inputmode="numeric"></label>
+    <label class="field"><span>A la fecha</span><input name="fecha" value="<?= e($f['fecha'] ?? '') ?>" placeholder="hoy" inputmode="numeric" data-fecha></label>
     <input type="search" name="q" value="<?= e($f['q'] ?? '') ?>" placeholder="Código o descripción" aria-label="Buscar">
     <?php include __DIR__ . '/../listados/_rubros.php'; ?>
     <label class="field"><span>Proveedor (código)</span><input name="proveedor" value="<?= e($f['proveedor'] ?? '') ?>" inputmode="numeric" size="6"></label>

@@ -18,8 +18,8 @@ $m = static fn ($v) => number_format((float) $v, 2, ',', '.');
 <p class="small muted">Presupuestos y facturas que se cobraron o fueron a cuenta corriente. La factura que sale de un presupuesto no se repite acá (va solo al subdiario). Las notas de crédito restan.</p>
 
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <select name="tipo" aria-label="Tipo"><option value="">Presupuestos y facturas</option>
         <?php foreach (['PR' => 'Solo presupuestos', 'FC' => 'Solo facturas', 'CM' => 'Cambios', 'NX' => 'Notas de crédito X', 'NC' => 'Notas de crédito'] as $k => $t): ?><option value="<?= $k ?>" <?= ($f['tipo'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select>
     <select name="forma" aria-label="Forma de pago"><option value="">Contado y cuenta corriente</option>

@@ -13,8 +13,8 @@ $q = ['proveedor' => (int) ($prov['id'] ?? 0), 'desde' => $desde, 'hasta' => $ha
 </div>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros" data-enviar-al-elegir>
     <?php $nombre = 'proveedor'; $titulo = 'Proveedor'; $autofocus = $prov === null; include __DIR__ . '/_proveedor.php'; ?>
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($desde) ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($hasta) ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($desde) ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($hasta) ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <button class="btn" type="submit">Ver</button>
 </form>
 

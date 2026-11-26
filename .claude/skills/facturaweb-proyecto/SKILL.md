@@ -259,6 +259,10 @@ Pedido de Hernán: que al entrar a la URL se pueda instalar como app (como el í
 ## Facturar con fecha distinta a hoy (0.63.0, 26/11/2026)
 Pedido de Hernán: facturas con otra fecha aprobadas por ARCA con esa fecha (no presupuestos ni kiosco). Campo «Fecha» en FC/NC/ND con calendario; límites de ARCA (5 días productos, 10 servicios),
 fechas en orden por tipo y punto de venta, nota no anterior a lo que corrige; la caja va con el día del cobro. D-149, D-150. Nota `docs/entregas/0.63.0-fecha-factura.md`.
+## Calendario en las consultas con fecha (0.64.0, 26/11/2026)
+Pedido de Hernán: «todas las consultas que tengan fechas deben tener la posibilidad de buscar en un calendario». Calendario propio común (`calendario.js`, `data-fecha`) en todos los filtros y cargas con fecha dd/mm/aaaa,
+con períodos rápidos en desde/hasta y hoja desde abajo en el celular (D-152). Los campos de la factura (servicio, vencimiento) quedan con el del navegador porque los toca el pedido de facturar con otra fecha. Nota `docs/entregas/0.64.0-calendario-fechas.md`.
+
 
 ## Reporte de caja para imprimir (0.65.0, 26/11/2026)
 

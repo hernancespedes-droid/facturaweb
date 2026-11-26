@@ -11,8 +11,8 @@ $paginas = (int) ceil($total / max(1, $porPagina));
     </div>
 </div>
 <form method="get" action="<?= e(url('/recibos')) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <input name="cliente" value="<?= e($f['cliente'] ?? '') ?>" placeholder="Cliente o número de recibo" type="search" aria-label="Cliente">
     <button class="btn btn-ghost" type="submit">Buscar</button>
 </form>

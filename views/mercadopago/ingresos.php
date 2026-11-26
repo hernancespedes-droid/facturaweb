@@ -39,8 +39,8 @@ $plata = static fn ($v) => number_format((float) $v, 2, ',', '.');
     <p class="muted small">Aviso por mail: <?= $mails === [] ? 'no se manda (se cargan los mails en Sistema → Configuración, «mercadopago.ingresos_mails»)' : e(implode(', ', $mails)) ?>.</p>
 <?php endif; ?>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input type="date" name="desde" value="<?= e($f['desde'] ?? '') ?>"></label>
-    <label class="field"><span>Hasta</span><input type="date" name="hasta" value="<?= e($f['hasta'] ?? '') ?>"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e(fecha($f['desde'] ?? '')) ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric" data-fecha></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e(fecha($f['hasta'] ?? '')) ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric" data-fecha></label>
     <label class="field"><span>Medio</span><select name="medio"><option value="">Todos</option>
         <?php foreach (IngresosService::MEDIOS as $k => $t): ?><option value="<?= e($k) ?>" <?= ($f['medio'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select></label>
     <label class="field"><span>Buscar</span><input type="search" name="texto" value="<?= e($f['texto'] ?? '') ?>" placeholder="Quién pagó, descripción u operación"></label>

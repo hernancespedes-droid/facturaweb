@@ -16,8 +16,8 @@ $estados = ['' => 'Todas', 'V' => 'Vigentes', 'A' => 'Anuladas', 'impagas' => 'A
     </div>
 </div>
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <?php $nombre = 'proveedor'; $titulo = 'Proveedor'; include __DIR__ . '/_proveedor.php'; ?>
     <?php include __DIR__ . '/_filtros_centro.php'; ?>
     <label class="field"><span>Tipo</span><select name="tipo"><option value="">Todos</option>

@@ -50,6 +50,7 @@ if ($alDia && Menu::visible('mp_ingresos')) {
     <script src="<?= e(asset('assets/app.js')) ?>" defer data-sw="<?= e(url('/sw.js')) ?>"></script>
     <script src="<?= e(asset('assets/grilla.js')) ?>" defer></script>
     <script src="<?= e(asset('assets/carga.js')) ?>" defer></script>
+    <script src="<?= e(asset('assets/calendario.js')) ?>" defer></script>
 </head>
 <body class="menu-<?= $menuLateral ? 'lateral' : 'horizontal' ?><?= $menuContraido ? ' menu-contraido' : '' ?>">
     <header class="topbar">

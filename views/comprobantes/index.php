@@ -24,8 +24,8 @@ $paginas = (int) ceil($total / max(1, $porPagina));
 </div>
 
 <form method="get" action="<?= e(url('/comprobantes')) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <select name="tipo" aria-label="Tipo"><option value="">Todos los tipos</option>
         <?php foreach (Tipos::NOMBRES as $k => $t): ?><option value="<?= $k ?>" <?= ($f['tipo'] ?? '') === $k ? 'selected' : '' ?>><?= e($t) ?></option><?php endforeach; ?></select>
     <input name="cliente" value="<?= e($f['cliente'] ?? '') ?>" placeholder="Cliente, código o CUIT" type="search" aria-label="Cliente">

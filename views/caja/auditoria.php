@@ -22,8 +22,8 @@ $hora = static fn (?string $t) => $t === null ? '—' : date('d/m/Y H:i:s', strt
 <?php endif; ?>
 
 <form method="get" action="<?= e($u) ?>" class="toolbar filtros">
-    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+    <label class="field"><span>Desde</span><input name="desde" value="<?= e($f['desde'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
+    <label class="field"><span>Hasta</span><input name="hasta" value="<?= e($f['hasta'] ?? '') ?>" placeholder="dd/mm/aaaa" data-fecha inputmode="numeric"></label>
     <label class="field"><span>Usuario</span><select name="usuario"><option value="">Todos</option>
         <?php foreach ($usuarios as $id => $n): ?><option value="<?= (int) $id ?>" <?= ($f['usuario'] ?? '') === (string) $id ? 'selected' : '' ?>><?= e($n) ?></option><?php endforeach; ?></select></label>
     <label class="field"><span>Origen</span><select name="origen"><option value="">Todos</option>
