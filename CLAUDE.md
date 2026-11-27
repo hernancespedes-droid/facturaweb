@@ -49,6 +49,13 @@ Sin Composer (Packagist bloqueado): autoloader propio, pruebas propias (`tests/r
 
 FC/NC/ND llevan `fecha` (no los internos, siempre hoy): `ComprobantesService::problemaFecha` (5 días productos, 10 servicios) y `fechaUltimoComprobante` (orden por tipo + letra + PV + entorno), nota no anterior a lo que corrige; va a ARCA como `CbteFch`. La caja usa la fecha del cobro (D-149, D-150).
 
+## Facturación masiva (0.66.0)
+
+`Modules/FacturacionMasiva` (`/facturacion-masiva`, permiso `comprobantes.masiva` + `comprobantes.emitir`, módulo `facturacion_masiva` apagado por omisión, D-154): `Planilla` lee el Excel/CSV
+(`Importacion\Lector`; columnas por título, «Referencia» agrupa renglones, precio final con IVA, D-155) y arma la entrada de `ComprobantesService::armar()`; `PreFacturasService` la guarda en
+`prefacturas.datos` (JSON, sin tocar nada), `guardar` (modificar con `views/comprobantes/form.php` + `$prefactura`), `eliminar` y `procesar` (una por vez: armar + emitir con `prefacturas.operacion`,
+D-156…D-158). La pantalla factura de a una por JSON (`public/assets/facturacion-masiva.js`). Mail: `ImpresionController::enviarPorMail`. e2e: `e2e/facturacion-masiva.js`.
+
 ## Cuenta corriente y recibos (etapa 4)
 
 - `Modules/CuentaCorriente/CuentaCorrienteService`: recibos (`armarRecibo` valida y calcula; `emitirRecibo` numera con `sucursales.ultimo_recibo` bloqueada, bloquea las filas de `ctact` y revalida el saldo adentro), `imputarManual`, `ajuste` (AD/AC), `anularRecibo`, cheques y deuda.

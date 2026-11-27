@@ -21,6 +21,7 @@ const RECORRIDOS = [
   'fecha-factura.js',
   'calendario.js',
   'reporte-caja.js',
+  'facturacion-masiva.js',
 ];
 
 for (const archivo of RECORRIDOS) {

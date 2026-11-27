@@ -62,10 +62,25 @@ final class ImpresionController
             Session::flash('error', 'Escribí uno o más mails válidos (separados por punto y coma).');
             return $volver;
         }
-        if (!Mailer::configurado()) {
-            Session::flash('error', 'El envío de mails no está configurado en este servidor.');
+        $error = self::enviarPorMail($h, $mails);
+        if ($error !== null) {
+            Session::flash('error', $error);
             return $volver;
         }
+        Session::flash('ok', 'Enviado a ' . $mails . '.');
+        return $volver;
+    }
+
+    /**
+     * Manda el comprobante en PDF a los mails (ya validados, «a@x.com; b@y.com») y anota el envío. null si salió; si no, el motivo.
+     * Lo usan el botón «Enviar por mail» y la facturación masiva. @param array<string,mixed> $h el de ComprobantesService::obtener()
+     */
+    public static function enviarPorMail(array $h, string $mails): ?string
+    {
+        if (!Mailer::configurado()) {
+            return 'El envío de mails no está configurado en este servidor.';
+        }
+        $svc = new ComprobantesService();
         $emisor = $svc->emisor();
         $d = ComprobanteImpreso::datos($h, $emisor);
         $titulo = Tipos::titulo($h['tipo'], $h['letra']) . ' ' . $d['numero'];
@@ -74,12 +89,10 @@ final class ImpresionController
             . "Saludos,\r\n" . ($emisor['empresa'] ?? '') . "\r\n";
         $error = Mailer::enviar(explode('; ', $mails), $titulo . ' - ' . ($emisor['empresa'] ?? ''), $texto, [$d['nombre_archivo'] => ComprobantePdf::generar($d)]);
         if ($error !== null) {
-            Session::flash('error', 'No se pudo enviar: ' . $error);
-            return $volver;
+            return 'No se pudo enviar: ' . $error;
         }
-        Db::pdo()->prepare('UPDATE subdiario SET fe_cemailenvio = ?, fe_dfechaenvio = CURDATE(), fe_limprimio = 1, actualizacion = NOW() WHERE fe_clave = ?')->execute([$mails, $id]);
-        Session::flash('ok', 'Enviado a ' . $mails . '.');
-        return $volver;
+        Db::pdo()->prepare('UPDATE subdiario SET fe_cemailenvio = ?, fe_dfechaenvio = CURDATE(), fe_limprimio = 1, actualizacion = NOW() WHERE fe_clave = ?')->execute([$mails, (int) $h['fe_clave']]);
+        return null;
     }
 
     /** Papel de la página imprimible: el de Parámetros, o el que se pida con ?papel=a4|t80|t50. @param array<string,mixed> $emisor */

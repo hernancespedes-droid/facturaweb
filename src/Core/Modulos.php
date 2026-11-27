@@ -27,6 +27,8 @@ final class Modulos
         'cambios' => ['nombre' => 'Cambio de mercadería', 'menu' => ['cambios'], 'rutas' => ['/cambios'], 'por_omision' => true],
         'compras' => ['nombre' => 'Compras y centros de costos', 'menu' => ['compras', 'compras_nueva', 'compras_qr', 'compras_lista', 'compras_apagar', 'compras_pagos', 'compras_cuenta', 'compras_analisis',
             'compras_presupuesto', 'compras_iva', 'compras_arca', 'compras_resultado', 'proveedores', 'compras_centros'], 'rutas' => ['/compras'], 'por_omision' => false],
+        // DECISIÓN D-154: la facturación masiva desde Excel llega apagada a los clientes (no todos la usan) y se prende por cliente desde el master.
+        'facturacion_masiva' => ['nombre' => 'Facturación masiva desde Excel (pre-facturas)', 'menu' => ['masiva'], 'rutas' => ['/facturacion-masiva'], 'por_omision' => false],
         'mercadopago' => ['nombre' => 'Mercado Pago (cobros e ingresos a la cuenta)', 'menu' => ['mp', 'mp_ingresos'], 'rutas' => ['/mercadopago', '/api/v1/mercadopago'], 'por_omision' => true],
         'agente' => ['nombre' => 'Agente de sincronización con el VFP', 'menu' => ['agente'], 'rutas' => ['/agente', '/api/v1/vfp', '/api/v1/ping'], 'por_omision' => false],
         // DECISIÓN D-76: soporte prendido por omisión en todos los clientes; se apaga por cliente desde el master.
