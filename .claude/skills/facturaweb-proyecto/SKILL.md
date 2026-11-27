@@ -272,4 +272,4 @@ Listados → Caja diaria → «Imprimir reporte detallado» abre una hoja A4 (`L
 ## Facturación masiva (0.66.0, 27/11/2026)
 Pedido de Hernán: subir un Excel con una factura por registro → **pre-facturas** (no tocan stock, caja, cuenta corriente ni ARCA) → grilla para elegir, modificar (mismo formulario de la factura)
 y eliminar → «Aprobar y facturar» las procesa de a una como facturas de ARCA con todo el circuito (stock, caja o cuenta corriente según cómo se cobra). Facturación → Facturación masiva.
-Módulo apagado por omisión en los clientes; permiso `comprobantes.masiva`. Decisiones D-154 a D-158 (a confirmar). Nota `docs/entregas/0.66.0-facturacion-masiva.md`.
+Módulo apagado por omisión en los clientes; permiso `comprobantes.masiva`. Decisiones D-154 a D-158 aprobadas por Hernán el 27/11/2026. Nota `docs/entregas/0.66.0-facturacion-masiva.md`.
