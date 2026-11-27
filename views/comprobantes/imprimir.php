@@ -23,8 +23,9 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
         .cab { display: grid; grid-template-columns: 1fr 18mm 1fr; border: 1.5px solid #000; min-height: 38mm; }
         .cab > div { padding: 3mm; }
         .emisor h1 { margin: 0 0 2mm; font-size: 16px; }
-        .emisor img.logo { display: block; max-width: 80mm; max-height: 14mm; margin-bottom: 1.5mm; }
-        .emisor.con-logo h1 { font-size: 13px; margin-bottom: 1mm; } .emisor.con-logo div { font-size: 10px; }
+        .emisor img.logo { display: block; max-width: 76mm; max-height: 22mm; margin: 0 auto 1mm; }
+        .emisor.con-logo { text-align: center; padding-top: 1.5mm; }
+        .emisor.con-logo h1 { font-size: 11px; margin-bottom: .5mm; } .emisor.con-logo div { font-size: 9px; }
         .emisor div { font-size: 11px; }
         .letra { border-left: 1px solid #000; border-right: 1px solid #000; text-align: center; padding: 1mm !important; }
         .letra b { display: block; font-size: 38px; line-height: 1.1; border-bottom: 1px solid #000; }
@@ -69,7 +70,6 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
             <?php if ($d['logo'] !== null): ?><img class="logo" src="data:image/jpeg;base64,<?= base64_encode($d['logo']['datos']) ?>" alt=""><?php endif; ?>
             <h1><?= e($e['nombre'] !== '' ? $e['nombre'] : 'Empresa sin cargar') ?></h1>
             <?php foreach (array_filter([$e['domicilio'], $e['telefono'] !== '' ? 'Tel.: ' . $e['telefono'] : '', $e['mail']]) as $l): ?><div><?= e($l) ?></div><?php endforeach; ?>
-            <?php if ($e['condicion'] !== ''): ?><div><b><?= e($e['condicion']) ?></b></div><?php endif; ?>
         </div>
         <div class="letra"><b><?= e($d['letra']) ?></b><span><?= $d['interno'] ? 'No fiscal' : 'Cód. ' . e(str_pad((string) $d['codigo'], 2, '0', STR_PAD_LEFT)) ?></span></div>
         <div class="datos">
@@ -78,6 +78,7 @@ $f = static fn (float $v, int $dec = 2): string => number_format($v, $dec, ',', 
             <div>Fecha: <?= e($d['fecha']) ?></div>
             <div>C.U.I.T.: <?= e($e['cuit']) ?></div>
             <?php if ($e['iibb'] !== ''): ?><div>Ingresos Brutos: <?= e($e['iibb']) ?></div><?php endif; ?>
+            <?php if ($e['condicion'] !== ''): ?><div><b><?= e($e['condicion']) ?></b></div><?php endif; ?>
             <?php if ($e['inicio'] !== ''): ?><div>Inicio de actividades: <?= e($e['inicio']) ?></div><?php endif; ?>
         </div>
     </div>

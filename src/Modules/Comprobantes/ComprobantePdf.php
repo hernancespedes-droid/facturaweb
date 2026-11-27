@@ -66,25 +66,30 @@ final class ComprobantePdf
         $m = self::M;
         $e = $d['emisor'];
         $pdf->rect($m, $m, self::ANCHO, 38, 0.3);
-        // izquierda: emisor (con logo, el logo arriba y los datos más compactos debajo)
+        // izquierda: emisor. Con logo: el logo grande y centrado (hasta 22 mm de alto, como el
+        // encabezado del VFP) y debajo la razón social y los datos, también centrados y más chicos.
+        // La condición de IVA va a la derecha, con el CUIT.
         $logo = $d['logo'] ?? null;
-        $lineas = array_filter([$e['domicilio'], $e['telefono'] !== '' ? 'Tel.: ' . $e['telefono'] : '', $e['mail'], $e['condicion'] !== '' ? $e['condicion'] : '']);
+        $lineas = array_filter([$e['domicilio'], $e['telefono'] !== '' ? 'Tel.: ' . $e['telefono'] : '', $e['mail']]);
         if ($logo !== null) {
-            $escala = min(80 / $logo['ancho'], 14 / $logo['alto']);
-            $pdf->jpeg($logo['datos'], $m + 3, $m + 2, $logo['ancho'] * $escala, $logo['alto'] * $escala);
-            $pdf->texto($m + 3, $m + 20, $pdf->ajustar($e['nombre'] ?: 'Empresa sin cargar', 82, 10.5, true), 10.5, true);
-            $y = $m + 24.2;
-            $paso = 3.5;
-            $tam = 7.5;
+            $escala = min(76 / $logo['ancho'], 22 / $logo['alto']);
+            $an = $logo['ancho'] * $escala;
+            $al = $logo['alto'] * $escala;
+            $pdf->jpeg($logo['datos'], $m + 1 + (84 - $an) / 2, $m + 1.5, $an, $al);
+            $y = $m + 1.5 + $al + 3.3;
+            $pdf->texto($m + 1, $y, $pdf->ajustar($e['nombre'] ?: 'Empresa sin cargar', 82, 8.5, true), 8.5, true, 'C', 84);
+            $y += 3.2;
+            foreach ($lineas as $l) {
+                $pdf->texto($m + 1, $y, $pdf->ajustar($l, 82, 7), 7, false, 'C', 84);
+                $y += 3;
+            }
         } else {
             $pdf->texto($m + 3, $m + 8, $pdf->ajustar($e['nombre'] ?: 'Empresa sin cargar', 80, 13, true), 13, true);
             $y = $m + 14;
-            $paso = 4.5;
-            $tam = 8.5;
-        }
-        foreach ($lineas as $l) {
-            $pdf->texto($m + 3, $y, $pdf->ajustar($l, 82, $tam), $tam, $l === $e['condicion']);
-            $y += $paso;
+            foreach ($lineas as $l) {
+                $pdf->texto($m + 3, $y, $pdf->ajustar($l, 82, 8.5), 8.5);
+                $y += 4.5;
+            }
         }
         // centro: letra
         $pdf->rect($m + 86, $m, 18, 20, 0.3);
@@ -95,10 +100,10 @@ final class ComprobantePdf
         $pdf->texto($m + 110, $m + 8, $d['titulo'], 13, true);
         $pdf->texto($m + 110, $m + 14, 'Nº ' . $d['numero'], 11, true);
         $pdf->texto($m + 110, $m + 19.5, 'Fecha: ' . $d['fecha'], 9.5);
-        $y = $m + 25;
-        foreach (array_filter(['C.U.I.T.: ' . $e['cuit'], $e['iibb'] !== '' ? 'Ingresos Brutos: ' . $e['iibb'] : '', $e['inicio'] !== '' ? 'Inicio de actividades: ' . $e['inicio'] : '']) as $l) {
-            $pdf->texto($m + 110, $y, $l, 8.5);
-            $y += 4.2;
+        $y = $m + 24.5;
+        foreach (array_filter(['C.U.I.T.: ' . $e['cuit'], $e['iibb'] !== '' ? 'Ingresos Brutos: ' . $e['iibb'] : '', $e['condicion'], $e['inicio'] !== '' ? 'Inicio de actividades: ' . $e['inicio'] : '']) as $l) {
+            $pdf->texto($m + 110, $y, $pdf->ajustar($l, 78, 8.5, $l === $e['condicion']), 8.5, $l === $e['condicion']);
+            $y += 3.8;
         }
         // cliente
         $y0 = $m + 41;
