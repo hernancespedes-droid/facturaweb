@@ -27,6 +27,7 @@ final class Menu
         $o['cambios'] = ['texto' => 'Cambio de mercadería', 'ruta' => '/cambios', 'permiso' => 'cambios.hacer', 'grupo' => 'Facturación'];
         $o['comprobantes_nc'] = ['texto' => 'Nueva nota de crédito', 'ruta' => '/comprobantes/nuevo?tipo=NC', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
         $o['comprobantes_nd'] = ['texto' => 'Nueva nota de débito', 'ruta' => '/comprobantes/nuevo?tipo=ND', 'permiso' => 'comprobantes.emitir', 'grupo' => 'Facturación'];
+        $o['masiva'] = ['texto' => 'Facturación masiva', 'ruta' => '/facturacion-masiva', 'permiso' => 'comprobantes.masiva', 'grupo' => 'Facturación'];
         $o['comprobantes'] = ['texto' => 'Comprobantes', 'ruta' => '/comprobantes', 'permiso' => 'comprobantes.ver', 'grupo' => 'Facturación'];
         $o['ctacte'] = ['texto' => 'Cuenta corriente', 'ruta' => '/cuenta-corriente', 'permiso' => 'ctacte.ver', 'grupo' => 'Cuenta corriente'];
         $o['recibos_nuevo'] = ['texto' => 'Nuevo recibo', 'ruta' => '/recibos/nuevo', 'permiso' => 'ctacte.cobrar', 'grupo' => 'Cuenta corriente'];
@@ -145,7 +146,7 @@ final class Menu
     private const ICONO = [
         'inicio' => 'inicio', 'clientes' => 'usuario', 'articulos' => 'caja_art', 'articulos_precios' => 'etiqueta', 'articulos_actualizacion' => 'tendencia',
         'comprobantes_fc' => 'doc_mas', 'comprobantes_pr' => 'portapapeles', 'kiosco' => 'carrito', 'cambios' => 'cambio',
-        'comprobantes_nc' => 'doc_menos', 'comprobantes_nd' => 'doc_mas', 'comprobantes' => 'docs', 'mp_ingresos' => 'ingreso', 'mp' => 'celular',
+        'comprobantes_nc' => 'doc_menos', 'comprobantes_nd' => 'doc_mas', 'comprobantes' => 'docs', 'masiva' => 'subir', 'mp_ingresos' => 'ingreso', 'mp' => 'celular',
         'ctacte' => 'billetera', 'recibos_nuevo' => 'doc_mas', 'recibos' => 'ticket', 'imputar' => 'enlace', 'ctacte_ajuste' => 'ajustes', 'cheques' => 'billete',
         'caja' => 'caja', 'caja_turnos' => 'reloj', 'caja_auditoria' => 'escudo',
         'caja_diaria' => 'calendario', 'ventas_diarias' => 'tendencia', 'iva_ventas' => 'porcentaje', 'libro_iva' => 'libro',

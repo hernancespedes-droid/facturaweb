@@ -33,11 +33,16 @@ $sinSucursal = $sucursales === [];
 $errorGeneral = array_intersect_key($errores, array_flip(['arca', 'licencia', 'tipo', 'emisor', 'sucursal', 'forma_pago', 'credito']));
 $concepto = $v('concepto', (string) $conceptoDefecto);
 $hoyIso = date('Y-m-d');
+/** @var array<string,mixed>|null $prefactura pre-factura de la facturación masiva: el mismo formulario guarda en vez de ir a revisar */
+$prefactura = $prefactura ?? null;
+if ($prefactura !== null) {
+    $errorGeneral += array_intersect_key($errores, array_flip(['stock', 'pagos', 'fpago', 'prefactura']));
+}
 ?>
 <div class="page-head">
     <div>
         <p class="eyebrow"><?= e($emisor['empresa'] ?: 'Empresa sin cargar') ?> · <?= e($etiquetaArca) ?></p>
-        <h1><?= e($nombre) ?> <span data-letra-titulo><?= e($letra) ?></span></h1>
+        <h1><?= $prefactura !== null ? e($prefactura['titulo']) . ' · ' : '' ?><?= e($nombre) ?> <span data-letra-titulo><?= e($letra) ?></span></h1>
     </div>
 </div>
 
@@ -52,13 +57,13 @@ $hoyIso = date('Y-m-d');
 <?php endif; ?>
 <?php if ($sinSucursal): ?><div class="alerta alerta-error">No hay ninguna sucursal con punto de venta: cargala en Tablas → Sucursales.</div><?php endif; ?>
 
-<form method="post" action="<?= e(url('/comprobantes/revisar')) ?>" class="card form" id="form-comprobante" novalidate
+<form method="post" action="<?= e($prefactura['accion'] ?? url('/comprobantes/revisar')) ?>" class="card form" id="form-comprobante" novalidate
       data-condicion-emisor="<?= e($emisor['condicion'] ?? '') ?>" data-tipo="<?= e($tipo) ?>" data-letra="<?= e($letra) ?>" data-sin-iva="<?= !empty($sinIva) ? '1' : '0' ?>"
       data-url-cliente="<?= e(url('/comprobantes/buscar-cliente')) ?>" data-url-articulo="<?= e(url('/comprobantes/buscar-articulo') . '?reserva=' . $reserva) ?>"
       data-url-asociables="<?= e(url('/comprobantes/asociables')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="tipo" value="<?= e($tipo) ?>">
-    <?php if (in_array($tipo, ['FC', 'PR'], true) && \App\Modules\Stock\StockService::activo()): ?>
+    <?php if ($prefactura === null && in_array($tipo, ['FC', 'PR'], true) && \App\Modules\Stock\StockService::activo()): ?>
         <input type="hidden" name="reserva" value="<?= e((string) $reserva) ?>" data-reserva data-url="<?= e(url('/stock/reservar')) ?>" data-csrf-nombre="<?= e(\App\Core\Csrf::CAMPO) ?>" data-csrf="<?= e(\App\Core\Csrf::token()) ?>">
     <?php endif; ?>
 
@@ -197,8 +202,22 @@ $hoyIso = date('Y-m-d');
         <label class="check"><input type="checkbox" name="excede_ok" value="1" <?= $v('excede_ok') === '1' ? 'checked' : '' ?>> <b>Autorizo exceder el crédito del cliente</b></label>
     <?php endif; ?>
 
+    <?php if ($prefactura !== null): ?>
+        <h2>Cómo se cobra</h2>
+        <label class="field<?= isset($errores['cobro']) ? ' has-error' : '' ?>"><span>Al facturarla se cobra con *</span>
+            <select name="cobro" data-prefactura-cobro>
+                <?php foreach ($prefactura['formas'] as $fp): $cod = (int) $fp['tipo'] === 6 ? 'CC' : (string) $fp['codigo']; ?>
+                    <option value="<?= e($cod) ?>" <?= $prefactura['cobro'] === $cod ? 'selected' : '' ?>><?= e((int) $fp['tipo'] === 6 ? 'Cuenta corriente' : ucfirst(mb_strtolower((string) $fp['descripcion']))) ?></option>
+                <?php endforeach; ?>
+                <?php if (!in_array(6, array_map(static fn ($fp) => (int) $fp['tipo'], $prefactura['formas']), true)): ?><option value="CC" <?= $prefactura['cobro'] === 'CC' ? 'selected' : '' ?>>Cuenta corriente</option><?php endif; ?>
+            </select>
+            <small class="muted">Cuenta corriente: queda como deuda del cliente. Cualquier otra: entra a la caja por el total al facturar.</small><?= $err('cobro') ?></label>
+        <div class="actions"><button class="btn" type="submit" <?= $sinSucursal ? 'disabled' : '' ?>>Guardar pre-factura</button>
+            <a class="btn btn-ghost" href="<?= e($prefactura['volver']) ?>">Cancelar</a></div>
+    <?php else: ?>
     <div class="actions"><button class="btn" type="submit" <?= $sinSucursal ? 'disabled' : '' ?>>Revisar</button>
         <a class="btn btn-ghost" href="<?= e(url('/comprobantes')) ?>">Cancelar</a></div>
+    <?php endif; ?>
 </form>
 
 <template id="renglon-plantilla">

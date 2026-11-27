@@ -268,3 +268,8 @@ con períodos rápidos en desde/hasta y hoja desde abajo en el celular (D-152). 
 
 Pedido de Hernán: el listado de caja tiene que dar un reporte a impresora detallado y fácil para alguien sin conocimientos (ingresos, salidas, ventas y a dónde fue cada peso).
 Listados → Caja diaria → «Imprimir reporte detallado» abre una hoja A4 (`Listados/ReporteCaja`, D-153) con los mismos números de la pantalla. Nota `docs/entregas/0.65.0-reporte-caja.md`.
+
+## Facturación masiva (0.66.0, 27/11/2026)
+Pedido de Hernán: subir un Excel con una factura por registro → **pre-facturas** (no tocan stock, caja, cuenta corriente ni ARCA) → grilla para elegir, modificar (mismo formulario de la factura)
+y eliminar → «Aprobar y facturar» las procesa de a una como facturas de ARCA con todo el circuito (stock, caja o cuenta corriente según cómo se cobra). Facturación → Facturación masiva.
+Módulo apagado por omisión en los clientes; permiso `comprobantes.masiva`. Decisiones D-154 a D-158 (a confirmar). Nota `docs/entregas/0.66.0-facturacion-masiva.md`.

@@ -1693,3 +1693,9 @@ tr.mp-no-visto td { background: color-mix(in srgb, var(--ok) 10%, transparent); 
 .cal-hoja .cal-atajo { padding: 8px 12px; font-size: .9rem; }
 [data-tema="claro"] .cal-pop { box-shadow: 0 14px 40px rgba(20, 30, 50, .18); }
 @media print { .cal-btn, .cal-pop, .cal-fondo { display: none !important; } }
+
+/* Facturación masiva (0.66.0) */
+.masiva-barra { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; }
+.masiva-barra p { margin: 0; }
+.masiva-avance { flex-basis: 100%; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.masiva-avance progress { width: min(320px, 100%); accent-color: var(--brand); }
