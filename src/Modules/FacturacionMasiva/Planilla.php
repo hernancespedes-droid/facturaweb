@@ -14,7 +14,7 @@ use PDO;
  * Lee la planilla de la facturación masiva y arma, por cada factura, lo mismo que cargaría el formulario de la factura (la «entrada» de
  * ComprobantesService::armar()). No graba nada.
  *
- * DECISIÓN D-155 (Claude, a confirmar por Hernán): formato de la planilla.
+ * DECISIÓN D-155 (Claude, aprobada por Hernán el 27/11/2026): formato de la planilla.
  *  - Una fila por factura. Si una factura tiene varios renglones, las filas llevan la misma «Referencia» (cualquier texto: el número de pedido,
  *    el mes y el cliente…): se juntan en una sola factura y los datos de la factura (cliente, fecha, cobro…) se toman de la primera fila del grupo.
  *  - Las columnas se reconocen por el título (sin importar mayúsculas ni acentos) y pueden estar en cualquier orden. Obligatorias: cliente

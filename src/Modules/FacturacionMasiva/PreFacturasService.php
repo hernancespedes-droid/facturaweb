@@ -21,10 +21,10 @@ use PDO;
  * lo de una factura cargada a mano: ComprobantesService::armar() valida y calcula y emitir() pide el CAE y graba subdiario, iva, estadística, stock y
  * caja o cuenta corriente según cómo se cobra.
  *
- * DECISIÓN D-156 (Claude, a confirmar por Hernán): al aprobar, quien aprueba autoriza lo que pediría autorización en una factura a mano si su rol lo puede
+ * DECISIÓN D-156 (Claude, aprobada por Hernán el 27/11/2026): al aprobar, quien aprueba autoriza lo que pediría autorización en una factura a mano si su rol lo puede
  * autorizar (stock que no alcanza con stock.autorizar o stock.vender_sin_stock; exceder el crédito con comprobantes.credito). Si no, esa pre-factura queda
  * pendiente con el motivo y las demás se facturan.
- * DECISIÓN D-157 (Claude, a confirmar por Hernán): se facturan de a una, en orden de fecha (ARCA exige fechas en orden por punto de venta). Cada una tiene su
+ * DECISIÓN D-157 (Claude, aprobada por Hernán el 27/11/2026): se facturan de a una, en orden de fecha (ARCA exige fechas en orden por punto de venta). Cada una tiene su
  * clave de operación desde que se carga: reintentar (o un corte en el medio) nunca factura dos veces. Una pre-factura que ARCA pudo haber aprobado
  * (operación sin respuesta o aprobada sin grabar) no se modifica ni se elimina hasta revisarla en Sistema → ARCA.
  */
@@ -229,7 +229,7 @@ final class PreFacturasService
             && implode('', array_map(static fn ($v) => trim((string) $v), array_intersect_key($r, array_flip(['articulo', 'descripcion', 'cantidad', 'precio'])))) !== ''));
         $datos += Planilla::entradaCobro($cobro);
         $r = $this->comp->armar(self::entrada($datos, $permisos), $permisos['credito'], $usuarioId);
-        // DECISIÓN D-158 (Claude, a confirmar por Hernán): lo que se resuelve recién al facturar (stock que no alcanza, crédito del cliente) no impide guardar:
+        // DECISIÓN D-158 (Claude, aprobada por Hernán el 27/11/2026): lo que se resuelve recién al facturar (stock que no alcanza, crédito del cliente) no impide guardar:
         // queda anotado. Todo lo demás se corrige antes de guardar, como en una factura a mano. Lo que vino mal de la planilla igual se guarda (para corregirlo acá).
         $bloquean = array_diff_key($r['errores'], array_flip(['stock', 'credito']));
         if ($bloquean !== []) {
